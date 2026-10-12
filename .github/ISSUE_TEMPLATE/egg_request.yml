@@ -1,0 +1,39 @@
+name: Egg request
+description: Ask for a game that isn't here yet, or a new variant (mod loader, branch) of one that is.
+labels: ['egg request']
+body:
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      placeholder: Sons of the Forest
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: How the dedicated server is installed
+      description: Steam app id of the dedicated server, or the official download page.
+      placeholder: 'SteamCMD app 2465200'
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Server platform
+      options:
+        - Linux build
+        - Windows only (needs Wine or Proton)
+        - Don't know
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Ports it needs, config files, RCON or query support, mod support, and anything you know that trips it up.
+  - type: input
+    id: upstream
+    attributes:
+      label: Existing egg elsewhere
+      description: A link to an egg for another panel, if there is one (its licence must allow reuse).

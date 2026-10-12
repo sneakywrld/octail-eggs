@@ -1,0 +1,298 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd stationeers/stationeers_vanilla/egg-stationeers.json (pelican-eggs, MIT licence). Octail adds the stationeers tag, an automatic update/query port (the port after the game port) instead of the fixed 27015, the Steam query (A2S) on it for player counts, install sandbox defaults and resource hints, makes the server password and the admin secret (ServerAuthSecret) optional, editable and passed only when set, one word each (upstream passed the hidden defaults \"change\" and \"changechange\" to every server), refuses double quotes, slashes and backslashes in the station name (it is a quoted argument and the save folder), limits the start location to a plain id, fixes the start condition rule (a stray space), keeps UPnP off (Octail publishes the ports), drops the stray \";2>&1\" at the end of the startup, waits for \"RakNet successfully hosted with Address:\" as the done line (current builds no longer print upstream's \"Host override address provided:\"), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/stationeers.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Stationeers",
+  "author": "eggs@goover.dev",
+  "uuid": "25563afc-89db-4e03-8dc2-cfd6571e6fb6",
+  "description": "Stationeers Server",
+  "tags": [
+    "stationeers",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Ubuntu)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_ubuntu"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "stty cols 80 rows 24; ./rocketstation_DedicatedServer.x86_64 -logFile - -file start \"{{STATION_NAME}}\" {{WORLD_ID}} {{DIFFICULTY}} {{START_CONDITION}} {{START_LOCATION}} -settings StartLocalHost true ServerVisible true GamePort {{SERVER_PORT}} UPNPEnabled {{UPNP}} ServerName \"{{STATION_NAME}}\" ServerMaxPlayers {{MAX_PLAYERS}} AutoSave {{AUTOSAVE}} SaveInterval {{SAVE_INTERVAL}} UpdatePort {{UPDATE_PORT}} AutoPauseServer {{AUTO_PAUSE}} UseSteamP2P {{USE_STEAM_P2_P}} LocalIpAddress 0.0.0.0 $( [ -z \"${SERVER_PASSWD}\" ] || printf 'ServerPassword %s' \"${SERVER_PASSWD}\" ) $( [ -z \"${SERVER_AUTH_SECRET}\" ] || printf 'ServerAuthSecret %s' \"${SERVER_AUTH_SECRET}\" )"
+  },
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": \"RakNet successfully hosted with Address:\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n##\n#\n# Variables\n# STEAM_USER, STEAM_PASS, STEAM_AUTH - Steam user setup. If a user has 2fa enabled it will most likely fail due to timeout. Leave blank for anon install.\n# WINDOWS_INSTALL - if it's a windows server you want to install set to 1\n# SRCDS_APPID - steam app id found here - https://developer.valvesoftware.com/wiki/Dedicated_Servers_List\n# SRCDS_BETAID - beta branch of a steam app. Leave blank to install normal branch\n# SRCDS_BETAPASS - password for a beta branch should one be required during private or closed testing phases.. Leave blank for no password.\n# INSTALL_FLAGS - Any additional SteamCMD  flags to pass during install.. Keep in mind that steamcmd auto update process in the docker image might overwrite or ignore these when it performs update on server boot.\n# AUTO_UPDATE - Adding this variable to the egg allows disabling or enabling automated updates on boot. Boolean value. 0 to disable and 1 to enable.\n#\n ##\n\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/rocketstation_DedicatedServer.x86_64\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Stationeers dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/rocketstation_DedicatedServer.x86_64\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto Pause Server",
+      "description": "Weather the server should auto pause or not if no players are connected",
+      "env_variable": "AUTO_PAUSE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "string",
+        "in:true,false"
+      ],
+      "sort": 9
+    },
+    {
+      "name": "Auto Update",
+      "description": "",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "AutoSave",
+      "description": "Turn Autosave on and off",
+      "env_variable": "AUTOSAVE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ],
+      "sort": 5
+    },
+    {
+      "name": "Beta Branch",
+      "description": "",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Difficulty",
+      "description": "Creative, Easy, Normal, Stationeer",
+      "env_variable": "DIFFICULTY",
+      "default_value": "Normal",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:Creative,Easy,Normal,Stationeer"
+      ],
+      "sort": 11
+    },
+    {
+      "name": "Map",
+      "description": "Available Maps: Lunar, Mars2, Europa3, MimasHerschel, Vulcan, Venus",
+      "env_variable": "WORLD_ID",
+      "default_value": "Mars2",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:Lunar,Mars2,Europa3,MimasHerschel,Vulcan,Venus"
+      ],
+      "sort": 10
+    },
+    {
+      "name": "Max Players",
+      "description": "",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "10",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,30"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Save Interval",
+      "description": "Time in seconds between each autosave. Shouldn't be below 60 sec.",
+      "env_variable": "SAVE_INTERVAL",
+      "default_value": "300",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:60,604800"
+      ],
+      "sort": 6
+    },
+    {
+      "name": "Admin Secret",
+      "description": "Optional: the ServerAuthSecret. Players who set the same secret in their game (settings ServerAuthSecret <secret> in the F3 console) can run server commands with serverrun. Empty = none. One word: no spaces or quotes.",
+      "env_variable": "SERVER_AUTH_SECRET",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\\s\"'\\\\]*$/",
+        "max:128"
+      ],
+      "sort": 8
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password. One word: no spaces or quotes.",
+      "env_variable": "SERVER_PASSWD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\\s\"'\\\\]*$/",
+        "max:32"
+      ],
+      "sort": 7
+    },
+    {
+      "name": "Start Condition",
+      "description": "DefaultStart, DefaultStartCommunity, Brutal, BrutalCommunity",
+      "env_variable": "START_CONDITION",
+      "default_value": "DefaultStart",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:DefaultStart,DefaultStartCommunity,Brutal,BrutalCommunity"
+      ],
+      "sort": 12
+    },
+    {
+      "name": "Start Location",
+      "description": "Highly depend on Map! Search trough https://stationeers-wiki.com/Dedicated_Server_Guide World types to get exact Location IDs",
+      "env_variable": "START_LOCATION",
+      "default_value": "MarsSpawnButchersFlat",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_]+$/",
+        "max:100"
+      ],
+      "sort": 13
+    },
+    {
+      "name": "Station Name",
+      "description": "The name of the world save and of the server in the list (up to 100 characters, no double quotes, slashes or backslashes). The save with this name is loaded at every start, or created.",
+      "env_variable": "STATION_NAME",
+      "default_value": "Pelican Hosted Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\/]*$/",
+        "max:100"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "Steam App ID",
+      "description": "Required for automatic updates.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "600760",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:600760"
+      ],
+      "sort": 16
+    },
+    {
+      "name": "UPNP",
+      "description": "UPnP port forwarding. Off: Octail publishes the ports.",
+      "env_variable": "UPNP",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:false"
+      ],
+      "sort": 14
+    },
+    {
+      "name": "Update Port",
+      "description": "Steam update and query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "UPDATE_PORT",
+      "default_value": "27015",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ],
+      "sort": 15
+    },
+    {
+      "name": "UseSteamP2P",
+      "description": "Weather the server should allow SteamP2P connections. Keep this disabled. ",
+      "env_variable": "USE_STEAM_P2_P",
+      "default_value": "false",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "string",
+        "in:true,false"
+      ],
+      "sort": 17
+    }
+  ],
+  "x_octail": {
+    "category": "Stationeers",
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "UPDATE_PORT"
+      },
+      "port_vars": {
+        "UPDATE_PORT": "primary+1"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

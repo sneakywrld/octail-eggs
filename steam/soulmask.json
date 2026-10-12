@@ -1,0 +1,170 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd soulmask/egg-soulmask.json (pelican-eggs, MIT licence). Octail adds a fixed uuid (upstream has none), the soulmask tag, an automatic query port instead of the fixed 27015, the Steam query (A2S) for player counts, the no_console_input flag (the server reads no console commands; its maintenance telnet stays on the container's own port), install sandbox defaults and resource hints, passes the server and admin passwords only when they are set and refuses spaces and quotes in them (they are one bare argument each), refuses double quotes and backslashes in the server name, limits the extra arguments to what the command line keeps as words, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/soulmask.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Soulmask",
+  "author": "josdekurk@gmail.com",
+  "uuid": "ae0be932-f05c-4b26-9b4a-962a5041f09a",
+  "description": "Escaping a deadly sacrificial ritual, you find an ancient mystical mask on your journey. This mask holds potent knowledge, changing the world you knew. Face the harsh challenges of nature, survive, rally followers, and build your own tribe. Explore and unveil the truths behind the enigmatic mask.",
+  "tags": [
+    "soulmask",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "/home/container/WS/Binaries/Linux/WSServer-Linux-Shipping WS Level01_Main -server -SILENT -SteamServerName=\"{{SERVER_NAME}}\" -saving={{SAVE_TIME}} -Port={{SERVER_PORT}} -QueryPort={{QUERY_PORT}} -EchoPort={{ECHO_PORT}} -forcepassthrough -MaxPlayers={{MAX_PLAYERS}} -backup={{BACKUP_TIME}} -log -UTF8Output -MULTIHOME=0.0.0.0 {{EXTRA_ARGS}} -online=Steam $( [ -z \"${ADMIN_PASSWORD}\" ] || printf -- '-adminpsw=%s' \"${ADMIN_PASSWORD}\" ) $( [ -z \"${SERVER_PASSWORD}\" ] || printf -- '-PSW=%s' \"${SERVER_PASSWORD}\" )",
+  "config": {
+    "files": "{}",
+    "startup": "{\r\n    \"done\": \"Create Dungeon Successed\"\r\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## other flags may be needed depending on install. looking at you cs 1.6\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} +app_update 1007 $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## add below your custom commands if needed\n## Maybe this path is just needed?\nmkdir -p /mnt/server/WS/Saved/Config/LinuxServer\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/WS/Binaries/Linux/WSServer-Linux-Shipping\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Soulmask dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/WS/Binaries/Linux/WSServer-Linux-Shipping\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "3017300",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:3017300",
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Auto update the server on start",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "Specifies the name of the game instance displayed in the server list",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Soulmask Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\]*$/|max:85",
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Specifies the maximum number of players the game instance can support.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "60",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,70",
+      "field_type": "text"
+    },
+    {
+      "name": "Backup Interval",
+      "description": "Specifies the interval for writing the game database to disk (unit: seconds).",
+      "env_variable": "BACKUP_TIME",
+      "default_value": "960",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:60,86400",
+      "field_type": "text"
+    },
+    {
+      "name": "Save Time Interval",
+      "description": "Specifies the interval for writing game objects to the database (unit: seconds).",
+      "env_variable": "SAVE_TIME",
+      "default_value": "600",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:60,86400",
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27015",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "field_type": "text"
+    },
+    {
+      "name": "Maintenance Port",
+      "description": "Maintenance port (TCP, telnet) inside the container. It isn't published, so it needs no port of its own.",
+      "env_variable": "ECHO_PORT",
+      "default_value": "18888",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password. No spaces or quotes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\]*$/|max:32",
+      "field_type": "text"
+    },
+    {
+      "name": "Admin Password",
+      "description": "Optional: the GM password (in the game: gm key <password>). Empty = none. No spaces or quotes.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\]*$/|max:32",
+      "field_type": "text"
+    },
+    {
+      "name": "Extra Arguments",
+      "description": "Additional arguments, separated by spaces, for example -pve. Empty = none.",
+      "env_variable": "EXTRA_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"'\\\\]*$/|max:128",
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Soulmask",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 16384,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

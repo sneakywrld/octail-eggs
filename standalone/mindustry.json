@@ -1,0 +1,109 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-standalone mindustry/egg-mindustry.json (pelican-eggs, MIT licence). Octail changes the install script (the release from the GitHub API over HTTPS, its SHA-256 digest checked, a missing release or asset fails the install, no unused GitHub login) and adds the mindustry tag, Java 21 and Java 17 images (upstream: Java 11, too old for current releases), the startup commands as one quoted argument (Mindustry splits them at commas, so the name can't hold commas, double quotes or backslashes), map names as one word (_ for spaces, as Mindustry matches them), a game mode and an optional save slot to load instead of a new map, a version rule (latest or a vNNN tag), generic TCP idle sleep (off until staff enable it per server), the say broadcast, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/mindustry.json"
+  },
+  "exported_at": "2024-06-01T00:16:53+00:00",
+  "name": "Mindustry",
+  "author": "sir3lit@gmail.com",
+  "uuid": "d7187af4-57c2-4771-b220-6b6276a6c88f",
+  "description": "Mindustry is a hybrid tower-defense sandbox factory game. Create elaborate supply chains of conveyor belts to feed ammo into your turrets, produce materials to use for building, and defend your structures from waves of enemies.",
+  "features": null,
+  "docker_images": {
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17"
+  },
+  "file_denylist": [],
+  "startup": "java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar server-release.jar \"config port {{SERVER_PORT}},config name {{SERVER_NAME}},$( [ -n \"${LOAD_SLOT}\" ] && printf 'load %s' \"${LOAD_SLOT}\" || printf 'host %s %s' \"${MAPNAME}\" \"${GAMEMODE}\" )\"",
+  "config": {
+    "files": "{}",
+    "startup": "{\r\n    \"done\": \"Server loaded. \"\r\n}",
+    "logs": "{}",
+    "stop": "exit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Mindustry installation script (pelican-eggs, changed for Octail: the release from the GitHub API over HTTPS, its\n# SHA-256 checked, failures exit non-zero)\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq ca-certificates > /dev/null\n\nVERSION=\"${VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    API=\"https://api.github.com/repos/Anuken/Mindustry/releases/latest\"\nelse\n    API=\"https://api.github.com/repos/Anuken/Mindustry/releases/tags/${VERSION}\"\nfi\nif ! RELEASE=$(curl -fsSL \"$API\"); then\n    echo \"Installation failed: Mindustry release ${VERSION} wasn't found on GitHub.\"\n    exit 1\nfi\nTAG=$(echo \"$RELEASE\" | jq -r '.tag_name')\nURL=$(echo \"$RELEASE\" | jq -r '.assets[] | select(.name == \"server-release.jar\") | .browser_download_url')\nDIGEST=$(echo \"$RELEASE\" | jq -r '.assets[] | select(.name == \"server-release.jar\") | .digest // empty')\nif [ -z \"$URL\" ]; then\n    echo \"Installation failed: release ${TAG} has no server-release.jar.\"\n    exit 1\nfi\n\necho \"Installing Mindustry ${TAG} from ${URL}\"\ncd /mnt/server\ncurl -fsSL -o server-release.jar.new \"$URL\"\nif [ -n \"$DIGEST\" ]; then\n    if ! echo \"${DIGEST#sha256:}  server-release.jar.new\" | sha256sum -c --quiet -; then\n        rm -f server-release.jar.new\n        echo \"Installation failed: the download doesn't match its checksum.\"\n        exit 1\n    fi\nelse\n    echo \"GitHub lists no checksum for this release; not checked.\"\nfi\nmv -f server-release.jar.new server-release.jar\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Mindustry ${TAG}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Version",
+      "description": "The release to install: latest, or a GitHub tag such as v146. Reinstall to switch.",
+      "env_variable": "VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^(latest|v\\d+(\\.\\d+)?)$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The server name in the server list (up to 64 characters; no commas, double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "An Octail Mindustry Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^,\"\\\\]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map Name",
+      "description": "The map hosted at start, with _ for spaces: Ancient_Caldera, Archipelago, Debris_Field, Domain, Fork, Fortress, Glacier, Islands, Labyrinth, Maze, Molten_Lake, Mud_Flats, Passage, Shattered, Tendrils, Triad, Veins, Wasteland, or a custom map in config/maps.",
+      "env_variable": "MAPNAME",
+      "default_value": "Tendrils",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_-]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Mode",
+      "description": "The mode the map is hosted in: survival, sandbox, attack or pvp.",
+      "env_variable": "GAMEMODE",
+      "default_value": "survival",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:survival,sandbox,attack,pvp",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Load Save Slot",
+      "description": "Optional: a save slot (from save <slot> in the console) loaded at start instead of hosting a new map. Empty = a new game on the map above.",
+      "env_variable": "LOAD_SLOT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_-]+$/|max:32",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "mindustry"
+  ],
+  "x_octail": {
+    "category": "Mindustry",
+    "features": {
+      "sleep": {
+        "mode": "tcp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

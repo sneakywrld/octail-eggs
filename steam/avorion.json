@@ -1,0 +1,249 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd avorion/egg-avorion.json (pelican-eggs, MIT licence). Octail adds automatic query, Steam query and Steam master ports instead of fixed defaults, makes the admin optional (a Steam64 ID when set), quotes the galaxy name and limits it to safe characters, fixes the int rules (integer), and adds the avorion tag, the /say broadcast, the Steam query (A2S) for player counts, install sandbox defaults and resource hints. **Install script fixed**: server.ini from raw.githubusercontent.com at the pinned games-steamcmd commit and only when the galaxy has none (upstream overwrote it on every reinstall), and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/avorion.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Avorion",
+  "author": "iamkubi@gmail.com",
+  "uuid": "0bb93b68-51c0-492f-a8fb-f2e6ce5ab892",
+  "description": "A procedural co-op space sandbox where players can build their own space ships out of dynamically scalable blocks. Fight epic space battles, explore, mine, trade, wage wars and build your own empire to save your galaxy from being torn apart by an unknown enemy.",
+  "tags": [
+    "avorion",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./bin/AvorionServer --galaxy-name \"{{GALAXY_NAME}}\" $( [ -z \"${ADMIN_ID}\" ] || printf %s \"--admin ${ADMIN_ID}\" ) --datapath galaxy --port {{SERVER_PORT}} --query-port {{QUERY_PORT}} --steam-master-port {{STEAM_MASTER_PORT}} --steam-query-port {{STEAM_QUERY_PORT}} --max-players {{MAX_PLAYERS}} --difficulty {{DIFFICULTY}} --collision-damage {{COLLISION_DMG}} --save-interval {{SAVE_INTERVAL}} --same-start-sector {{SAME_START_SECTOR}} --server-name \"{{SERVER_NAME}}\" --threads {{GAME_THREADS}} --listed {{SERVER_LISTED}}",
+  "config": {
+    "files": "{}",
+    "startup": "{\r\n    \"done\": \"Server startup complete\"\r\n}",
+    "logs": "{}",
+    "stop": "/stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Avorion Installation Script\n#\n# Server Files: /mnt/server\n\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/bin/AvorionServer\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Avorion dedicated server; try reinstalling.\"\n    exit 1\nfi\n\nmkdir -p /mnt/server/backups\nmkdir -p \"/mnt/server/galaxy/${GALAXY_NAME}\"\n## Octail: keep the galaxy's settings on a reinstall; the template comes from the pinned upstream commit\nif [[ ! -f \"/mnt/server/galaxy/${GALAXY_NAME}/server.ini\" ]]; then\n    curl -fsSL https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/avorion/server.ini --output \"/mnt/server/galaxy/${GALAXY_NAME}/server.ini\"\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Galaxy Name",
+      "description": "Name of the galaxy (its folder under galaxy/). Letters, digits, spaces, dots, dashes and underscores.",
+      "env_variable": "GALAXY_NAME",
+      "default_value": "Avorion",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:32|regex:/^[\\w .-]+$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name of the server, shown in the server list.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Avorion Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:64|regex:/^[^\"\\\\$`]*$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin ID",
+      "description": "Optional: the Steam64 ID (17 digits) of the player to make server admin.",
+      "env_variable": "ADMIN_ID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|regex:/^\\d{17}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Maximum number of players allowed",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "10",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Difficulty",
+      "description": "Difficulty of the server, allowed values are: -3, -2, -1, 0, 1, 2, 3 Default: 0",
+      "env_variable": "DIFFICULTY",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1,2,3,-1,-2,-3",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Collision Damage",
+      "description": "A multiplier for damage to colliding objects. Accepts floating-point numbers, e.g. 0.5 is 50% collision damage. 0: no damage, 1: full damage. default: 1",
+      "env_variable": "COLLISION_DMG",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Save Interval",
+      "description": "Time between automatic saves in seconds.  Defaults to 300 (5 minutes).",
+      "env_variable": "SAVE_INTERVAL",
+      "default_value": "300",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Same Start Sector",
+      "description": "Indicates if all players should start in the same sector. If false, a random empty sector on the outer rim is populated and used as the home sector for each new player.",
+      "env_variable": "SAME_START_SECTOR",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Threads",
+      "description": "Number of concurrent threads that are used to update sectors. (Identical to the 'Threads' setting ingame.)",
+      "env_variable": "GAME_THREADS",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "List Publicly",
+      "description": "Privacy setting. If enabled together with useSteam, the server will show up in public server lists. (Same as the ingame setting 'List Publicly')",
+      "env_variable": "SERVER_LISTED",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "565060",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:565060",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "LD Library Path",
+      "description": "",
+      "env_variable": "LD_LIBRARY_PATH",
+      "default_value": "./linux64",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Master Port",
+      "description": "Steam master server port (--steam-master-port). Set by Octail when the server is created (three after the game port).",
+      "env_variable": "STEAM_MASTER_PORT",
+      "default_value": "27021",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Query Port",
+      "description": "Steam query port (--steam-query-port). Set by Octail when the server is created (two after the game port).",
+      "env_variable": "STEAM_QUERY_PORT",
+      "default_value": "27020",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Avorion's own query port (--query-port). Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27003",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "1 = on; 0 = off",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Beta branch",
+      "description": "Leave empty for the public branch, beta for the beta branch.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|in:,beta",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Avorion",
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "STEAM_QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1",
+        "STEAM_QUERY_PORT": "primary+2",
+        "STEAM_MASTER_PORT": "primary+3"
+      },
+      "broadcast_command": "/say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

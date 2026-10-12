@@ -1,0 +1,200 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd satisfactory/egg-satisfactory.json (pelican-eggs, MIT licence). Octail adds the satisfactory tag, the HTTPS server API console bridge (rcon type \"satisfactory\"), an automatic reliable port, crash files and generic UDP idle sleep (off until staff enable it per server). SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/satisfactory.json"
+  },
+  "uuid": "dafdb96a-e8c1-449f-a6ae-b7ba209c05ff",
+  "name": "Satisfactory",
+  "author": "red_thirten@yahoo.com",
+  "description": "Satisfactory is a first-person open-world factory building game with a dash of exploration and combat. Play alone or with friends, explore an alien planet, create multi-story factories, and enter conveyor belt heaven!",
+  "tags": [
+    "satisfactory",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space",
+    "satisfactory"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./Engine/Binaries/Linux/*-Linux-Shipping FactoryGame -Port={{SERVER_PORT}} -ReliablePort={{RELIABLE_PORT}} -multihome=0.0.0.0"
+  },
+  "config": {
+    "files": {
+      "FactoryGame/Saved/Config/LinuxServer/Game.ini": {
+        "parser": "ini",
+        "find": {
+          "[/Script/Engine.GameSession].MaxPlayers": "{{server.environment.MAX_PLAYERS}}"
+        }
+      },
+      "FactoryGame/Saved/Config/LinuxServer/Engine.ini": {
+        "parser": "ini",
+        "find": {
+          "[/Script/FactoryGame.FGSaveSession].mNumRotatingAutosaves": "{{server.environment.NUM_AUTOSAVES}}",
+          "[/Script/OnlineSubsystemUtils.IpNetDriver].InitialConnectTimeout": "{{server.environment.INIT_CONNECT_TIMEOUT}}",
+          "[/Script/OnlineSubsystemUtils.IpNetDriver].ConnectionTimeout": "{{server.environment.CONNECT_TIMEOUT}}"
+        }
+      }
+    },
+    "startup": {
+      "done": "Engine Initialization"
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n\n# File: Pterodactyl Satisfactory Egg - egg-satisfactory.json\n# Authors: Red-Thirten, Kubi, matthewp, Software-Noob, and Zarklord\n# Date: 2024/09/10\n# License: MIT License\n\n## Download and install SteamCMD\ncd /tmp\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\nmkdir -p /mnt/server/steamcmd\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n# Install game server using SteamCMD\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login anonymous +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +exit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n# Set up 32 and 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk{32,64}\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Satisfactory setup\n# Check for successful installation and make the server binary executable.\n# Use `find` to see if a valid server binary exists using a wildcard, because\n# the binary name may change in the future.\n# (eg. it changed when the engine was updated from UE4 to UE5)\ncd /mnt/server/Engine/Binaries/Linux\ncount=$(find . -maxdepth 1 -name '*-Linux-Shipping' -type f -executable | wc -l)\nif [[ $count -eq 0 ]]; then\n    echo -e \"\\n\\nSteamCMD failed to install the Satisfactory Dedicated Server!\"\n    echo -e \"\\tTry reinstalling the server again.\\n\"\n    exit 1\nelse\n    chmod +x *-Linux-Shipping\nfi\n\necho -e \"\\nSatisfactory Dedicated Server successfully installed!\\n\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "/bin/bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Reliable messaging port",
+      "description": "Used for the first handshake between clients and the server. Octail assigns it from the server allocations. Players connect to the server's main port, not this one.",
+      "env_variable": "RELIABLE_PORT",
+      "default_value": "8888",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "min:0",
+        "max:65535"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Automatic Updates",
+      "description": "Quickly checks for any server updates on startup, and updates if necessary. (1 Enable | 0 Disable)",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Number of Rotating Autosaves",
+      "description": "Number of session auto-saves for the server to keep before the oldest save is deleted and the others are moved down the list.",
+      "env_variable": "NUM_AUTOSAVES",
+      "default_value": "3",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "min:0"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "[Experimental] Max Players",
+      "description": "The server and client are currently not optimized to support more than 4 players. However, you can override this value here at your own risk of poor performance.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "4",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "min:1"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "[Advanced] Client Initial Connection Timeout",
+      "description": "Time in seconds to wait for a new client connection to be established before destroying the connection.",
+      "env_variable": "INIT_CONNECT_TIMEOUT",
+      "default_value": "30",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "min:1"
+      ],
+      "sort": 5
+    },
+    {
+      "name": "[Advanced] Client Established Connection Timeout",
+      "description": "Time in seconds to wait before considering an established client connection timed out. Typically shorter than the time to wait on an initial connection because this connection should already have been setup and any interruption should be trapped quicker.",
+      "env_variable": "CONNECT_TIMEOUT",
+      "default_value": "20",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "min:1"
+      ],
+      "sort": 6
+    },
+    {
+      "name": "[Advanced] Branch Name",
+      "description": "[Accepted Values: \"public\", \"experimental\", or leave empty to use the primary branch of the server] Used to download or switch to a non-primary branch of the game server. \"Automatic Updates\" and \"Validate Server Files\" must be set to \"1\" to switch branches if the server is already installed. NOTE: Any non-primary branches may not be fully compatible/stable!",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "string",
+        "nullable",
+        "in:public,experimental"
+      ],
+      "sort": 7
+    },
+    {
+      "name": "[Repair] Validate Server Files",
+      "description": "Leave empty (no value) for OFF or type \"true\" or \"1\" for ON. Validates all server files when Automatic Updates is enabled. Note: This will significantly increase server startup times, so it is recommended to only enable this when needed.",
+      "env_variable": "VALIDATE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "string",
+        "nullable"
+      ],
+      "sort": 8
+    },
+    {
+      "name": "[System] Satisfactory Dedicated Server App ID",
+      "description": "Steam App ID used for installation and updates.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "1690800",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "in:1690800"
+      ],
+      "sort": 9
+    }
+  ],
+  "x_octail": {
+    "category": "Satisfactory",
+    "features": {
+      "rcon": {
+        "type": "satisfactory"
+      },
+      "port_vars": {
+        "RELIABLE_PORT": "primary+1"
+      },
+      "crash_files": [
+        "FactoryGame/Saved/Crashes/*/*.log",
+        "FactoryGame/Saved/Logs/FactoryGame.log"
+      ],
+      "sleep": {
+        "mode": "udp"
+      }
+    }
+  }
+}

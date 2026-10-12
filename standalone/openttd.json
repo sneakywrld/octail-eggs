@@ -1,0 +1,162 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-standalone openttd/egg-open-t-t-d-server.json (pelican-eggs, MIT licence). Octail changes the install script (\"latest\" OpenTTD and OpenGFX from the CDN's latest.yaml instead of the old 13.0-RC2, every download checked against the SHA-256 in the CDN's manifest, failures exit non-zero, and instead of the 1.8-era openttd.cfg from the old parkervcp/eggs path, which also overwrote the config on every reinstall because it looked in /home/container, a minimal openttd.cfg only when there is none) and the config edits for current OpenTTD (12+ keeps the server name in private.cfg and the password in secrets.cfg, and server_advertise became server_game_type), and adds the openttd tag, a password, max clients and max companies, autosave_on_exit so the stop (exit) saves to save/autosave/exit.sav and the next start loads it (-g; upstream started a new map every time), the port also on the command line (-D), generic TCP idle sleep (off until staff enable it per server), the say broadcast, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/openttd.json"
+  },
+  "exported_at": "2024-10-21T19:12:22+00:00",
+  "name": "OpenTTD",
+  "author": "admin@justmyrandomstuff.com",
+  "uuid": "878470b2-369e-4629-95db-7e5fe0eafb99",
+  "description": "OpenTTD is an open source simulation game based upon the popular Microprose game \"Transport Tycoon Deluxe\", written by Chris Sawyer. It attempts to mimic the original game as closely as possible while extending it with new features.\r\n\r\nOpenTTD is modelled after the original Transport Tycoon game by Chris Sawyer and enhances the game experience dramatically. Many features were inspired by TTDPatch while others are original.",
+  "features": [],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "./openttd -D 0.0.0.0:{{SERVER_PORT}} $( [ -f save/autosave/exit.sav ] && printf %s '-g save/autosave/exit.sav' )",
+  "config": {
+    "files": "{\n    \"openttd.cfg\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"network.server_port\": \"{{server.allocations.default.port}}\",\n            \"network.server_game_type\": \"{{server.environment.SERVER_GAME_TYPE}}\",\n            \"network.max_clients\": \"{{server.environment.MAX_CLIENTS}}\",\n            \"network.max_companies\": \"{{server.environment.MAX_COMPANIES}}\",\n            \"gui.autosave_on_exit\": \"true\"\n        }\n    },\n    \"private.cfg\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"network.server_name\": \"{{server.environment.srv_name}}\"\n        }\n    },\n    \"secrets.cfg\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"network.server_password\": \"{{server.environment.SERVER_PASSWORD}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Map generated, starting game\"\n}",
+    "logs": "{}",
+    "stop": "exit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# OpenTTD installation script (pelican-eggs, changed for Octail: \"latest\" versions from the CDN, every download checked\n# against the SHA-256 in the CDN's manifest, failures exit non-zero, a minimal openttd.cfg only when there is none)\n#\n# Server Files: /mnt/server\nset -e\napk add --no-cache xz curl tar unzip\n\nCDN=https://cdn.openttd.org\nmkdir -p /mnt/server\ncd /mnt/server\n\n## the newest stable release of openttd or opengfx\nlatest() {\n    curl -fsSL \"$CDN/$1-releases/latest.yaml\" | awk '$1 == \"-\" && $2 == \"version:\" { v = $3 } $1 == \"name:\" && $2 == \"stable\" { print v; exit }'\n}\n## download $CDN/<folder>/<file> to /tmp/<file> and check it against the folder's manifest\nfetch() {\n    SUM=$(curl -fsSL \"$CDN/$1/manifest.yaml\" | awk -v f=\"$2\" '$1 == \"-\" && $2 == \"id:\" { found = ($3 == f) } found && $1 == \"sha256sum:\" { print $2; exit }')\n    if [ -z \"$SUM\" ]; then\n        echo \"Installation failed: $2 isn't on cdn.openttd.org (check the version).\"\n        exit 1\n    fi\n    echo \"Downloading $CDN/$1/$2\"\n    curl -fsSL -o \"/tmp/$2\" \"$CDN/$1/$2\"\n    echo \"$SUM  /tmp/$2\" | sha256sum -c -\n}\n\nOPENTTD=\"${OPENTTD_VERSION:-latest}\"\n[ \"$OPENTTD\" = \"latest\" ] && OPENTTD=$(latest openttd)\nOPENGFX=\"${OPENGFX_VERSION:-latest}\"\n[ \"$OPENGFX\" = \"latest\" ] && OPENGFX=$(latest opengfx)\nif [ -z \"$OPENTTD\" ] || [ -z \"$OPENGFX\" ]; then\n    echo \"Installation failed: the latest versions couldn't be read from cdn.openttd.org.\"\n    exit 1\nfi\n\nfetch \"openttd-releases/$OPENTTD\" \"openttd-$OPENTTD-linux-generic-amd64.tar.xz\"\ntar -xJf \"/tmp/openttd-$OPENTTD-linux-generic-amd64.tar.xz\" --strip-components=1 -C /mnt/server\nchmod +x openttd\n\nfetch \"opengfx-releases/$OPENGFX\" \"opengfx-$OPENGFX-all.zip\"\nmkdir -p /tmp/opengfx baseset\nunzip -o -q \"/tmp/opengfx-$OPENGFX-all.zip\" -d /tmp/opengfx\ntar -xf /tmp/opengfx/opengfx-*.tar --strip-components=1 -C baseset\nrm -rf /tmp/opengfx /tmp/opengfx-*.zip /tmp/openttd-*.tar.xz\n\n## Octail: a minimal openttd.cfg (current ini version, saves on exit), only when there is none; OpenTTD fills in the\n## rest, and Octail sets the port, name, password and limits before every start\nif [ ! -f openttd.cfg ]; then\n    printf '[version]\\nini_version = 7\\n\\n[gui]\\nautosave_on_exit = true\\n\\n[network]\\nserver_game_type = public\\n' > openttd.cfg\nfi\n\nif [ ! -x /mnt/server/openttd ]; then\n    echo \"Installation failed: the OpenTTD server is missing.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: OpenTTD $OPENTTD with OpenGFX $OPENGFX.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name shown in the server list (up to 80 characters, no double quotes or backslashes).",
+      "env_variable": "srv_name",
+      "default_value": "OpenTTD Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\]*$/",
+        "max:80"
+      ],
+      "sort": 1,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Listing",
+      "description": "public: in the in-game server list; invite-only: players join with the invite code (shown in the console); local: only on the local network and by address.",
+      "env_variable": "SERVER_GAME_TYPE",
+      "default_value": "public",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:public,invite-only,local"
+      ],
+      "sort": 2,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password. No double quotes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"\\\\]*$/",
+        "max:64"
+      ],
+      "sort": 3,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Clients",
+      "description": "How many players may be connected at once (2-255).",
+      "env_variable": "MAX_CLIENTS",
+      "default_value": "25",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:2,255"
+      ],
+      "sort": 4,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Companies",
+      "description": "How many companies may exist at once (1-15).",
+      "env_variable": "MAX_COMPANIES",
+      "default_value": "15",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,15"
+      ],
+      "sort": 5,
+      "field_type": "text"
+    },
+    {
+      "name": "OpenTTD Version",
+      "description": "latest (the newest stable release) or a version such as 15.3 or 16.0-beta4. Reinstall to switch.",
+      "env_variable": "OPENTTD_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^(latest|\\d+\\.\\d+(\\.\\d+)?(-[A-Za-z]+\\d*)?)$/",
+        "max:20"
+      ],
+      "sort": 6,
+      "field_type": "text"
+    },
+    {
+      "name": "OpenGFX Version",
+      "description": "The base graphics: latest or a version such as 8.0. Reinstall to switch.",
+      "env_variable": "OPENGFX_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^(latest|\\d+\\.\\d+(\\.\\d+)?)$/",
+        "max:20"
+      ],
+      "sort": 7,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "openttd"
+  ],
+  "x_octail": {
+    "category": "OpenTTD",
+    "features": {
+      "sleep": {
+        "mode": "tcp"
+      },
+      "broadcast_command": "say \"{message}\"",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

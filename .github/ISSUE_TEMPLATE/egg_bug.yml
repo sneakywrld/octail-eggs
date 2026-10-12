@@ -1,0 +1,65 @@
+name: Egg bug
+description: An egg doesn't install, doesn't start, or a variable, port or feature doesn't work.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Remove passwords, tokens, Steam credentials and IP addresses you don't want public
+        from logs before pasting. Problems with a runtime image itself (a missing library, the entrypoint) belong in
+        [octail-yolks](https://github.com/sneakywrld/octail-yolks/issues/new/choose).
+  - type: input
+    id: egg
+    attributes:
+      label: Egg
+      description: The egg's file in this repository.
+      placeholder: steam/palworld.json
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Egg version
+      description: When you imported or last updated it (or the commit of this repository), and whether you edited it.
+      placeholder: imported 2026-10-01, not edited
+  - type: input
+    id: image
+    attributes:
+      label: Runtime image
+      description: The image the server uses (Startup tab).
+      placeholder: ghcr.io/sneakywrld/octail-yolks:steamcmd_debian
+  - type: input
+    id: panel
+    attributes:
+      label: Panel and node
+      description: Octail version, node OS, architecture and container runtime (Docker or Podman).
+      placeholder: Octail 1.4.0, Debian 12 amd64, Docker 27.3
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Where it fails
+      options:
+        - Install / reinstall
+        - Server start
+        - While running (console, RCON, players, sleep, ...)
+        - Update / Check for updates
+        - Import
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what happened instead. Non-default variable values help.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The install log or the server console from the start (including the `container~` line).
+      render: text
+    validations:
+      required: true

@@ -1,0 +1,155 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd astroneer/egg-astroneer-dedicated-server.json (pelican-eggs, MIT licence). Octail fixes the config edits ({{server.environment.X}} instead of {{env.X}}, Octail's section.key form instead of [section].key, the URL section's case, no PlayerProperties line that overwrote the server's player list), writes Engine.ini and AstroServerSettings.ini in the install when they are missing (so the edits land from the first start, with encryption off, which Proton needs), and adds the astroneer tag, the no_console_input flag (Proton reads no commands), install sandbox defaults and resource hints, makes the public IP optional (empty = the allocation's IP when it isn't 0.0.0.0, else the address api.ipify.org sees, as AstroLauncher does: the server does not start without one) and checked as an IP, shows the engine log (Astro/Saved/Logs/Astro.log) on the console and detects the start from it (upstream's start line was a Wine notice printed before the game runs), the owner name and Guid optional, refuses double quotes and backslashes in the names, turns the Proton debug log off (it grows by gigabytes), waits for the server when the stop (Ctrl+C) arrives so the container ends with it, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The start also counts once the game port (UDP) is bound (x_octail.features.ready): under Proton Astro.log can stay empty, so the start lines may never show.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/astroneer.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Astroneer",
+  "author": "melethainiel.aerin@gmail.com",
+  "uuid": "165ead11-926d-4b3b-a5d8-86c73d09427c",
+  "description": "A game of aerospace industry and interplanetary exploration.",
+  "tags": [
+    "astroneer",
+    "steamcmd",
+    "proton"
+  ],
+  "features": null,
+  "docker_images": {
+    "Proton": "ghcr.io/sneakywrld/octail-yolks:proton"
+  },
+  "file_denylist": [],
+  "startup": "if [ -z \"${PUBLIC_IP}\" ]; then ASTRO_IP=${SERVER_IP}; if [ -z \"${ASTRO_IP}\" ] || [ \"${ASTRO_IP}\" = \"0.0.0.0\" ]; then ASTRO_IP=$(curl -fsS --max-time 10 https://api.ipify.org || true); fi; if [[ ${ASTRO_IP} =~ ^[0-9]{1,3}(\\.[0-9]{1,3}){3}$ ]]; then echo \"Octail: Public IP is empty, using ${ASTRO_IP}.\"; sed -i \"s/^PublicIP=$/PublicIP=${ASTRO_IP}/\" Astro/Saved/Config/WindowsServer/AstroServerSettings.ini; else echo \"Octail: set Public IP on the Startup tab; without it the server does not start.\"; fi; fi; proton run ./Astro/Binaries/Win64/AstroServer-Win64-Shipping.exe & ASTRO_PID=$!; tail -c0 -F ./Astro/Saved/Logs/Astro.log --pid=${ASTRO_PID} 2>/dev/null & trap \"wait ${ASTRO_PID}\" INT TERM; wait ${ASTRO_PID}",
+  "config": {
+    "files": "{\n    \"Astro/Saved/Config/WindowsServer/Engine.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"URL.Port\": \"{{server.allocations.default.port}}\",\n            \"SystemSettings.net.AllowEncryption\": \"False\"\n        }\n    },\n    \"Astro/Saved/Config/WindowsServer/AstroServerSettings.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"/Script/Astro.AstroServerSettings.PublicIP\": \"{{server.environment.PUBLIC_IP}}\",\n            \"/Script/Astro.AstroServerSettings.ServerName\": \"{{server.environment.SERVER_NAME}}\",\n            \"/Script/Astro.AstroServerSettings.OwnerName\": \"{{server.environment.OWNER_NAME}}\",\n            \"/Script/Astro.AstroServerSettings.OwnerGuid\": \"{{server.environment.OWNER_GUID}}\",\n            \"/Script/Astro.AstroServerSettings.ServerPassword\": \"{{server.environment.SERVER_PWD}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"LogInit: Display: Engine is initialized.\",\n        \"IpNetDriver listening on port\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\necho -e \"steam user is not set.\\n\"\necho -e \"Using anonymous user.\\n\"\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\nelse\necho -e \"user set to ${STEAM_USER}\"\nfi\n## download and install steamcmd\n## install end\necho \"-----------------------------------------\"\necho \"Install steamcmd\"\necho \"-----------------------------------------\"\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n## install game using steamcmd\n## install end\necho \"-----------------------------------------\"\necho \"Install game\"\necho \"-----------------------------------------\"\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/Astro/Binaries/Win64/AstroServer-Win64-Shipping.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Astroneer dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n## Octail: the config files exist from the first start (Octail edits them before every start); the server needs\n## encryption off to run under Proton\nmkdir -p /mnt/server/Astro/Saved/Config/WindowsServer\nif [[ ! -f /mnt/server/Astro/Saved/Config/WindowsServer/Engine.ini ]]; then\n    printf '[URL]\\nPort=7777\\n\\n[SystemSettings]\\nnet.AllowEncryption=False\\n' > /mnt/server/Astro/Saved/Config/WindowsServer/Engine.ini\nelif ! grep -q \"^net.AllowEncryption=\" /mnt/server/Astro/Saved/Config/WindowsServer/Engine.ini; then\n    printf '\\n[SystemSettings]\\nnet.AllowEncryption=False\\n' >> /mnt/server/Astro/Saved/Config/WindowsServer/Engine.ini\nfi\nif [[ ! -f /mnt/server/Astro/Saved/Config/WindowsServer/AstroServerSettings.ini ]]; then\n    printf '[/Script/Astro.AstroServerSettings]\\nPublicIP=\\nServerName=\\nOwnerName=\\nOwnerGuid=\\nServerPassword=\\n' > /mnt/server/Astro/Saved/Config/WindowsServer/AstroServerSettings.ini\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Public IP",
+      "description": "The server's public IPv4 address, which players connect to. Empty = the server's own IP when it has one (not 0.0.0.0), else the address api.ipify.org sees. The server does not start without one.",
+      "env_variable": "PUBLIC_IP",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|ip",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Owner Name",
+      "description": "Optional but recommended: the Steam name of the server owner, who becomes its admin.",
+      "env_variable": "OWNER_NAME",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Owner Guid",
+      "description": "Optional: the owner's Guid; Astroneer fills it in when the owner first joins.",
+      "env_variable": "OWNER_GUID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "If specified, players must provide this password to join the server.",
+      "env_variable": "SERVER_PWD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|alpha_dash|between:1,100",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Automatic Updates",
+      "description": "Quickly checks for any server updates on startup, and updates if necessary. (1 Enable | 0 Disable)",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "[Advanced] Windows Install",
+      "description": "Windows Install",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "[Advanced] Steam App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "728470",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:728470",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "PROTON_LOG",
+      "description": "Proton's debug log (steam-728470.log). Off: it grows by gigabytes.",
+      "env_variable": "PROTON_LOG",
+      "default_value": "0",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The server name (up to 60 characters, no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Astroneer Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\]*$/|max:60",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Astroneer",
+    "features": {
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      }
+    }
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "_comment": "Octail egg for any SteamCMD dedicated server (plan §6.4). Install script adapted from pelican-eggs/games-steamcmd (MIT licence). Set the app id and the startup command per game; anonymous SteamCMD only. Generic UDP idle sleep (off until staff enable it per server).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steamcmd/generic.json"
+  },
+  "uuid": "0192f000-0000-7000-8000-00000057ea30",
+  "name": "Generic SteamCMD game",
+  "author": "octail@meowgafactory.com",
+  "description": "Installs any dedicated server that SteamCMD can download anonymously (Valheim, Palworld, 7 Days to Die, Project Zomboid, ...). Set the Steam app id, the server binary and its arguments; AUTO_UPDATE re-runs SteamCMD on every start.",
+  "tags": [
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian",
+    "SteamCMD (Proton)": "ghcr.io/sneakywrld/octail-yolks:proton"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./{{SERVER_BINARY}} {{SERVER_ARGS}}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": []
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Generic SteamCMD install (Octail). Server files: /mnt/server\nset -e\n\nif [ -z \"${SRCDS_APPID}\" ]; then\n    echo \"SRCDS_APPID is not set: give the egg variable 'Steam app id' a value.\"\n    exit 1\nfi\n\n## SteamCMD\ncd /tmp\nmkdir -p /mnt/server/steamcmd /mnt/server/steamapps\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise, even as root. Tentacle gives the files back to the server user afterwards.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\nBETA=\"\"\nif [ -n \"${SRCDS_BETAID}\" ]; then BETA=\"-beta ${SRCDS_BETAID}\"; fi\nif [ -n \"${SRCDS_BETAPASS}\" ]; then BETA=\"${BETA} -betapassword ${SRCDS_BETAPASS}\"; fi\nPLATFORM=\"\"\nif [ \"${WINDOWS_INSTALL}\" == \"1\" ]; then PLATFORM=\"+@sSteamCmdForcePlatformType windows\"; fi\n\n# Anonymous login only (logged-in Steam accounts come with plan §6.7). SteamCMD sometimes exits\n# non-zero on the first run while it updates itself, so try up to three times.\nfor attempt in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login anonymous ${PLATFORM} +app_update ${SRCDS_APPID} ${BETA} validate +quit; then\n        break\n    fi\n    echo \"SteamCMD failed (attempt ${attempt}).\"\n    if [ \"${attempt}\" == \"3\" ]; then exit 1; fi\ndone\n\n## Steam client libraries many servers need\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so || true\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so || true\n\nif [ -n \"${SERVER_BINARY}\" ] && [ -f \"/mnt/server/${SERVER_BINARY}\" ]; then\n    chmod +x \"/mnt/server/${SERVER_BINARY}\"\nfi\necho \"SteamCMD install of app ${SRCDS_APPID} finished.\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Steam app id",
+      "description": "The dedicated server's Steam app id, for example 896660 for Valheim or 2394010 for Palworld (see https://developer.valvesoftware.com/wiki/Dedicated_Servers_List).",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "regex:/^[0-9]{1,10}$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server binary",
+      "description": "The file to run, relative to the server folder, for example valheim_server.x86_64.",
+      "env_variable": "SERVER_BINARY",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:200"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Server arguments",
+      "description": "Arguments after the binary. Most games need the port: the server's main port is in the SERVER_PORT environment variable.",
+      "env_variable": "SERVER_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "max:1000"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Automatic updates",
+      "description": "Run SteamCMD on every start to update the game (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "Beta branch",
+      "description": "Leave empty for the default branch.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.-]*$/",
+        "max:64"
+      ],
+      "sort": 5
+    },
+    {
+      "name": "Beta branch password",
+      "description": "Only for branches that need one.",
+      "env_variable": "SRCDS_BETAPASS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:64"
+      ],
+      "sort": 6
+    },
+    {
+      "name": "Windows build",
+      "description": "1 downloads the Windows build (run it with the Proton image).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": 7
+    }
+  ],
+  "x_octail": {
+    "category": "SteamCMD",
+    "features": {
+      "sleep": {
+        "mode": "udp"
+      }
+    }
+  }
+}

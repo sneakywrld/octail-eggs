@@ -1,0 +1,350 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd thefront/egg-the-front.json (pelican-eggs, MIT licence). Octail adds the the-front tag, automatic beacon, query and shutdown-service ports instead of fixed defaults (upstream gave query and shutdown the same 27017), the Steam query (A2S) for player counts, the no_console_input flag (the server reads no console commands), install sandbox defaults and resource hints, refuses double quotes and backslashes in the server name, limits the config name to letters, digits, - and _ (it is a folder name), the password to one word, admins to Steam IDs and tags to the documented numbers, stops with Ctrl+C (upstream's ^^C was a kill), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v1",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/the-front.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "The Front",
+  "author": "eggs@goover.dev",
+  "uuid": "cdab0d81-2c29-416e-9766-4e7c17a55533",
+  "description": "The Front is a survival open-world crafting shooter. You play the role of a resistance fighter sent back in time to stop the rise of a tyrannical empire.",
+  "tags": [
+    "the-front",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./ProjectWar/Binaries/Linux/TheFrontServer  ProjectWar_Start?DedicatedServer -server -game -log -ServerTags=\"{{SRV_TAGS}}\" -UseSteamSocket={{STEAMSOCKET}} -Port=\"{{SERVER_PORT}}\" -BeaconPort=\"{{BEACON_PORT}}\" -ShutDownServicePort=\"{{SHUTDOWN_PORT}}\" -QueryPort=\"{{QUERY_PORT}}\" -ConfigServerName=\"{{CFG_NAME}}\" -OutIPAddress={{SERVER_IP}} -UserDir=\"/home/container/TheFrontManager/{{CFG_NAME}}/\" -ServerName=\"{{SRV_NAME}}\" -EnableParallelCharacterMovementTickFunction -EnableParallelCharacterTickFunction -UseDynamicPhysicsScene -Game.PhysicsVehicle=false -ansimalloc -Game.MaxFrameRate=35 -MaxQueueSize=50 -QueueValidTime=120 -QueueThreshold={{MAX_PLAYERS}} -ServerFightModeType={{GAMEMODE}} -IsCanSelfDamage={{SELFDMG}} -IsCanFriendDamage={{DMGALLIES}} -SaveWorldInterval={{SRV_SAVETIME}} -GMOverlapRatio=2 -GreenHand={{GREENHAND}} -SensitiveWords={{SENSITIVE_WORDS}} -UseACE={{ANTI_CHEAT}} -ServerAdminAccounts=\"{{SRV_ADMIN}}\" -IsShowGmTitle={{ADMIN_LABEL}} -ServerPassword={{SRV_PW}}",
+  "config": {
+    "files": "{}",
+    "startup": "{\r\n    \"done\": \"LogLoad: (Engine Initialization) \"\r\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\nclear\nRED='\\033[0;31m'\nGREEN='\\033[0;32m'\nYELLOW='\\033[1;33m'\nBLUE='\\033[0;34m'\nNC='\\033[0m'\n\necho -e \"${BLUE}-------------------------------------------------${NC}\"\necho -e \"${YELLOW}The Front  Installscript${NC}\"\necho -e \"${YELLOW}Egg by gOOvER | https://goover.dev${NC}\"\necho -e \"${BLUE}-------------------------------------------------${NC}\"\n\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates jq dos2unix\n\necho -e \"${BLUE}-------------------------------------------------${NC}\"\necho -e \"${YELLOW}download and install steamcmd. please wait...${NC}\"\necho -e \"${BLUE}-------------------------------------------------${NC}\"\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\necho -e \"${GREEN}..done..${NC}\"\n\n## install game using steamcmd\necho -e \"${BLUE}-------------------------------------------------${NC}\"\necho -e \"${YELLOW}install game using steamcmd. please wait...${NC}\"\necho -e \"${BLUE}-------------------------------------------------${NC}\"\n\n## other flags may be needed depending on install. looking at you cs 1.6\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update 1007 +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\necho -e \"${GREEN}..done..${NC}\"\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/ProjectWar/Binaries/Linux/TheFrontServer\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the The Front dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/ProjectWar/Binaries/Linux/TheFrontServer\n\n## install end\necho -e \"${BLUE}-------------------------------------------------${NC}\"\necho -e \"${GREEN}Installation completed...${NC}\"\necho -e \"${BLUE}-------------------------------------------------${NC}\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": null,
+      "name": "[SERVER] Server Name",
+      "description": "The name in the server list (no double quotes or backslashes).",
+      "env_variable": "SRV_NAME",
+      "default_value": "Pterodactyl hosted Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\]*$/",
+        "max:50"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Max Players",
+      "description": "The max number of players on your server.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "10",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,80"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Config Name",
+      "description": "Name of the save (a folder in TheFrontManager/): letters, digits, - and _ only.",
+      "env_variable": "CFG_NAME",
+      "default_value": "new",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "alpha_dash",
+        "max:20"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Server Password",
+      "description": "Optional: players must enter it to join. One word, no quotes.",
+      "env_variable": "SRV_PW",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\\s\"'\\\\]*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] PvE",
+      "description": "off = PvP; on = PvE",
+      "env_variable": "GAMEMODE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Use Steam Socket",
+      "description": "Use Steam servers for network penetration. Enable this if you don't have a public IP but you want to allow players from outside your network to join your server. If disabled, only you and other players on your LAN can join. If you have a public IP, you do not need to enable this. Enabling this feature will affect latency. When Steam servers are busy, you may not be able to join this server.",
+      "env_variable": "STEAMSOCKET",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Damage self?",
+      "description": "Allows players to damage themselves.",
+      "env_variable": "SELFDMG",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Damage allies?",
+      "description": "Allows squadmates to damage each other.",
+      "env_variable": "DMGALLIES",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Server Admins",
+      "description": "Enter a 17-digit Steam ID. Use semicolons between each ID. GM level defaults to highest level (Lv. 25)",
+      "env_variable": "SRV_ADMIN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[0-9]{17}(;[0-9]{17})*;?$/"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[ADVANCED] Label admin",
+      "description": "Toggles special admin icon.",
+      "env_variable": "ADMIN_LABEL",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[ADVANCED] Server save interval",
+      "description": "Server archive interval (in seconds)",
+      "env_variable": "SRV_SAVETIME",
+      "default_value": "300",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:150,600"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[ADVANCED] Enable novice protection?",
+      "description": "When enabled, new characters will receive novice protection.",
+      "env_variable": "GREENHAND",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[ADVANCED] Server Tags",
+      "description": "Up to 5 tag numbers separated by commas, e.g. 1,4: 0 = PvP, 1 = PvE, 2 = EXP multiplier, 3 = gathering rate, 4 = keep inventory, 5 = 45-day wipe, 6 = 15-day wipe, 7 = 30-day wipe, 8 = 60-day wipe.",
+      "env_variable": "SRV_TAGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[0-8](,[0-8]){0,4}$/"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[ADVANCED] Enable anticheat?",
+      "description": "Toggles anticheat.",
+      "env_variable": "ANTI_CHEAT",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[ADVANCED] Enable profanity?",
+      "description": "When disable, profanity will be blocked.",
+      "env_variable": "SENSITIVE_WORDS",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] Auto Update",
+      "description": "Autoupdate your Server on start/restart",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SYSTEM] SRCDS_APPID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "2334200",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:20"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] BeaconPort",
+      "description": "Set by Octail when the server is created (one after the game port).",
+      "env_variable": "BEACON_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] QueryPort",
+      "description": "Set by Octail when the server is created (two after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27017",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "[SERVER] ShutDownServicePort",
+      "description": "Set by Octail when the server is created (three after the game port).",
+      "env_variable": "SHUTDOWN_PORT",
+      "default_value": "27018",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": null,
+      "name": "WINDOWS_INSTALL",
+      "description": "DO NOT REMOVE !!!",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "boolean"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "The Front",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "BEACON_PORT": "primary+1",
+        "QUERY_PORT": "primary+2",
+        "SHUTDOWN_PORT": "primary+3"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 12288
+      }
+    }
+  }
+}

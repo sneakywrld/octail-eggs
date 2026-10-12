@@ -1,0 +1,211 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd palworld/egg-palworld.yaml (pelican-eggs, MIT licence), converted to JSON. Console input goes through the egg's own in-container RCON client, as upstream (the RCON port stays inside the container). Octail adds the palworld tag, generic UDP idle sleep (off until staff enable it per server), install sandbox defaults and resource hints. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/palworld.json"
+  },
+  "exported_at": "2026-07-11T16:15:38+00:00",
+  "name": "Palworld",
+  "author": "admin@ballaual.de",
+  "uuid": "ca527103-3e6e-4fa0-9a1f-ea468e314293",
+  "description": "Fight, farm, build and work alongside mysterious creatures called \"Pals\" in this completely new\nmultiplayer, open world survival and crafting game!",
+  "tags": [
+    "palworld",
+    "steamcmd"
+  ],
+  "icon": null,
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD_Debian": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [
+    "PalServer.sh"
+  ],
+  "startup_commands": {
+    "Default": "./PalworldServerConfigParser; (while read cmd; do rcon -s -a \"localhost:$RCON_PORT\" -p \"$ADMIN_PASSWORD\" \"$cmd\";done) < /dev/stdin & /home/container/Pal/Binaries/Linux/PalServer-Linux-Shipping Pal -publiclobby -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS -port={{SERVER_PORT}} -publicport={{SERVER_PORT}} -servername=\"{{SERVER_NAME}}\" -players={{MAX_PLAYERS}} $(if [ -n \"$SERVER_PASSWORD\" ]; then echo \"-serverpassword=\\\"${SERVER_PASSWORD}\\\"\"; fi) -adminpassword=\"{{ADMIN_PASSWORD}}\" -rcon"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": "Setting breakpad minidump AppID = 2394010"
+    },
+    "logs": {},
+    "stop": "shutdown 15"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## other flags may be needed depending on install. looking at you cs 1.6\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n## add below your custom commands if needed\n\n## copy template config file\necho \"Copy template config file into config folder!\"\nif [ -f \"/mnt/server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini\" ]; then\n    echo \"Config file already exitis, backing up and overwriting with a new one\"\n    mv /mnt/server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini /mnt/server/Pal/Saved/Config/LinuxServer/PalWorldSettings_$(date +\"%Y%m%d%H%M%S\").ini\n    cp /mnt/server/DefaultPalWorldSettings.ini /mnt/server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini\nelse\n    echo \"Creating new config file\"\n    mkdir -p /mnt/server/Pal/Saved/Config/LinuxServer\n    cp /mnt/server/DefaultPalWorldSettings.ini /mnt/server/Pal/Saved/Config/LinuxServer/PalWorldSettings.ini\nfi\n\ncd /mnt/server\n# Download self made replace tool\necho \"Downloading config parser application\"\ncurl -sSL -o PalworldServerConfigParser https://github.com/pelican-eggs/Palworld-Config-Parser-Tool/releases/latest/download/PalworldServerConfigParser-linux-amd64\nchmod +x PalworldServerConfigParser\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "App ID",
+      "description": "Do not edit!",
+      "env_variable": "SRCDS_APPID",
+      "default_value": 2394010,
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:2394010"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Auto Update",
+      "description": "Auto update the server on start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": 1,
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Max Players",
+      "description": "",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": 32,
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "between:1,32"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Admin Password",
+      "description": "If specified, players must provide this password (via the in-game chat or RCON) to gain access to\nadministrator commands on the server.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "alpha_dash",
+        "between:1,30"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "Public IP",
+      "description": "Set this to the server public ip address.\r\nOnly needed if the allocation is a local ip, else the allocate ip will be used automatically",
+      "env_variable": "PUBLIC_IP",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string"
+      ],
+      "sort": 5
+    },
+    {
+      "name": "Server Name",
+      "description": "",
+      "env_variable": "SERVER_NAME",
+      "default_value": "A Pterodactyl hosted Palworld Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64"
+      ],
+      "sort": 6
+    },
+    {
+      "name": "Server Password",
+      "description": "If specified, players must provide this password to join the server.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "between:1,30"
+      ],
+      "sort": 7
+    },
+    {
+      "name": "RCON Port",
+      "description": "Does not need to be allocated!",
+      "env_variable": "RCON_PORT",
+      "default_value": 25575,
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "numeric"
+      ],
+      "sort": 8
+    },
+    {
+      "name": "Enable RCON",
+      "description": "Must Be ON",
+      "env_variable": "RCON_ENABLE",
+      "default_value": "True",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:True"
+      ],
+      "sort": 9
+    },
+    {
+      "name": "Server Description",
+      "description": "The description of the server.",
+      "env_variable": "SERVER_DESCRIPTION",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:128"
+      ],
+      "sort": 10
+    },
+    {
+      "name": "Crossplay Platforms",
+      "description": "Comma-separated list of platforms allowed to connect. Valid values: Steam, Xbox, PS5, Mac. Example:\nSteam,Xbox,PS5,Mac",
+      "env_variable": "CROSSPLAY_PLATFORMS",
+      "default_value": "Steam,Xbox,PS5,Mac",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string"
+      ],
+      "sort": 11
+    }
+  ],
+  "x_octail": {
+    "category": "Palworld",
+    "features": {
+      "sleep": {
+        "mode": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 16384,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

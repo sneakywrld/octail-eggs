@@ -1,0 +1,94 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd barotrauma/egg-barotrauma.json (pelican-eggs, MIT licence). Octail passes the game port and an automatic query port on the command line (-port, -queryport; upstream left both at serversettings.xml's 27015/27016), makes the install fail when SteamCMD didn't download the server, and adds the barotrauma tag, a working console, generic UDP idle sleep (off until staff enable it per server), install sandbox defaults and resource hints. Console: the server's DebugConsole (BarotraumaServer DebugConsole.UpdateCommandLine) only reads commands with Console.KeyAvailable/ReadKey when neither stdin nor stdout is redirected, and has no RCON, stdin-line mode or command-line switch for it, so upstream's `| sed` colour filter (which redirects stdout and so turns command input off) is dropped: the server runs straight on the container's TTY. There .NET's Console.CursorLeft/CursorTop send cursor position queries (ESC[6n) and block the game's main thread until a terminal answers; the tty_answers flag makes Tentacle answer them on stdin and keep only colours of the escape codes (strip_ansi keeps the persistent log plain). Commands typed in the web console arrive as keys ending in Enter; broadcasts (maintenance countdowns) use `say`, which the server shows as \"HOST: …\" in the chat. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/barotrauma.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Barotrauma",
+  "author": "admin@softwarenoob.com",
+  "uuid": "6ef6233c-a525-47c9-9e7a-f3a40258c3bf",
+  "description": "Barotrauma is a 2D co-op survival horror submarine simulator, inspired by games like FTL: Faster Than Light, Rimworld, Dwarf Fortress and Space Station 13. It’s a Sci-Fi game that combines ragdoll physics and alien sea monsters with teamwork and existential fear.",
+  "tags": [
+    "barotrauma",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./DedicatedServer -batchmode -port {{SERVER_PORT}} -queryport {{QUERY_PORT}}",
+  "config": {
+    "files": "{}",
+    "startup": "{\r\n    \"done\": \"Server started\"\r\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## add below your custom commands if needed\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/DedicatedServer\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Barotrauma dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "SRCDS_APPID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "1026340",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:1026340",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "1 = on; 0 = off",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Query Port",
+      "description": "Steam query port, passed with -queryport. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": 3,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Barotrauma",
+    "features": {
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "tty_answers": true,
+      "strip_ansi": true,
+      "broadcast_command": "say {message}",
+      "sleep": {
+        "mode": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 4096
+      }
+    }
+  }
+}

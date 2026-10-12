@@ -1,0 +1,136 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd hurtworld/egg-hurtworld.json (pelican-eggs, MIT licence). Octail adds the hurtworld tag (the uMod tool), an automatic query port instead of the fixed 13871, the Steam query (A2S) on it for player counts, install sandbox defaults and resource hints, refuses ; \" and \\ in the server name (it is part of the quoted -exec command list, where ; starts another command), makes the owner's Steam ID optional (addadmin only when set, 17 digits), max players an integer 1-60 (upstream limited the text length), stops with Ctrl+C instead of a kill, drops the unset $1 after -logfile, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/hurtworld.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Hurtworld",
+  "author": "brycea@terrahost.cloud",
+  "uuid": "a0574872-4d56-4eb1-8359-ea748c52d1bf",
+  "description": "Hurtworld is a hardcore multiplayer survival FPS with a focus on deep survival progression that doesn't become trivial once you establish some basic needs. Built for hardcore gamers, Hurtworld aims to punish.",
+  "tags": [
+    "hurtworld",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./Hurtworld.x86_64 -batchmode -nographics -exec \"host {{SERVER_PORT}};queryport {{QUERY_PORT}};maxplayers {{MAX_PLAYERS}};servername {{HOSTNAME}};creativemode {{CREATIVE_MODE}}$( [ -z \"${ADMINS}\" ] || printf ';addadmin %s' \"${ADMINS}\" )\" -logfile",
+  "config": {
+    "files": "{}",
+    "startup": "{\r\n    \"done\": \"orphaned items\"\r\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/Hurtworld.x86_64\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Hurtworld dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/Hurtworld.x86_64\n\n## copy 32-bit steamclient.so\ncp -v linux32/steamclient.so ../Hurtworld_Data/Plugins/x86/steamclient.so\n\n## copy 64-bit steamclient.so\ncp -v linux64/steamclient.so ../Hurtworld_Data/Plugins/x86_64/steamclient.so\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "/bin/bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Game ID",
+      "description": "The ID corresponding to the game to download and run using SRCDS.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "405100",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:405100",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "13871",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Max players allowed on the server at one time (1-60).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "60",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,60",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name of your server in the public server list (up to 50 characters; no ; \" or \\).",
+      "env_variable": "HOSTNAME",
+      "default_value": "A Hurtworld Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^;\"\\\\]*$/|max:50",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Owner Steam ID",
+      "description": "Optional: the 17-digit Steam ID (7656…) of the server owner, made admin at every start. Empty = none.",
+      "env_variable": "ADMINS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^\\d{17}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Creative Mode",
+      "description": "Turn creative mode on and off (free build). Value as 0 for off, 1 for on.",
+      "env_variable": "CREATIVE_MODE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "AUTO_UPDATE",
+      "description": "Disabling or enabling automated updates on boot.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Hurtworld",
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

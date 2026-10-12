@@ -1,0 +1,116 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd truck-simulator/euro-truck-simulator2/egg-euro-truck-simulator2-dedicated-server.json (pelican-eggs, MIT licence). Octail stops the server with Ctrl+C instead of a kill (^^C), adds an automatic query port instead of the fixed 27016, a lobby name without quotes (it is written into server_config.sii), the euro-truck-simulator-2 tags, the no_console_input flag, the Steam query (A2S) for player counts, install sandbox defaults and resource hints. **Install script fixed**: config files from raw.githubusercontent.com at the pinned games-steamcmd commit instead of the old parkervcp/eggs master paths, failed downloads fail the install, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/euro-truck-simulator-2.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Euro Truck Simulator 2 Dedicated Server",
+  "author": "josdekurk@gmail.com",
+  "uuid": "41f472a3-7969-4bc0-a9cb-35b60cb93350",
+  "description": "Travel across Europe as king of the road, a trucker who delivers important cargo across impressive distances! With dozens of cities to explore, your endurance, skill and speed will all be pushed to their limits.",
+  "tags": [
+    "euro-truck-simulator-2",
+    "ets2",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space",
+    "no_console_input"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./bin/linux_x64/eurotrucks2_server",
+  "config": {
+    "files": "{\r\n    \"/.local/share/Euro Truck Simulator 2/server_config.sii\": {\r\n        \"parser\": \"file\",\r\n        \"find\": {\r\n            \" connection_dedicated_port:\": \" connection_dedicated_port: {{server.build.default.port}}\",\r\n            \" query_dedicated_port:\": \" query_dedicated_port: {{env.QUERY_PORT}}\",\r\n            \" server_logon_token:\": \" server_logon_token: \\\"{{env.STEAM_TOKEN}}\\\"\",\r\n            \" lobby_name:\": \" lobby_name: \\\"{{env.LOBBY_NAME}}\\\"\"\r\n        }\r\n    }\r\n}",
+    "startup": "{\r\n    \"done\": \"[MP] State: running\"\r\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/bin/linux_x64/eurotrucks2_server\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Euro Truck Simulator 2 dedicated server; try reinstalling.\"\n    exit 1\nfi\n\nmkdir -p /mnt/server/.local/share/\"Euro Truck Simulator 2\"/\n\nCONFIG_FILE=/mnt/server/.local/share/\"Euro Truck Simulator 2\"/server_config.sii\nif [ ! -f \"$CONFIG_FILE\" ]; then\n    cd /mnt/server/.local/share/\"Euro Truck Simulator 2\"/\n    echo \"a config file does not yet exist making one!\"\n    curl -fsSL -o server_config.sii https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/truck-simulator/server_config.sii || exit 1\nfi\n\nPACKAGE_FILE=/mnt/server/.local/share/\"Euro Truck Simulator 2\"/server_packages.sii\nif [ ! -f \"$PACKAGE_FILE\" ]; then\n    cd /mnt/server/.local/share/\"Euro Truck Simulator 2\"/\n    echo \"a server_packages.sii file does not yet exist making one!\"\n    curl -fsSL -o server_packages.sii https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/truck-simulator/euro-truck-simulator2/ets2-files/server_packages.sii || exit 1\nfi\n\nDATA_FILE=/mnt/server/.local/share/\"Euro Truck Simulator 2\"/server_packages.dat\nif [ ! -f \"$DATA_FILE\" ]; then\n    cd /mnt/server/.local/share/\"Euro Truck Simulator 2\"/\n    echo \"a server_packages.dat file does not yet exist making one!\"\n    curl -fsSL -o server_packages.dat https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/truck-simulator/euro-truck-simulator2/ets2-files/server_packages.dat || exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto update",
+      "description": "Auto update the server on startup",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "1948160",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:1948160",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Steam query port, written to server_config.sii. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Auth token",
+      "description": "By default, whenever a dedicated server is launched it is using an anonymous account. For such an account non-persistent server id is generated (used for direct search). To avoid this you can acquire a logon token on https://steamcommunity.com/dev/managegameservers (game ownership is required)",
+      "env_variable": "STEAM_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|alpha_num|size:32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Lobby name",
+      "description": "The server name in the convoy browser (no double quotes or backslashes).",
+      "env_variable": "LOBBY_NAME",
+      "default_value": "Euro Truck Simulator 2 server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:64|regex:/^[^\"\\\\]*$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Truck Simulator",
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 15360
+      }
+    }
+  }
+}

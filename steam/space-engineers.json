@@ -1,0 +1,267 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd space_engineers/default/egg-space-engineers.json (pelican-eggs, MIT licence). Octail edits the XML config files with the file parser, one element per line (Octail has no xml parser; upstream's edits would be skipped), and adds the space-engineers tag, automatic Steam and Remote API ports instead of fixed defaults, the no_console_input flag (Wine reads no commands), install sandbox defaults and resource hints, refuses < > & in the name and description (they are written into XML), stops with Ctrl+C handed to the server by a trap (the wine image runs the line in bash as PID 1, which ignores it otherwise; upstream's ^^C was a kill) and ends the container with the server, downloads the starting world and config from the pinned commit instead of the old parkervcp/eggs path (failed downloads fail the install),, makes the install fail when SteamCMD didn't download the server, strips the empty first line of upstream's SpaceEngineers-Dedicated.cfg in the install and before every start (with it the server can't read the XML and falls back to defaults: port 27016, Remote API on 8080, no LoadWorld, so \"Premade world not found\"), and replaces upstream's shared Remote API key with a random one. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/space-engineers.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Space Engineers",
+  "author": "eggs@goover.dev",
+  "uuid": "ac8271cf-8176-4bfe-a2bb-8de031ec86f5",
+  "description": "Space Engineers is a voxel-based sandbox game set in space and on planets.",
+  "tags": [
+    "space-engineers",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup": "sed -i '/./,$!d' config/SpaceEngineers-Dedicated.cfg 2>/dev/null; export WINEDLLOVERRIDES=\"mscoree=n,b;mshtml=n,b\"; wine /home/container/DedicatedServer64/SpaceEngineersDedicated.exe -path Z:\\\\home\\\\container\\\\config -console -ignorelastsession & SE_PID=$!; trap \"kill -INT ${SE_PID} 2>/dev/null; wait ${SE_PID}\" INT TERM; wait ${SE_PID}",
+  "config": {
+    "files": "{\n    \"config/SpaceEngineers-Dedicated.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"    <GameMode>\": \"    <GameMode>{{server.environment.SERVER_MODE}}</GameMode>\",\n            \"    <MaxPlayers>\": \"    <MaxPlayers>{{server.environment.MAX_PLAYERS}}</MaxPlayers>\",\n            \"    <AutoSaveInMinutes>\": \"    <AutoSaveInMinutes>{{server.environment.SAVE_INTERVAL}}</AutoSaveInMinutes>\",\n            \"    <EnableSaving>\": \"    <EnableSaving>{{server.environment.SAVE_ENABLED}}</EnableSaving>\",\n            \"    <ExperimentalMode>\": \"    <ExperimentalMode>{{server.environment.EXPERIMENTAL_ENABLED}}</ExperimentalMode>\",\n            \"    <EnableIngameScripts>\": \"    <EnableIngameScripts>{{server.environment.INGAMESCRIPTS_ENABLED}}</EnableIngameScripts>\",\n            \"  <IP>\": \"  <IP>0.0.0.0</IP>\",\n            \"  <ServerPort>\": \"  <ServerPort>{{server.allocations.default.port}}</ServerPort>\",\n            \"  <SteamPort>\": \"  <SteamPort>{{server.environment.STEAM_PORT}}</SteamPort>\",\n            \"  <ServerName>\": \"  <ServerName>{{server.environment.SERVER_NAME}}</ServerName>\",\n            \"  <WorldName>\": \"  <WorldName>{{server.environment.WORLD_NAME}}</WorldName>\",\n            \"  <ServerDescription>\": \"  <ServerDescription>{{server.environment.SERVER_DESC}}</ServerDescription>\",\n            \"  <RemoteApiEnabled>\": \"  <RemoteApiEnabled>{{server.environment.REMOTEAPI_ENABLE}}</RemoteApiEnabled>\",\n            \"  <RemoteApiPort>\": \"  <RemoteApiPort>{{server.environment.REMOTEAPI_PORT}}</RemoteApiPort>\"\n        }\n    },\n    \"config/Saves/World/Sandbox.sbc\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"    <GameMode>\": \"    <GameMode>{{server.environment.SERVER_MODE}}</GameMode>\",\n            \"    <MaxPlayers>\": \"    <MaxPlayers>{{server.environment.MAX_PLAYERS}}</MaxPlayers>\",\n            \"    <AutoSaveInMinutes>\": \"    <AutoSaveInMinutes>{{server.environment.SAVE_INTERVAL}}</AutoSaveInMinutes>\",\n            \"    <EnableSaving>\": \"    <EnableSaving>{{server.environment.SAVE_ENABLED}}</EnableSaving>\",\n            \"    <ExperimentalMode>\": \"    <ExperimentalMode>{{server.environment.EXPERIMENTAL_ENABLED}}</ExperimentalMode>\",\n            \"    <EnableIngameScripts>\": \"    <EnableIngameScripts>{{server.environment.INGAMESCRIPTS_ENABLED}}</EnableIngameScripts>\"\n        }\n    },\n    \"config/Saves/World/Sandbox_config.sbc\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"    <GameMode>\": \"    <GameMode>{{server.environment.SERVER_MODE}}</GameMode>\",\n            \"    <MaxPlayers>\": \"    <MaxPlayers>{{server.environment.MAX_PLAYERS}}</MaxPlayers>\",\n            \"    <AutoSaveInMinutes>\": \"    <AutoSaveInMinutes>{{server.environment.SAVE_INTERVAL}}</AutoSaveInMinutes>\",\n            \"    <EnableSaving>\": \"    <EnableSaving>{{server.environment.SAVE_ENABLED}}</EnableSaving>\",\n            \"    <ExperimentalMode>\": \"    <ExperimentalMode>{{server.environment.EXPERIMENTAL_ENABLED}}</ExperimentalMode>\",\n            \"    <EnableIngameScripts>\": \"    <EnableIngameScripts>{{server.environment.INGAMESCRIPTS_ENABLED}}</EnableIngameScripts>\"\n        }\n    }\n}",
+    "startup": "{\r\n    \"done\": \"Game ready...\"\r\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Installation Script\n#\n## Define variables\n## Octail: the world and config templates from the pinned pelican-eggs commit (upstream's parkervcp/eggs path is gone)\ndlurl=\"https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/space_engineers/default\"\n\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\n#apt -y update\n#apt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/DedicatedServer64/SpaceEngineersDedicated.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Space Engineers dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Create world and config\nmkdir -p $HOME/config/Saves\nif [ ! -d $HOME/config/Saves/World ]\nthen\n    curl -fsSL $dlurl/World.zip -o $HOME/World.zip || { echo \"Downloading the starting world failed.\"; exit 1; }\n    unzip -o $HOME/World.zip -d $HOME/config/Saves/\nfi\nif [ ! -f $HOME/config/SpaceEngineers-Dedicated.cfg ]; then\n    curl -fsSL $dlurl/SpaceEngineers-Dedicated.cfg -o $HOME/config/SpaceEngineers-Dedicated.cfg || { echo \"Downloading the server config failed.\"; exit 1; }\nfi\n\nrm -fR $HOME/World.zip\n\n## Octail: upstream's config starts with an empty line before <?xml ?>, which makes it unreadable: the server\n## then runs on its defaults (port 27016, Remote API on 8080, no LoadWorld: \"Premade world not found\").\n## Drop leading blank lines (this also repairs a config from an earlier install).\nsed -i '/./,$!d' $HOME/config/SpaceEngineers-Dedicated.cfg\n## Octail: every upstream config ships the same Remote API key; give this server its own\nif grep -q '<RemoteSecurityKey>jrVRQIvlBI8OSsuzwZNzVw==</RemoteSecurityKey>' $HOME/config/SpaceEngineers-Dedicated.cfg; then\n    sed -i \"s|<RemoteSecurityKey>.*</RemoteSecurityKey>|<RemoteSecurityKey>$(head -c 16 /dev/urandom | base64)</RemoteSecurityKey>|\" $HOME/config/SpaceEngineers-Dedicated.cfg\nfi\n\n# copy libs for mod support\ncp -v $HOME/steamclient.dll ../DedicatedServer64/\ncp -v $HOME/steamclient64.dll ../DedicatedServer64/\ncp -v $HOME/tier0_s.dll ../DedicatedServer64/\ncp -v $HOME/tier0_s64.dll ../DedicatedServer64/\ncp -v $HOME/vstdlib_s.dll ../DedicatedServer64/\ncp -v $HOME/vstdlib_s64.dll ../DedicatedServer64/\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "APP ID",
+      "description": "The ID corresponding to the game to download.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "298740",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|numeric|in:298740",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "Name of the server, appears in the Steam browser (no < > or &).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "A Pterodactyl hosted Space Engineer Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^<>&]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "World Name",
+      "description": "Name of your world (and of your save folder)  !!!!! DO NOT EDIT OR SERVER WILL NOT START !!!!!",
+      "env_variable": "WORLD_NAME",
+      "default_value": "World",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|string|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Description",
+      "description": "Description of the game (no < > or &).",
+      "env_variable": "SERVER_DESC",
+      "default_value": "A Pterodactyl hosted Space Engineer Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^<>&]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Mode",
+      "description": "Game Mode setting: Survival, Creative",
+      "env_variable": "SERVER_MODE",
+      "default_value": "Survival",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:Survival,Creative",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Maximum Players",
+      "description": "",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "4",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Enable Saving",
+      "description": "",
+      "env_variable": "SAVE_ENABLED",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Save Interval",
+      "description": "Time between auto saves specified in minutes",
+      "env_variable": "SAVE_INTERVAL",
+      "default_value": "5",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,999",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Port",
+      "description": "Steam port (UDP), written to SpaceEngineers-Dedicated.cfg. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "STEAM_PORT",
+      "default_value": "8766",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Enable Remote API",
+      "description": "Enable Remote API",
+      "env_variable": "REMOTEAPI_ENABLE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Remote API Port",
+      "description": "Remote API port (TCP), written to SpaceEngineers-Dedicated.cfg. Set by Octail when the server is created (two after the game port).",
+      "env_variable": "REMOTEAPI_PORT",
+      "default_value": "8081",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Enable Experimental Mode",
+      "description": "Enable Experimental Mode. Must be 'true' when using mods",
+      "env_variable": "EXPERIMENTAL_ENABLED",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Enable In-Game Scripts",
+      "description": "Allow players to run In-Game Scripts",
+      "env_variable": "INGAMESCRIPTS_ENABLED",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "WINEDEBUG",
+      "description": "WINEDEBUG: Debug Level of wine",
+      "env_variable": "WINEDEBUG",
+      "default_value": "-all",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "nullable|string|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Windows Install",
+      "description": "Required for auto-update",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "WINETRICKS_RUN",
+      "description": "",
+      "env_variable": "WINETRICKS_RUN",
+      "default_value": "win11 vcrun2022 mono corefonts",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "WINEARCH",
+      "description": "",
+      "env_variable": "WINEARCH",
+      "default_value": "win64",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "WINEPATH",
+      "description": "",
+      "env_variable": "WINEPATH",
+      "default_value": "/home/container",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|max:64",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Space Engineers",
+    "features": {
+      "no_console_input": true,
+      "port_vars": {
+        "STEAM_PORT": "primary+1",
+        "REMOTEAPI_PORT": "primary+2"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 30720
+      }
+    }
+  }
+}

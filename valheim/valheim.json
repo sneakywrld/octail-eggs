@@ -1,0 +1,274 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd valheim/valheim_vanilla/egg-valheim.json (pelican-eggs, MIT licence), the plain server without BepInEx (valheim-bepinex.yaml is the modded one). Octail adds the valheim tag, the thunderstore: false feature (this server loads no BepInEx, so the Thunderstore tool stays off), the no_console_input flag (the server reads no console commands), a reserved query port (game port + 1) with the Steam query (A2S) for player counts, install sandbox defaults and resource hints, keeps the console filter alive on Ctrl+C (it ignores SIGINT, so the world save on stop still shows), drops the update URL (pinned), starts the server the way its own start_server.sh does (./linux64 in front of LD_LIBRARY_PATH and SteamAppId=892970 exported, like valheim-bepinex.yaml; without them the server crashed with signal 11 right after \"Mono config path\"), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The startup drops the image's nss_wrapper (LD_PRELOAD): with it, PlayFab's logger segfaults for any non-root user; Tentacle mounts an /etc/passwd naming the server user instead.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/valheim/valheim.json"
+  },
+  "exported_at": "2026-04-06T02:01:23+00:00",
+  "name": "Valheim",
+  "author": "magi1053@outlook.com",
+  "uuid": "af693402-1618-49e0-8678-0818aae9b92e",
+  "description": "A brutal exploration and survival game for 1-10 players, set in a procedurally-generated purgatory inspired by viking culture.",
+  "image": null,
+  "tags": [
+    "valheim",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "unset LD_PRELOAD NSS_WRAPPER_PASSWD NSS_WRAPPER_GROUP; export LD_LIBRARY_PATH=\"./linux64:$LD_LIBRARY_PATH\"; export SteamAppId=892970; ./valheim_server.x86_64 -nographics -batchmode -name \"{{SERVER_NAME}}\" -port {{SERVER_PORT}} -world \"{{WORLD}}\" -password \"{{PASSWORD}}\" -public {{PUBLIC_SERVER}} -saveinterval {{BACKUP_INTERVAL}} -backups {{BACKUP_COUNT}} -backupshort {{BACKUP_SHORTTIME}} -backuplong {{BACKUP_LONGTIME}} $( [[ {{ENABLE_CROSSPLAY}} -eq 1 ]] && echo \" -crossplay \") > >(trap '' INT; sed -uE \"{{CONSOLE_FILTER}}\")"
+  },
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": \"DungeonDB Start\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n##\n#\n# Variables\n# STEAM_USER, STEAM_PASS, STEAM_AUTH - Steam user setup. If a user has 2fa enabled it will most likely fail due to timeout. Leave blank for anon install.\n# WINDOWS_INSTALL - if it's a windows server you want to install set to 1\n# SRCDS_APPID - steam app id found here - https://developer.valvesoftware.com/wiki/Dedicated_Servers_List\n# SRCDS_BETAID - beta branch of a steam app. Leave blank to install normal branch\n# SRCDS_BETAPASS - password for a beta branch should one be required during private or closed testing phases.. Leave blank for no password.\n# INSTALL_FLAGS - Any additional SteamCMD  flags to pass during install.. Keep in mind that steamcmd auto update process in the docker image might overwrite or ignore these when it performs update on server boot.\n# AUTO_UPDATE - Adding this variable to the egg allows disabling or enabling automated updates on boot. Boolean value. 0 to disable and 1 to enable.\n#\n ##\n\n# Install packages. Default packages below are not required if using our existing install image thus speeding up the install process.\napt -y update\napt -y --no-install-recommends install curl lib32gcc-s1 ca-certificates\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/valheim_server.x86_64\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Valheim dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/valheim_server.x86_64\n\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 7,
+      "name": "Auto Update",
+      "description": "Enable automatic updates.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Backup Count",
+      "description": "Sets how many automatic backups will be kept. The first is the 'short' backup length, and the rest are the 'long' backup length. When default values are used means one backup that is 2 hours old, and 3 backups that are 12 hours apart. Default: 4.",
+      "env_variable": "BACKUP_COUNT",
+      "default_value": "4",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "min:0"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Backup Interval",
+      "description": "Change how often the world will save in seconds. Default: 1800 (30 minutes).",
+      "env_variable": "BACKUP_INTERVAL",
+      "default_value": "1800",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "min:0"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Backup Longtime",
+      "description": "Sets the interval between the subsequent automatic backups in seconds. Default: 43200 (12 hours).",
+      "env_variable": "BACKUP_LONGTIME",
+      "default_value": "43200",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "min:0"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Backup Shorttime",
+      "description": "Sets the interval between the first automatic backups in seconds. Default: 7200 (2 hours).",
+      "env_variable": "BACKUP_SHORTTIME",
+      "default_value": "7200",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "numeric",
+        "min:0"
+      ]
+    },
+    {
+      "sort": 15,
+      "name": "Console Filter",
+      "description": "Remove unwanted outputs from the console.",
+      "env_variable": "CONSOLE_FILTER",
+      "default_value": "/^\\(Filename:.*Line:[[:space:]]+[[:digit:]]+\\)$/d; /^([[:space:]]+)?$/d",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "string"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Enable Crossplay",
+      "description": "Enable crossplay support.",
+      "env_variable": "ENABLE_CROSSPLAY",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "LD Library Path",
+      "description": "Required to load server libraries.",
+      "env_variable": "LD_LIBRARY_PATH",
+      "default_value": "./linux64",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Server password, 5 to 20 characters. It must not be part of the server name (Valheim refuses to start then).",
+      "env_variable": "PASSWORD",
+      "default_value": "secret",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "min:5",
+        "max:20"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Public Server",
+      "description": "Public visibility of your server. Set it to false to make the server invisible and only joinable via the 'Join IP'-button.",
+      "env_variable": "PUBLIC_SERVER",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "Name that appears in server browser.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:60"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "App ID",
+      "description": "Valheim steam app id for auto updates.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "896660",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "numeric"
+      ]
+    },
+    {
+      "sort": 13,
+      "name": "Beta Branch",
+      "description": "Beta branch of a steam app. Leave blank to install normal branch.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "max:30"
+      ]
+    },
+    {
+      "sort": 14,
+      "name": "Beta Password",
+      "description": "Password for a beta branch should one be required during private or closed testing phases. Leave blank for no password.",
+      "env_variable": "SRCDS_BETAPASS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "max:30"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "World Name",
+      "description": "Name to load if switching between multiple saved worlds.",
+      "env_variable": "WORLD",
+      "default_value": "Dedicated",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20"
+      ]
+    },
+    {
+      "sort": 16,
+      "name": "Query Port",
+      "description": "Valheim always uses the game port + 1 for Steam queries. Octail reserves it when the server is created; the game doesn't read this setting.",
+      "env_variable": "QUERY_PORT",
+      "default_value": "2457",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "integer"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Valheim",
+    "features": {
+      "thunderstore": false,
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

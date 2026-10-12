@@ -1,0 +1,66 @@
+{
+  "_comment": "Octail test-game egg: a tiny shell 'game' for CI, the Linode dev node and /selftest (plan §12, §9.15).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/testing/test-game.json"
+  },
+  "uuid": "0192f000-0000-7000-8000-00000000c0de",
+  "name": "Octail Test Game",
+  "author": "octail@meowgafactory.com",
+  "description": "Prints a start-detection line, echoes console input and exits cleanly on \"stop\". Uses almost no memory. The install script writes start.sh, because the yolk entrypoint runs the startup line without a shell.",
+  "tags": [
+    "test"
+  ],
+  "features": [],
+  "docker_images": {
+    "Alpine (Yolks)": "ghcr.io/sneakywrld/octail-yolks:alpine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "sh ./start.sh"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-port": "{{server.allocations.default.port}}",
+          "motd": "{{server.environment.MOTD}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Server started"
+      ]
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\nset -e\ncd /mnt/server\necho \"installed at $(date -u +%FT%TZ)\" > installed.txt\ntouch server.properties\ncat > start.sh <<'EOS'\n#!/bin/sh\n# Octail test game: prints the start line, echoes console input, exits cleanly on \"stop\".\necho \"[test-game] Server started on port ${SERVER_PORT} (motd: ${MOTD})\"\nwhile read -r line; do\n  echo \"[test-game] echo: $line\"\n  if [ \"$line\" = \"stop\" ]; then echo \"[test-game] stopping\"; exit 0; fi\ndone\nEOS\nchmod +x start.sh\necho \"[test-game] install finished\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Message of the day",
+      "description": "Shown in the start line and written to server.properties.",
+      "env_variable": "MOTD",
+      "default_value": "Hello from Octail",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64"
+      ],
+      "sort": 0
+    }
+  ],
+  "x_octail": {
+    "category": "Testing"
+  }
+}
