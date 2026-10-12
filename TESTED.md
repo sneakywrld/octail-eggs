@@ -6,8 +6,8 @@ The last real run of each egg on one of Octail's nodes, with the runtime image i
 its ready line (or its bound game port, for eggs that detect the start that way), sent a console command, stopped.
 A run is limited like a customer server (the memory limit below).
 
-17 of 102 eggs have a run on the current images: 15 passed, 2 failed.
-19 couldn't be run yet and 66 haven't been tried on these images.
+19 of 102 eggs have a run on the current images: 17 passed, 2 failed.
+18 couldn't be run yet and 65 haven't been tried on these images.
 
 | Egg | Result | Date | Image | Ready | Memory peak / limit | Node | Earlier | Note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -18,12 +18,12 @@ A run is limited like a customer server (the memory limit below).
 | <a name="minecraft-forge"></a>[minecraft/forge.json](minecraft/forge.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-geyser"></a>[minecraft/geyser.json](minecraft/geyser.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="minecraft-neoforge"></a>[minecraft/neoforge.json](minecraft/neoforge.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
-| <a name="minecraft-paper"></a>[minecraft/paper.json](minecraft/paper.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
+| <a name="minecraft-paper"></a>[minecraft/paper.json](minecraft/paper.json) | ✓ passed | 2026-10-12 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 79 s | 960 / 896 MiB | tentacle | – | peak 960 MiB of an 896 MiB cap |
 | <a name="minecraft-purpur"></a>[minecraft/purpur.json](minecraft/purpur.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-quilt"></a>[minecraft/quilt.json](minecraft/quilt.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-spigot"></a>[minecraft/spigot.json](minecraft/spigot.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-sponge"></a>[minecraft/sponge.json](minecraft/sponge.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
-| <a name="minecraft-velocity"></a>[minecraft/velocity.json](minecraft/velocity.json) | not tested yet | – | – | – | – | – | – | a proxy, no EULA prompt; not yet run on a node |
+| <a name="minecraft-velocity"></a>[minecraft/velocity.json](minecraft/velocity.json) | ✓ passed | 2026-10-12 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 6 s | 221 / 896 MiB | tentacle | – | – |
 | <a name="source-counter-strike-2"></a>[source/counter-strike-2.json](source/counter-strike-2.json) | not run | – | – | – | – | – | – | needs a game server token |
 | <a name="source-counter-strike-source"></a>[source/counter-strike-source.json](source/counter-strike-source.json) | ✓ passed | 2026-10-10 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 16 s | 87 / 8192 MiB | node1 | – | – |
 | <a name="source-day-of-defeat-source"></a>[source/day-of-defeat-source.json](source/day-of-defeat-source.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
