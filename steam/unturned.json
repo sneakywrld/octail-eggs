@@ -146,6 +146,11 @@
         "memory_mb": 2048,
         "disk_mb": 8192
       }
+    },
+    "variables": {
+      "GSLT": {
+        "secret": true
+      }
     }
   }
 }

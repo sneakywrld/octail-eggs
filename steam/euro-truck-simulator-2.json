@@ -111,6 +111,11 @@
         "memory_mb": 2048,
         "disk_mb": 15360
       }
+    },
+    "variables": {
+      "STEAM_TOKEN": {
+        "secret": true
+      }
     }
   }
 }

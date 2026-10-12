@@ -4,7 +4,7 @@
 
 [![Validate eggs](https://github.com/sneakywrld/octail-eggs/actions/workflows/validate.yml/badge.svg)](https://github.com/sneakywrld/octail-eggs/actions/workflows/validate.yml)
 
-The game-server eggs [Octail](https://github.com/sneakywrld) ships and tests: 57 eggs, one JSON file
+The game-server eggs [Octail](https://github.com/sneakywrld) ships and tests: 102 eggs, one JSON file
 per game, in a folder per category. They use the Pterodactyl and Pelican egg formats (`PTDL_v2`,
 `PLCN_v1`–`PLCN_v3`) with Octail's additions in `x_octail` (category, server tools, extra ports, RCON, idle sleep,
 install sandbox, resource hints, start detection by port), which other panels ignore. Every egg runs on our own runtime images,
@@ -40,15 +40,18 @@ Imported install scripts need a staff review before they run, except scripts ide
 
 | Category | Folder | Eggs | What |
 | --- | --- | --- | --- |
-| [Minecraft](#minecraft) | [`minecraft/`](minecraft) | 6 | Java (Paper, Fabric, Forge, NeoForge), the Velocity proxy and Bedrock |
-| [Source](#source) | [`source/`](source) | 7 | Source and Source 2 dedicated servers (srcds) |
+| [Minecraft](#minecraft) | [`minecraft/`](minecraft) | 13 | Java (Paper, Fabric, Forge, NeoForge), the Velocity proxy and Bedrock |
+| [Source](#source) | [`source/`](source) | 11 | Source and Source 2 dedicated servers (srcds) |
+| [GoldSrc](#goldsrc) | [`goldsrc/`](goldsrc) | 7 | GoldSrc (Half-Life 1 engine) dedicated servers (hlds, svends) |
 | [Rust](#rust) | [`rust/`](rust) | 1 | Rust, with uMod/Oxide or Carbon |
 | [ARK](#ark) | [`ark/`](ark) | 2 | ARK: Survival Evolved and Survival Ascended |
 | [Valheim](#valheim) | [`valheim/`](valheim) | 2 | Valheim, plain and with BepInEx |
-| [Terraria](#terraria) | [`terraria/`](terraria) | 2 | Terraria, vanilla and tModLoader |
-| [Steam games](#steam-games) | [`steam/`](steam) | 31 | other games installed with SteamCMD |
+| [Terraria](#terraria) | [`terraria/`](terraria) | 3 | Terraria, vanilla and tModLoader |
+| [Steam games](#steam-games) | [`steam/`](steam) | 45 | other games installed with SteamCMD |
 | [SteamCMD](#steamcmd) | [`steamcmd/`](steamcmd) | 1 | the generic SteamCMD egg for any game with an app id |
-| [Standalone games](#standalone-games) | [`standalone/`](standalone) | 4 | games downloaded from their own sites |
+| [Standalone games](#standalone-games) | [`standalone/`](standalone) | 10 | games downloaded from their own sites |
+| [Voice servers](#voice-servers) | [`voice/`](voice) | 2 | voice chat servers: TeamSpeak 3 and Mumble |
+| [Apps](#apps) | [`apps/`](apps) | 4 | generic Node.js, Python, Java and Go apps such as Discord bots |
 | [Testing](#testing) | [`testing/`](testing) | 1 | the tiny shell "game" Octail uses in CI and on test nodes |
 
 File names are the game without the folder prefix (`minecraft/paper.json`, `terraria/tmodloader.json`). Paths
@@ -68,10 +71,17 @@ Java (Paper, Fabric, Forge, NeoForge), the Velocity proxy and Bedrock. Folder: [
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Vanilla Bedrock | [bedrock.json](minecraft/bedrock.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#minecraft-bedrock) | – |
+| BungeeCord | [bungeecord.json](minecraft/bungeecord.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [—](TESTED.md#minecraft-bungeecord) | proxy |
 | Fabric | [fabric.json](minecraft/fabric.json) | [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | – | [—](TESTED.md#minecraft-fabric) | sleep (minecraft_java) |
+| Folia | [folia.json](minecraft/folia.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [—](TESTED.md#minecraft-folia) | set USER_AGENT before installing |
 | Forge | [forge.json](minecraft/forge.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#minecraft-forge) | sleep (minecraft_java) |
+| Geyser Standalone | [geyser.json](minecraft/geyser.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) | – | [—](TESTED.md#minecraft-geyser) | proxy |
 | NeoForge | [neoforge.json](minecraft/neoforge.json) | [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | – | [—](TESTED.md#minecraft-neoforge) | sleep (minecraft_java) |
 | Paper | [paper.json](minecraft/paper.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#minecraft-paper) | set USER_AGENT before installing |
+| Purpur | [purpur.json](minecraft/purpur.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#minecraft-purpur) | sleep (minecraft_java) |
+| Quilt | [quilt.json](minecraft/quilt.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#minecraft-quilt) | sleep (minecraft_java) |
+| Spigot | [spigot.json](minecraft/spigot.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#minecraft-spigot) | sleep (minecraft_java) |
+| SpongeVanilla | [sponge.json](minecraft/sponge.json) | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#minecraft-sponge) | sleep (minecraft_java) |
 | Velocity | [velocity.json](minecraft/velocity.json) | [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | – | [—](TESTED.md#minecraft-velocity) | proxy, set USER_AGENT before installing |
 
 ### Source
@@ -83,10 +93,28 @@ Source and Source 2 dedicated servers (srcds). Folder: [`source/`](source).
 | Counter-Strike 2 | [counter-strike-2.json](source/counter-strike-2.json) | [`steamcmd_sniper`](https://github.com/sneakywrld/octail-yolks#steamcmd_sniper) | TV_PORT +1 | [—](TESTED.md#source-counter-strike-2) | RCON (source), Players tab, sleep (udp) |
 | Counter-Strike: Source | [counter-strike-source.json](source/counter-strike-source.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [✓ 2026-10-10](TESTED.md#source-counter-strike-source) | RCON (source), Players tab, sleep (udp) |
 | Day of Defeat: Source | [day-of-defeat-source.json](source/day-of-defeat-source.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-day-of-defeat-source) | RCON (source), Players tab, sleep (udp) |
+| Day of Infamy | [day-of-infamy.json](source/day-of-infamy.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-day-of-infamy) | RCON (source), Players tab, sleep (udp), start detected by port |
+| Fistful of Frags | [fistful-of-frags.json](source/fistful-of-frags.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-fistful-of-frags) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Garry's Mod | [garrysmod.json](source/garrysmod.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-garrysmod) | RCON (source), Players tab, sleep (udp), Steam Workshop |
 | Source Engine Game (SRCDS) | [generic.json](source/generic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-generic) | RCON (source), Players tab, sleep (udp) |
+| Insurgency (2014) | [insurgency.json](source/insurgency.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-insurgency) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Left 4 Dead 2 | [left-4-dead-2.json](source/left-4-dead-2.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-left-4-dead-2) | RCON (source), Players tab, sleep (udp) |
+| No More Room in Hell | [no-more-room-in-hell.json](source/no-more-room-in-hell.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-no-more-room-in-hell) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Team Fortress 2 | [team-fortress-2.json](source/team-fortress-2.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#source-team-fortress-2) | RCON (source), Players tab, sleep (udp) |
+
+### GoldSrc
+
+GoldSrc (Half-Life 1 engine) dedicated servers (hlds, svends). Folder: [`goldsrc/`](goldsrc).
+
+| Game | Egg | Runtime images | Extra ports | Tested | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Counter-Strike 1.6 | [counter-strike-16.json](goldsrc/counter-strike-16.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-counter-strike-16) | Players tab, sleep (udp), start detected by port |
+| Counter-Strike: Condition Zero | [counter-strike-condition-zero.json](goldsrc/counter-strike-condition-zero.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-counter-strike-condition-zero) | Players tab, sleep (udp), start detected by port |
+| Day of Defeat | [day-of-defeat.json](goldsrc/day-of-defeat.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-day-of-defeat) | Players tab, sleep (udp), start detected by port |
+| Deathmatch Classic | [deathmatch-classic.json](goldsrc/deathmatch-classic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-deathmatch-classic) | Players tab, sleep (udp), start detected by port |
+| Half-Life Deathmatch | [half-life-deathmatch.json](goldsrc/half-life-deathmatch.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-half-life-deathmatch) | Players tab, sleep (udp), start detected by port |
+| Sven Co-op | [sven-co-op.json](goldsrc/sven-co-op.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-sven-co-op) | Players tab, sleep (udp), start detected by port |
+| Team Fortress Classic | [team-fortress-classic.json](goldsrc/team-fortress-classic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](TESTED.md#goldsrc-team-fortress-classic) | Players tab, sleep (udp), start detected by port |
 
 ### Rust
 
@@ -121,6 +149,7 @@ Terraria, vanilla and tModLoader. Folder: [`terraria/`](terraria).
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
 | tModloader | [tmodloader.json](terraria/tmodloader.json) | [`dotnet_8`](https://github.com/sneakywrld/octail-yolks#dotnet_8) | – | [—](TESTED.md#terraria-tmodloader) | sleep (tcp) |
+| Terraria TShock | [tshock.json](terraria/tshock.json) | [`dotnet_9`](https://github.com/sneakywrld/octail-yolks#dotnet_9) [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | REST_PORT +1 | [—](TESTED.md#terraria-tshock) | sleep (tcp) |
 | Terraria Vanilla | [vanilla.json](terraria/vanilla.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-10](TESTED.md#terraria-vanilla) | sleep (tcp) |
 
 ### Steam games
@@ -131,35 +160,49 @@ Other games installed with SteamCMD. Folder: [`steam/`](steam).
 | --- | --- | --- | --- | --- | --- |
 | 7 Days To Die | [7-days-to-die.json](steam/7-days-to-die.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [✓ 2026-10-10](TESTED.md#steam-7-days-to-die) | player count |
 | Abiotic Factor | [abiotic-factor.json](steam/abiotic-factor.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | QUERY_PORT +1 | [✓ 2026-10-10](TESTED.md#steam-abiotic-factor) | player count, Proton, no console input |
-| Arma Reforger | [arma-reforger.json](steam/arma-reforger.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-arma-reforger) | player count |
+| American Truck Simulator Dedicated Server | [american-truck-simulator.json](steam/american-truck-simulator.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-american-truck-simulator) | player count, no console input |
+| Arma 3 | [arma-3.json](steam/arma-3.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT +5, Steam query +1, Steam +2, BattlEye +4 | [—](TESTED.md#steam-arma-3) | Players tab, Steam Workshop, no console input |
+| Arma Reforger | [arma-reforger.json](steam/arma-reforger.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-arma-reforger) | player count, no console input |
+| ASKA | [aska.json](steam/aska.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [—](TESTED.md#steam-aska) | player count, Wine, no console input, start detected by port |
+| Assetto Corsa | [assetto-corsa.json](steam/assetto-corsa.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | HTTP_PORT +1 | [—](TESTED.md#steam-assetto-corsa) | no console input, start detected by port |
 | Astroneer | [astroneer.json](steam/astroneer.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | [✗ 2026-10-10](TESTED.md#steam-astroneer) | Proton, no console input, start detected by port |
 | Avorion | [avorion.json](steam/avorion.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, STEAM_QUERY_PORT +2, STEAM_MASTER_PORT +3 | [—](TESTED.md#steam-avorion) | player count |
 | Barotrauma | [barotrauma.json](steam/barotrauma.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-barotrauma) | sleep (udp) |
 | Conan Exiles Enhanced | [conan-exiles.json](steam/conan-exiles.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RAW_PORT +1, QUERY_PORT +2, RCON_PORT +3 | [—](TESTED.md#steam-conan-exiles) | RCON (source), player count, no console input |
-| Core Keeper | [core-keeper.json](steam/core-keeper.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-core-keeper) | – |
+| Core Keeper | [core-keeper.json](steam/core-keeper.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-core-keeper) | no console input |
 | Craftopia | [craftopia.json](steam/craftopia.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [✗ 2026-10-10](TESTED.md#steam-craftopia) | start detected by port |
+| DayZ | [dayz.json](steam/dayz.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, RCON_PORT +3, Steam +2, BattlEye +4 | [—](TESTED.md#steam-dayz) | Players tab, Steam Workshop, no console input |
 | Don't Starve Together | [dont-starve-together.json](steam/dont-starve-together.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | CAVES_PORT +1 | [—](TESTED.md#steam-dont-starve-together) | – |
 | Eco | [eco.json](steam/eco.json) | [`steamcmd_dotnet`](https://github.com/sneakywrld/octail-yolks#steamcmd_dotnet) | WEB_PORT +1, RCON_PORT +2 | [—](TESTED.md#steam-eco) | – |
-| Enshrouded | [enshrouded.json](steam/enshrouded.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | QUERY_PORT +1 | [✓ 2026-10-10](TESTED.md#steam-enshrouded) | player count, Proton |
-| Euro Truck Simulator 2 Dedicated Server | [euro-truck-simulator-2.json](steam/euro-truck-simulator-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-euro-truck-simulator-2) | player count |
+| Empyrion - Galactic Survival | [empyrion.json](steam/empyrion.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | Steam query +1, game traffic (+2) +2, game traffic (+3) +3 | [—](TESTED.md#steam-empyrion) | Wine, no console input, start detected by port |
+| Enshrouded | [enshrouded.json](steam/enshrouded.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | QUERY_PORT +1 | [✓ 2026-10-10](TESTED.md#steam-enshrouded) | player count, Proton, no console input |
+| Euro Truck Simulator 2 Dedicated Server | [euro-truck-simulator-2.json](steam/euro-truck-simulator-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-euro-truck-simulator-2) | player count, no console input |
+| Holdfast: Nations At War | [holdfast.json](steam/holdfast.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, COMM_PORT +2 | [—](TESTED.md#steam-holdfast) | player count, no console input, start detected by port |
 | Hurtworld | [hurtworld.json](steam/hurtworld.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-hurtworld) | player count |
 | Icarus | [icarus.json](steam/icarus.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [✓ 2026-10-10](TESTED.md#steam-icarus) | player count, Wine, no console input |
 | Insurgency: Sandstorm | [insurgency-sandstorm.json](steam/insurgency-sandstorm.json) | [`steamcmd_ubuntu`](https://github.com/sneakywrld/octail-yolks#steamcmd_ubuntu) | QUERY_PORT +1, RCON_PORT +2 | [—](TESTED.md#steam-insurgency-sandstorm) | RCON (source), Players tab |
-| Killing Floor 2 | [killing-floor-2.json](steam/killing-floor-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, WEB_ADMIN_PORT +2 | [—](TESTED.md#steam-killing-floor-2) | player count |
+| Killing Floor 2 | [killing-floor-2.json](steam/killing-floor-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, WEB_ADMIN_PORT +2 | [—](TESTED.md#steam-killing-floor-2) | player count, no console input |
 | Mordhau | [mordhau.json](steam/mordhau.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, BEACON_PORT +2, RCON_PORT +3 | [—](TESTED.md#steam-mordhau) | RCON (source), Players tab |
 | Necesse | [necesse.json](steam/necesse.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [—](TESTED.md#steam-necesse) | sleep (udp) |
+| Night of the Dead | [night-of-the-dead.json](steam/night-of-the-dead.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [—](TESTED.md#steam-night-of-the-dead) | player count, Wine, no console input, start detected by port |
 | Palworld | [palworld.json](steam/palworld.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [—](TESTED.md#steam-palworld) | sleep (udp) |
 | Pavlov VR | [pavlov-vr.json](steam/pavlov-vr.json) | [`steamcmd_ubuntu`](https://github.com/sneakywrld/octail-yolks#steamcmd_ubuntu) | RCON_PORT +1, status helper +400 | [—](TESTED.md#steam-pavlov-vr) | no console input |
 | Project Zomboid | [project-zomboid.json](steam/project-zomboid.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | STEAM_PORT +1 | [—](TESTED.md#steam-project-zomboid) | player count, sleep (udp) |
+| The Lord of the Rings: Return to Moria | [return-to-moria.json](steam/return-to-moria.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | – | [—](TESTED.md#steam-return-to-moria) | Wine, no console input, start detected by port |
 | Satisfactory | [satisfactory.json](steam/satisfactory.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RELIABLE_PORT +1 | [—](TESTED.md#steam-satisfactory) | RCON (satisfactory), sleep (udp) |
+| SCP: Secret Laboratory | [scp-secret-laboratory.json](steam/scp-secret-laboratory.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [—](TESTED.md#steam-scp-secret-laboratory) | start detected by port |
 | Sons Of The Forest | [sons-of-the-forest.json](steam/sons-of-the-forest.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1, BLOBSYNC_PORT +2 | [✓ 2026-10-10](TESTED.md#steam-sons-of-the-forest) | player count, Wine, no console input |
 | Soulmask | [soulmask.json](steam/soulmask.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-soulmask) | player count, no console input |
 | Space Engineers | [space-engineers.json](steam/space-engineers.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | STEAM_PORT +1, REMOTEAPI_PORT +2 | [✓ 2026-10-10](TESTED.md#steam-space-engineers) | Wine, no console input |
 | Squad | [squad.json](steam/squad.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | GAME_PORT_2 +1, QUERY_PORT +2, QUERY_PORT_2 +3, BEACON_PORT +4, RCON_PORT +5 | [✓ 2026-10-10](TESTED.md#steam-squad) | RCON (source), Players tab |
+| Starbound | [starbound.json](steam/starbound.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT +1 | [—](TESTED.md#steam-starbound) | RCON (source), Players tab, start detected by port |
 | Stationeers | [stationeers.json](steam/stationeers.json) | [`steamcmd_ubuntu`](https://github.com/sneakywrld/octail-yolks#steamcmd_ubuntu) | UPDATE_PORT +1 | [✓ 2026-10-12](TESTED.md#steam-stationeers) | player count |
+| Stormworks: Build and Rescue | [stormworks.json](steam/stormworks.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | Steam query +1, third game port +2 | [—](TESTED.md#steam-stormworks) | Wine, no console input, start detected by port |
+| The Forest | [the-forest.json](steam/the-forest.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1, STEAM_PORT +2 | [—](TESTED.md#steam-the-forest) | player count, Wine, no console input, start detected by port |
 | The Front | [the-front.json](steam/the-front.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | BEACON_PORT +1, QUERY_PORT +2, SHUTDOWN_PORT +3 | [—](TESTED.md#steam-the-front) | player count, no console input |
+| The Isle (Evrima) | [the-isle.json](steam/the-isle.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT +1, QUEUE_PORT +2 | [—](TESTED.md#steam-the-isle) | no console input, start detected by port |
 | Unturned | [unturned.json](steam/unturned.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](TESTED.md#steam-unturned) | player count, sleep (udp) |
-| V Rising BepInEx | [v-rising.json](steam/v-rising.json) | [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | QUERY_PORT +1, RCON_PORT +2 | [✓ 2026-10-10](TESTED.md#steam-v-rising) | RCON (source), player count, Wine, Thunderstore mods |
+| V Rising BepInEx | [v-rising.json](steam/v-rising.json) | [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | QUERY_PORT +1, RCON_PORT +2 | [✓ 2026-10-10](TESTED.md#steam-v-rising) | RCON (source), player count, Wine, Thunderstore mods, no console input |
 
 ### SteamCMD
 
@@ -175,10 +218,36 @@ Games downloaded from their own sites. Folder: [`standalone/`](standalone).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
+| BeamMP Server | [beammp.json](standalone/beammp.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#standalone-beammp) | start detected by port |
+| DDraceNetwork (DDNet) | [ddnet.json](standalone/ddnet.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#standalone-ddnet) | start detected by port |
 | Factorio | [factorio.json](standalone/factorio.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | RCON_PORT +1 | [—](TESTED.md#standalone-factorio) | RCON (source), sleep (udp) |
+| Luanti | [luanti.json](standalone/luanti.json) | [`alpine`](https://github.com/sneakywrld/octail-yolks#alpine) | – | [—](TESTED.md#standalone-luanti) | no console input, start detected by port |
 | Mindustry | [mindustry.json](standalone/mindustry.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [—](TESTED.md#standalone-mindustry) | sleep (tcp) |
+| OpenRCT2 | [openrct2.json](standalone/openrct2.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#standalone-openrct2) | sleep (tcp), start detected by port |
 | OpenTTD | [openttd.json](standalone/openttd.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-10](TESTED.md#standalone-openttd) | sleep (tcp) |
+| Space Station 14 | [space-station-14.json](standalone/space-station-14.json) | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | – | [—](TESTED.md#standalone-space-station-14) | start detected by port |
 | Vintage Story | [vintage-story.json](standalone/vintage-story.json) | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) [`dotnet_8`](https://github.com/sneakywrld/octail-yolks#dotnet_8) | – | [—](TESTED.md#standalone-vintage-story) | sleep (tcp) |
+| Xonotic | [xonotic.json](standalone/xonotic.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#standalone-xonotic) | start detected by port |
+
+### Voice servers
+
+Voice chat servers: TeamSpeak 3 and Mumble. Folder: [`voice/`](voice).
+
+| Game | Egg | Runtime images | Extra ports | Tested | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Mumble Server | [mumble.json](voice/mumble.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#voice-mumble) | no console input, start detected by port |
+| TeamSpeak 3 Server | [teamspeak.json](voice/teamspeak.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | QUERY_PORT +1, FILE_TRANSFER_PORT +2 | [—](TESTED.md#voice-teamspeak) | no console input, start detected by port |
+
+### Apps
+
+Generic Node.js, Python, Java and Go apps such as Discord bots. Folder: [`apps/`](apps).
+
+| Game | Egg | Runtime images | Extra ports | Tested | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Go App | [go-app.json](apps/go-app.json) | [`go_1.23`](https://github.com/sneakywrld/octail-yolks#go_1.23) | – | [—](TESTED.md#apps-go-app) | start detected by port |
+| Java App (JAR) | [java-jar.json](apps/java-jar.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](TESTED.md#apps-java-jar) | start detected by port |
+| Node.js App | [nodejs-app.json](apps/nodejs-app.json) | [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | – | [—](TESTED.md#apps-nodejs-app) | start detected by port |
+| Python App | [python-app.json](apps/python-app.json) | [`python_3.12`](https://github.com/sneakywrld/octail-yolks#python_3.12) | – | [—](TESTED.md#apps-python-app) | start detected by port |
 
 ### Testing
 
@@ -190,10 +259,11 @@ The tiny shell "game" Octail uses in CI and on test nodes. Folder: [`testing/`](
 
 ## Validation
 
-`node tools/validate.mjs` (no dependencies) checks every egg on each push and pull request: it parses, has the
-required fields and at least one image, SteamCMD installs retry the download, installs that check for the server
-binary exit 1 when it is missing, no `http://` downloads, variable rules parse, `x_octail` is well formed and
-update addresses point at the egg's own file. Every image is one of ours (`ghcr.io/sneakywrld/octail-yolks`); upstream Pterodactyl, Pelican and parkervcp images are refused.
+`node tools/validate.mjs` (no dependencies) checks every egg on each push and pull request. It runs the egg format
+rules Octail's own importer runs (`tools/egg-format.mjs`, the same file): an egg the panel would refuse, or import
+with a warning (unknown variable rules, malformed `x_octail` features, …), fails. On top of that: the required
+fields, SteamCMD installs retry the download, installs that check for the server binary exit 1 when it is
+missing, no `http://` downloads, and update addresses point at the egg's own file. Every image is one of ours (`ghcr.io/sneakywrld/octail-yolks`); upstream Pterodactyl, Pelican and parkervcp images are refused.
 
 ## Sources and licence
 
@@ -204,59 +274,104 @@ additions hasn't been chosen yet.
 | Egg | Based on |
 | --- | --- |
 | [minecraft/bedrock.json](minecraft/bedrock.json) | https://raw.githubusercontent.com/pelican-eggs/minecraft/refs/heads/main/bedrock/bedrock/egg-vanilla-bedrock.json |
+| [minecraft/bungeecord.json](minecraft/bungeecord.json) | Octail |
 | [minecraft/fabric.json](minecraft/fabric.json) | minecraft java/fabric/egg-fabric.yaml (pelican-eggs, MIT licence) |
+| [minecraft/folia.json](minecraft/folia.json) | Octail |
 | [minecraft/forge.json](minecraft/forge.json) | minecraft java/forge/egg-forge-minecraft.yaml (pelican-eggs, MIT licence) |
+| [minecraft/geyser.json](minecraft/geyser.json) | Octail |
 | [minecraft/neoforge.json](minecraft/neoforge.json) | minecraft java/neoforge/egg-neo-forge.json (pelican-eggs, MIT licence) |
 | [minecraft/paper.json](minecraft/paper.json) | https://raw.githubusercontent.com/pelican-eggs/minecraft/refs/heads/main/java/paper/egg-paper.yaml |
+| [minecraft/purpur.json](minecraft/purpur.json) | Octail |
+| [minecraft/quilt.json](minecraft/quilt.json) | Octail |
+| [minecraft/spigot.json](minecraft/spigot.json) | Octail |
+| [minecraft/sponge.json](minecraft/sponge.json) | Octail |
 | [minecraft/velocity.json](minecraft/velocity.json) | minecraft proxy/java/velocity/egg-velocity.json (pelican-eggs, MIT licence) |
 | [source/counter-strike-2.json](source/counter-strike-2.json) | https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/counter_strike/counter_strike_2/egg-counter--strike2.yaml |
 | [source/counter-strike-source.json](source/counter-strike-source.json) | games-steamcmd counter_strike/counter_strike_source/egg-counter--strike--source.yaml (pelican-eggs, MIT licence) |
 | [source/day-of-defeat-source.json](source/day-of-defeat-source.json) | Octail's source-engine.json (games-steamcmd custom-source-engine/egg-custom-source-engine-game.yaml, MIT licence) |
+| [source/day-of-infamy.json](source/day-of-infamy.json) | Octail's source-engine.json and LinuxGSM's doiserver settings (MIT licence) |
+| [source/fistful-of-frags.json](source/fistful-of-frags.json) | games-steamcmd fof/egg-fof.json (pelican-eggs, MIT licence) |
 | [source/garrysmod.json](source/garrysmod.json) | games-steamcmd gmod/egg-garrys-mod (pelican-eggs, MIT licence) |
 | [source/generic.json](source/generic.json) | games-steamcmd custom-source-engine/egg-custom-source-engine-game.yaml (pelican-eggs, MIT licence) |
+| [source/insurgency.json](source/insurgency.json) | games-steamcmd insurgency/egg-insurgency.yaml (pelican-eggs, MIT licence) |
 | [source/left-4-dead-2.json](source/left-4-dead-2.json) | games-steamcmd left4dead_2/egg-left4-dead2.json (pelican-eggs, MIT licence) |
+| [source/no-more-room-in-hell.json](source/no-more-room-in-hell.json) | games-steamcmd nmrih/egg-nmrih.json (pelican-eggs, MIT licence) |
 | [source/team-fortress-2.json](source/team-fortress-2.json) | https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/team_fortress_2/egg-team-fortress2.yaml |
+| [goldsrc/counter-strike-16.json](goldsrc/counter-strike-16.json) | games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) |
+| [goldsrc/counter-strike-condition-zero.json](goldsrc/counter-strike-condition-zero.json) | games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) |
+| [goldsrc/day-of-defeat.json](goldsrc/day-of-defeat.json) | games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) |
+| [goldsrc/deathmatch-classic.json](goldsrc/deathmatch-classic.json) | games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) |
+| [goldsrc/half-life-deathmatch.json](goldsrc/half-life-deathmatch.json) | games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) |
+| [goldsrc/sven-co-op.json](goldsrc/sven-co-op.json) | games-steamcmd svencoop/egg-sven-co-op.json (pelican-eggs, MIT licence) |
+| [goldsrc/team-fortress-classic.json](goldsrc/team-fortress-classic.json) | games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) |
 | [rust/rust.json](rust/rust.json) | games-steamcmd rust/vanilla/egg-rust.yaml (pelican-eggs, MIT licence) |
 | [ark/survival-ascended.json](ark/survival-ascended.json) | https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/ark_survival_ascended/egg-a-r-k--survival-ascended.json |
 | [ark/survival-evolved.json](ark/survival-evolved.json) | https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/ark_survival_evolved/egg-ark--survival-evolved.json |
 | [valheim/bepinex.json](valheim/bepinex.json) | https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/valheim/valheim_bepinex/egg-valheim-bep-i-nex.yaml |
 | [valheim/valheim.json](valheim/valheim.json) | games-steamcmd valheim/valheim_vanilla/egg-valheim.json (pelican-eggs, MIT licence) |
 | [terraria/tmodloader.json](terraria/tmodloader.json) | games-standalone terraria/tmodloader/egg-t-modloader.json (pelican-eggs, MIT licence) |
+| [terraria/tshock.json](terraria/tshock.json) | Octail |
 | [terraria/vanilla.json](terraria/vanilla.json) | games-standalone terraria/vanilla/egg-terraria-vanilla.json (pelican-eggs, MIT licence) |
 | [steam/7-days-to-die.json](steam/7-days-to-die.json) | games-steamcmd 7_days_to_die/egg-7-days-to-die.json (pelican-eggs, MIT licence) |
 | [steam/abiotic-factor.json](steam/abiotic-factor.json) | games-steamcmd abiotic_factor/egg-abiotic-factor.yaml (pelican-eggs, MIT licence) |
+| [steam/american-truck-simulator.json](steam/american-truck-simulator.json) | games-steamcmd truck-simulator/american-truck-simulator/egg-american-truck-simulator-dedicated-server.json (pelican-eggs, MIT licence) |
+| [steam/arma-3.json](steam/arma-3.json) | Octail |
 | [steam/arma-reforger.json](steam/arma-reforger.json) | games-steamcmd arma/arma_reforger/egg-arma-reforger.json (pelican-eggs, MIT licence) |
+| [steam/aska.json](steam/aska.json) | Octail |
+| [steam/assetto-corsa.json](steam/assetto-corsa.json) | Octail |
 | [steam/astroneer.json](steam/astroneer.json) | games-steamcmd astroneer/egg-astroneer-dedicated-server.json (pelican-eggs, MIT licence) |
 | [steam/avorion.json](steam/avorion.json) | games-steamcmd avorion/egg-avorion.json (pelican-eggs, MIT licence) |
 | [steam/barotrauma.json](steam/barotrauma.json) | games-steamcmd barotrauma/egg-barotrauma.json (pelican-eggs, MIT licence) |
 | [steam/conan-exiles.json](steam/conan-exiles.json) | games-steamcmd conan_exiles/egg-conan-exiles-enhanced.yaml (pelican-eggs, MIT licence) |
 | [steam/core-keeper.json](steam/core-keeper.json) | games-steamcmd core_keeper/egg-core-keeper.json (pelican-eggs, MIT licence) |
 | [steam/craftopia.json](steam/craftopia.json) | games-steamcmd craftopia/egg-craftopia.yaml (pelican-eggs, MIT licence) |
+| [steam/dayz.json](steam/dayz.json) | Octail |
 | [steam/dont-starve-together.json](steam/dont-starve-together.json) | games-steamcmd dont_starve/egg-don-t-starve-together.json (pelican-eggs, MIT licence) |
 | [steam/eco.json](steam/eco.json) | games-steamcmd eco/egg-eco.json (pelican-eggs, MIT licence) |
+| [steam/empyrion.json](steam/empyrion.json) | games-steamcmd empyrion/egg-pterodactyl-empyrion--galactic-survival.json (pelican-eggs, MIT licence) |
 | [steam/enshrouded.json](steam/enshrouded.json) | games-steamcmd enshrouded/egg-enshrouded.json (pelican-eggs, MIT licence) |
 | [steam/euro-truck-simulator-2.json](steam/euro-truck-simulator-2.json) | games-steamcmd truck-simulator/euro-truck-simulator2/egg-euro-truck-simulator2-dedicated-server.json (pelican-eggs, MIT licence) |
+| [steam/holdfast.json](steam/holdfast.json) | games-steamcmd holdfast/egg-holdfast-na-w.json (pelican-eggs, MIT licence) |
 | [steam/hurtworld.json](steam/hurtworld.json) | games-steamcmd hurtworld/egg-hurtworld.json (pelican-eggs, MIT licence) |
 | [steam/icarus.json](steam/icarus.json) | games-steamcmd icarus/egg-icarus.yaml (pelican-eggs, MIT licence) |
 | [steam/insurgency-sandstorm.json](steam/insurgency-sandstorm.json) | games-steamcmd insurgency_sandstorm/egg-insurgency--sandstorm.json (pelican-eggs, MIT licence) |
 | [steam/killing-floor-2.json](steam/killing-floor-2.json) | games-steamcmd killing_floor_2/egg-killing-floor2.json (pelican-eggs, MIT licence) |
 | [steam/mordhau.json](steam/mordhau.json) | games-steamcmd mordhau/egg-mordhau.json (pelican-eggs, MIT licence) |
 | [steam/necesse.json](steam/necesse.json) | games-steamcmd necesse/egg-necesse.json (pelican-eggs, MIT licence) |
+| [steam/night-of-the-dead.json](steam/night-of-the-dead.json) | games-steamcmd night_of_the_dead/egg-pterodactyl-night-of-the-dead.json (pelican-eggs, MIT licence) |
 | [steam/palworld.json](steam/palworld.json) | games-steamcmd palworld/egg-palworld.yaml (pelican-eggs, MIT licence) |
 | [steam/pavlov-vr.json](steam/pavlov-vr.json) | games-steamcmd pavlov_vr/egg-pavlov-v-r.json (pelican-eggs, MIT licence) |
 | [steam/project-zomboid.json](steam/project-zomboid.json) | games-steamcmd project_zomboid/egg-project-zomboid.json (pelican-eggs, MIT licence) |
+| [steam/return-to-moria.json](steam/return-to-moria.json) | Octail |
 | [steam/satisfactory.json](steam/satisfactory.json) | games-steamcmd satisfactory/egg-satisfactory.json (pelican-eggs, MIT licence) |
+| [steam/scp-secret-laboratory.json](steam/scp-secret-laboratory.json) | games-steamcmd scpsl/dedicated/egg-s-c-p--s-l.json (pelican-eggs, MIT licence) |
 | [steam/sons-of-the-forest.json](steam/sons-of-the-forest.json) | games-steamcmd sonsoftheforest/egg-sons-of-the-forest.json (pelican-eggs, MIT licence) |
 | [steam/soulmask.json](steam/soulmask.json) | games-steamcmd soulmask/egg-soulmask.json (pelican-eggs, MIT licence) |
 | [steam/space-engineers.json](steam/space-engineers.json) | games-steamcmd space_engineers/default/egg-space-engineers.json (pelican-eggs, MIT licence) |
 | [steam/squad.json](steam/squad.json) | games-steamcmd squad/egg-squad.json (pelican-eggs, MIT licence) |
+| [steam/starbound.json](steam/starbound.json) | Octail |
 | [steam/stationeers.json](steam/stationeers.json) | games-steamcmd stationeers/stationeers_vanilla/egg-stationeers.json (pelican-eggs, MIT licence) |
+| [steam/stormworks.json](steam/stormworks.json) | games-steamcmd stormworks/egg-pterodactyl-stormworks--build-and-rescue.json (pelican-eggs, MIT licence) |
+| [steam/the-forest.json](steam/the-forest.json) | games-steamcmd the_forest/egg-pterodactyl-the-forest.json (pelican-eggs, MIT licence) |
 | [steam/the-front.json](steam/the-front.json) | games-steamcmd thefront/egg-the-front.json (pelican-eggs, MIT licence) |
+| [steam/the-isle.json](steam/the-isle.json) | games-steamcmd the_isle/evrima/egg-the-isle.json (pelican-eggs, MIT licence) |
 | [steam/unturned.json](steam/unturned.json) | games-steamcmd unturned/egg-unturned.json (pelican-eggs, MIT licence) |
 | [steam/v-rising.json](steam/v-rising.json) | https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/v_rising/v_rising_bepinex/egg-v-rising-bep-in-ex.json |
 | [steamcmd/generic.json](steamcmd/generic.json) | Octail |
+| [standalone/beammp.json](standalone/beammp.json) | Octail |
+| [standalone/ddnet.json](standalone/ddnet.json) | games-standalone ddracenetwork/egg-d-d-race-network.json (pelican-eggs, MIT licence) |
 | [standalone/factorio.json](standalone/factorio.json) | https://raw.githubusercontent.com/pelican-eggs/games-standalone/refs/heads/main/factorio/factorio/egg-factorio.yaml |
+| [standalone/luanti.json](standalone/luanti.json) | Octail |
 | [standalone/mindustry.json](standalone/mindustry.json) | games-standalone mindustry/egg-mindustry.json (pelican-eggs, MIT licence) |
+| [standalone/openrct2.json](standalone/openrct2.json) | Octail |
 | [standalone/openttd.json](standalone/openttd.json) | games-standalone openttd/egg-open-t-t-d-server.json (pelican-eggs, MIT licence) |
+| [standalone/space-station-14.json](standalone/space-station-14.json) | Octail |
 | [standalone/vintage-story.json](standalone/vintage-story.json) | https://raw.githubusercontent.com/pelican-eggs/games-standalone/refs/heads/main/vintage_story/egg-vintage-story.json |
+| [standalone/xonotic.json](standalone/xonotic.json) | games-standalone xonotic/egg-xonotic.json (pelican-eggs, MIT licence) |
+| [voice/mumble.json](voice/mumble.json) | Octail |
+| [voice/teamspeak.json](voice/teamspeak.json) | Octail |
+| [apps/go-app.json](apps/go-app.json) | Octail |
+| [apps/java-jar.json](apps/java-jar.json) | Octail |
+| [apps/nodejs-app.json](apps/nodejs-app.json) | Octail |
+| [apps/python-app.json](apps/python-app.json) | Octail |
 | [testing/test-game.json](testing/test-game.json) | Octail |

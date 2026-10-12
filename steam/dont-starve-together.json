@@ -186,6 +186,11 @@
         "memory_mb": 2048,
         "disk_mb": 5120
       }
+    },
+    "variables": {
+      "SERVER_TOKEN": {
+        "secret": true
+      }
     }
   }
 }

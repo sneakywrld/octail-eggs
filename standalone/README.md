@@ -2,15 +2,21 @@
 
 # Standalone games
 
-Games downloaded from their own sites: 4 eggs.
+Games downloaded from their own sites: 10 eggs.
 Back to [all eggs](../README.md#standalone-games).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
+| BeamMP Server | [beammp.json](beammp.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#standalone-beammp) | start detected by port |
+| DDraceNetwork (DDNet) | [ddnet.json](ddnet.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#standalone-ddnet) | start detected by port |
 | Factorio | [factorio.json](factorio.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | RCON_PORT +1 | [—](../TESTED.md#standalone-factorio) | RCON (source), sleep (udp) |
+| Luanti | [luanti.json](luanti.json) | [`alpine`](https://github.com/sneakywrld/octail-yolks#alpine) | – | [—](../TESTED.md#standalone-luanti) | no console input, start detected by port |
 | Mindustry | [mindustry.json](mindustry.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [—](../TESTED.md#standalone-mindustry) | sleep (tcp) |
+| OpenRCT2 | [openrct2.json](openrct2.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#standalone-openrct2) | sleep (tcp), start detected by port |
 | OpenTTD | [openttd.json](openttd.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-10](../TESTED.md#standalone-openttd) | sleep (tcp) |
+| Space Station 14 | [space-station-14.json](space-station-14.json) | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | – | [—](../TESTED.md#standalone-space-station-14) | start detected by port |
 | Vintage Story | [vintage-story.json](vintage-story.json) | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) [`dotnet_8`](https://github.com/sneakywrld/octail-yolks#dotnet_8) | – | [—](../TESTED.md#standalone-vintage-story) | sleep (tcp) |
+| Xonotic | [xonotic.json](xonotic.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#standalone-xonotic) | start detected by port |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

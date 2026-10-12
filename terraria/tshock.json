@@ -1,0 +1,244 @@
+{
+  "_comment": "Octail's own egg (no upstream file), with the Terraria variables of terraria-vanilla.json. TShock for Linux x64 from Pryaxis' GitHub releases (latest or a tag), checked against GitHub's SHA-256 digest of the asset or a pinned SHA-256 (no checksum: the install fails), failures exit non-zero. TShock 6 is framework-dependent .NET 9, so it runs on dotnet_9 (dotnet_10 with DOTNET_ROLL_FORWARD=Major as the alternative). serverconfig.txt gets the world, port, players, MOTD, seed, password and NPC stream before every start (properties parser, as the vanilla egg); the port, player cap and REST API are also set on TShock's command line, which overrides tshock/config.json. The REST API is off unless the owner turns it on, and then listens on its own allocated port (REST_PORT). Generic TCP idle sleep (off until staff enable it per server), say as the broadcast, off saves and stops.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/terraria/tshock.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Terraria TShock",
+  "author": "eggs@octail.net",
+  "uuid": "84bd94a2-a5e0-4492-8a94-fd9dad367a4f",
+  "description": "TShock, the Terraria server mod for communities: permissions and groups, anti-cheat, server-side characters, bans, region protection and plugins.",
+  "tags": [
+    "terraria",
+    "tshock",
+    "dotnet"
+  ],
+  "features": null,
+  "docker_images": {
+    ".NET 9": "ghcr.io/sneakywrld/octail-yolks:dotnet_9",
+    ".NET 10": "ghcr.io/sneakywrld/octail-yolks:dotnet_10"
+  },
+  "file_denylist": [],
+  "startup": "DOTNET_ROLL_FORWARD=Major exec ./TShock.Server -config serverconfig.txt -port {{SERVER_PORT}} -maxplayers {{MAX_PLAYERS}} -worldselectpath /home/container/saves/Worlds --rest-enabled {{REST_API}} --rest-port {{REST_PORT}}",
+  "config": {
+    "files": "{\n    \"serverconfig.txt\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"worldpath\": \"/home/container/saves/Worlds\",\n            \"worldname\": \"{{server.environment.WORLD_NAME}}\",\n            \"world\": \"/home/container/saves/Worlds/{{server.environment.WORLD_NAME}}.wld\",\n            \"difficulty\": \"{{server.environment.WORLD_DIFFICULTY}}\",\n            \"autocreate\": \"{{server.environment.WORLD_SIZE}}\",\n            \"port\": \"{{server.allocations.default.port}}\",\n            \"maxplayers\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"motd\": \"{{server.environment.SERVER_MOTD}}\",\n            \"seed\": \"{{server.environment.WORLD_SEED}}\",\n            \"password\": \"{{server.environment.PASSWORD}}\",\n            \"npcstream\": \"{{server.environment.NPCSTREAM}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Server started\"\n}",
+    "logs": "{}",
+    "stop": "off"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# TShock (Octail's own install script): the TShock release for Linux x64 from Pryaxis' GitHub releases (latest or a\n# tag), checked against the SHA-256 digest GitHub lists for the asset or a pinned SHA-256, failures exit non-zero.\n# Worlds (saves/), TShock's database and config (tshock/) and plugins added by the owner stay on reinstall;\n# serverconfig.txt is only written when there is none.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq unzip tar ca-certificates > /dev/null\n\nVERSION=\"${TSHOCK_VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    API=\"https://api.github.com/repos/Pryaxis/TShock/releases/latest\"\nelse\n    API=\"https://api.github.com/repos/Pryaxis/TShock/releases/tags/v${VERSION#v}\"\nfi\nif ! RELEASE=$(curl -fsSL \"$API\"); then\n    echo \"Installation failed: TShock release ${VERSION} wasn't found on GitHub.\"\n    exit 1\nfi\nTAG=$(echo \"$RELEASE\" | jq -r '.tag_name')\nASSET=$(echo \"$RELEASE\" | jq -r '[.assets[] | select(.name | test(\"linux-x64-Release\\\\.zip$\"))][0] // empty')\nif [ -z \"$ASSET\" ]; then\n    echo \"Installation failed: release ${TAG} has no Linux x64 build.\"\n    exit 1\nfi\nNAME=$(echo \"$ASSET\" | jq -r '.name')\nURL=$(echo \"$ASSET\" | jq -r '.browser_download_url')\nDIGEST=$(echo \"$ASSET\" | jq -r '.digest // empty')\nSUM=\"${TSHOCK_SHA256:-}\"\nif [ -z \"$SUM\" ]; then\n    SUM=\"${DIGEST#sha256:}\"\nfi\nif [ -z \"$SUM\" ]; then\n    echo \"Installation failed: GitHub lists no checksum for ${NAME}; set TShock SHA-256 to the file's checksum.\"\n    exit 1\nfi\n\necho \"Downloading ${NAME} (${TAG})\"\ncurl -fsSL -o /tmp/tshock.zip \"$URL\"\nif ! echo \"${SUM,,}  /tmp/tshock.zip\" | sha256sum -c --quiet -; then\n    rm -f /tmp/tshock.zip\n    echo \"Installation failed: the download doesn't match its SHA-256.\"\n    exit 1\nfi\nrm -rf /tmp/tshock\nmkdir -p /tmp/tshock /mnt/server\nunzip -q /tmp/tshock.zip -d /tmp/tshock\n# The zip holds one tar that keeps the file modes (TShock.Server is executable).\nfor archive in /tmp/tshock/*.tar; do\n    if [ -f \"$archive\" ]; then\n        tar -xf \"$archive\" -C /tmp/tshock\n        rm -f \"$archive\"\n    fi\ndone\nif [ ! -f /tmp/tshock/TShock.Server ]; then\n    echo \"Installation failed: ${NAME} has no TShock.Server.\"\n    exit 1\nfi\ncp -a /tmp/tshock/. /mnt/server/\nrm -rf /tmp/tshock /tmp/tshock.zip\n\ncd /mnt/server\nchmod +x TShock.Server\nmkdir -p saves/Worlds tshock ServerPlugins\nif [ ! -f serverconfig.txt ]; then\n    cat > serverconfig.txt <<'OCTAIL_EOF'\nworldpath=/home/container/saves/Worlds\nworldname=world\nworld=/home/container/saves/Worlds/world.wld\ndifficulty=0\nautocreate=1\nmaxplayers=8\nOCTAIL_EOF\nfi\n\nif [ ! -x /mnt/server/TShock.Server ]; then\n    echo \"Installation failed: TShock.Server is missing.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: TShock ${TAG}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "TShock version",
+      "description": "latest or a release such as 6.2.1 (each TShock release supports one Terraria version; players need that one). Reinstall to switch.",
+      "env_variable": "TSHOCK_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|v?\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.]+)?)$/"
+      ],
+      "sort": 1,
+      "field_type": "text"
+    },
+    {
+      "name": "TShock SHA-256",
+      "description": "Optional: the SHA-256 of the release's Linux x64 zip, to pin the download. Empty: the checksum GitHub lists for it.",
+      "env_variable": "TSHOCK_SHA256",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([0-9A-Fa-f]{64})?$/"
+      ],
+      "sort": 2,
+      "field_type": "text"
+    },
+    {
+      "name": "World name",
+      "description": "The name for the world file.",
+      "env_variable": "WORLD_NAME",
+      "default_value": "world",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^[A-Za-z0-9 _-]+$/"
+      ],
+      "sort": 3,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "The maximum number of players a server will hold (1-255).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,255"
+      ],
+      "sort": 4,
+      "field_type": "text"
+    },
+    {
+      "name": "World size",
+      "description": "The size of a new world: 1 (small), 2 (medium), 3 (large).",
+      "env_variable": "WORLD_SIZE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "in:1,2,3"
+      ],
+      "sort": 5,
+      "field_type": "text"
+    },
+    {
+      "name": "Difficulty",
+      "description": "The difficulty of a new world: 0 (classic), 1 (expert), 2 (master), 3 (journey).",
+      "env_variable": "WORLD_DIFFICULTY",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "in:0,1,2,3"
+      ],
+      "sort": 6,
+      "field_type": "text"
+    },
+    {
+      "name": "MOTD",
+      "description": "The message of the day.",
+      "env_variable": "SERVER_MOTD",
+      "default_value": "Welcome!",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:128",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 7,
+      "field_type": "text"
+    },
+    {
+      "name": "World seed",
+      "description": "The seed for a new world. Empty: random.",
+      "env_variable": "WORLD_SEED",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:40",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 8,
+      "field_type": "text"
+    },
+    {
+      "name": "Password",
+      "description": "The server password. Empty: none (TShock accounts still apply).",
+      "env_variable": "PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:64",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 9,
+      "field_type": "text"
+    },
+    {
+      "name": "NPC stream",
+      "description": "Reduces enemy skipping but uses more bandwidth. The lower the number the less skipping, 0 is off.",
+      "env_variable": "NPCSTREAM",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:0,60"
+      ],
+      "sort": 10,
+      "field_type": "text"
+    },
+    {
+      "name": "REST API",
+      "description": "true turns on TShock's REST API on the REST port (it needs tokens from TShock to do anything); false keeps it off.",
+      "env_variable": "REST_API",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ],
+      "sort": 11,
+      "field_type": "text"
+    },
+    {
+      "name": "REST port",
+      "description": "The REST API port, an allocation of its own (set when the server is created).",
+      "env_variable": "REST_PORT",
+      "default_value": "7878",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ],
+      "sort": 12,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Terraria",
+    "features": {
+      "port_vars": {
+        "REST_PORT": "primary+1"
+      },
+      "sleep": {
+        "mode": "tcp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

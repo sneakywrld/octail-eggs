@@ -245,6 +245,11 @@
         "memory_mb": 4096,
         "disk_mb": 61440
       }
+    },
+    "variables": {
+      "STEAM_GSLT": {
+        "secret": true
+      }
     }
   }
 }

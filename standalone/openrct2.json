@@ -1,0 +1,230 @@
+{
+  "_comment": "Octail's own egg (no upstream file). The headless OpenRCT2 multiplayer server (openrct2-cli) from the official Linux Debian 12 build on GitHub (latest or a tag), checked against the release's sha256sums.txt and GitHub's digest, failures exit non-zero. OpenRCT2 needs the original RollerCoaster Tycoon 2 data files, which can't be shipped: the operator uploads them to rct2/ or sets RCT2_DATA_URL to an archive on their own storage (optionally with RCT2_DATA_SHA256); without them the start stops with that message (exit 1). The start hosts the park file, or the newest autosave when it's newer (OpenRCT2 autosaves every 5 minutes by default; Ctrl+C doesn't save), or the first RCT2 scenario on a fresh server. userdata/config.ini gets the server name, description, greeting, player cap and listing before every start (ini parser). The start is 'Listening for clients' or the TCP port once bound.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/openrct2.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "OpenRCT2",
+  "author": "eggs@octail.net",
+  "uuid": "d3910f07-5583-40f9-a530-d7eea08d30c5",
+  "description": "OpenRCT2, the open-source re-implementation of RollerCoaster Tycoon 2: a headless multiplayer server for building a park together. Needs the original RollerCoaster Tycoon 2 data files.",
+  "tags": [
+    "openrct2"
+  ],
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "if [ -z \"$(find rct2 -maxdepth 2 -ipath '*/data/g1.dat' -print -quit 2>/dev/null)\" ]; then echo 'OpenRCT2 needs the RollerCoaster Tycoon 2 data files: upload them to rct2/ (the folder with Data/g1.dat) or set the RCT2 data URL and reinstall.'; exit 1; fi; PARK=\"{{PARK_FILE}}\"; AUTO=$(ls -t userdata/save/autosave/*.park 2>/dev/null | head -n 1); if [ \"{{RESUME_AUTOSAVE}}\" = true ] && [ -n \"$AUTO\" ] && { [ ! -f \"$PARK\" ] || [ \"$AUTO\" -nt \"$PARK\" ]; }; then PARK=\"$AUTO\"; fi; if [ ! -f \"$PARK\" ]; then PARK=$(find rct2 -maxdepth 2 -iname '*.sc6' | sort | head -n 1); fi; if [ -z \"$PARK\" ]; then echo 'No park to host: upload a park or scenario to the park file.'; exit 1; fi; echo \"Hosting $PARK\"; exec ./openrct2-cli host \"$PARK\" --port {{SERVER_PORT}} --address 0.0.0.0 --headless --user-data-path /home/container/userdata --rct2-data-path /home/container/rct2 $( [ -z \"${SERVER_PASSWORD}\" ] || printf -- '--password %s' \"${SERVER_PASSWORD}\" )",
+  "config": {
+    "files": "{\n    \"userdata/config.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"network.server_name\": \"\\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"network.server_description\": \"\\\"{{server.environment.DESCRIPTION}}\\\"\",\n            \"network.server_greeting\": \"\\\"{{server.environment.GREETING}}\\\"\",\n            \"network.maxplayers\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"network.advertise\": \"{{server.environment.ADVERTISE}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Listening for clients\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# OpenRCT2 (Octail's own install script): the official Linux (Debian 12) build from OpenRCT2's GitHub releases (latest\n# or a tag), checked against the release's sha256sums.txt and GitHub's digest, failures exit non-zero. Only the\n# headless openrct2-cli, libopenrct2.so and OpenRCT2's own data/ are installed.\n# OpenRCT2 needs the original RollerCoaster Tycoon 2 data files, which Octail can't ship: the operator uploads them to\n# rct2/ (the folder with Data/g1.dat) or sets RCT2 data URL to an archive of them on their own storage (optionally\n# with its SHA-256). Parks (parks/), the user data (userdata/: config.ini, autosaves, groups and users) and rct2/\n# stay on reinstall.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq unzip tar xz-utils bzip2 ca-certificates > /dev/null\n\nVERSION=\"${OPENRCT2_VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    API=\"https://api.github.com/repos/OpenRCT2/OpenRCT2/releases/latest\"\nelse\n    API=\"https://api.github.com/repos/OpenRCT2/OpenRCT2/releases/tags/v${VERSION#v}\"\nfi\nif ! RELEASE=$(curl -fsSL \"$API\"); then\n    echo \"Installation failed: OpenRCT2 release ${VERSION} wasn't found on GitHub.\"\n    exit 1\nfi\nTAG=$(echo \"$RELEASE\" | jq -r '.tag_name')\nASSET=\"OpenRCT2-${TAG}-Linux-bookworm-x86_64.tar.gz\"\nSUMS=\"OpenRCT2-${TAG}-sha256sums.txt\"\nURL=$(echo \"$RELEASE\" | jq -r --arg a \"$ASSET\" '.assets[] | select(.name == $a) | .browser_download_url')\nDIGEST=$(echo \"$RELEASE\" | jq -r --arg a \"$ASSET\" '.assets[] | select(.name == $a) | .digest // empty')\nSUMS_URL=$(echo \"$RELEASE\" | jq -r --arg a \"$SUMS\" '.assets[] | select(.name == $a) | .browser_download_url')\nif [ -z \"$URL\" ] || [ -z \"$SUMS_URL\" ]; then\n    echo \"Installation failed: release ${TAG} has no ${ASSET} or no ${SUMS}.\"\n    exit 1\nfi\nSUM=$(curl -fsSL \"$SUMS_URL\" | awk -v f=\"$ASSET\" '$2 == f || $2 == \"./\" f { print tolower($1); exit }')\nif [ -z \"$SUM\" ]; then\n    echo \"Installation failed: ${SUMS} doesn't list ${ASSET}.\"\n    exit 1\nfi\nif [ -n \"$DIGEST\" ] && [ \"${DIGEST#sha256:}\" != \"$SUM\" ]; then\n    echo \"Installation failed: ${SUMS} and GitHub disagree about ${ASSET}'s SHA-256.\"\n    exit 1\nfi\n\necho \"Downloading ${ASSET}\"\ncurl -fsSL -o /tmp/openrct2.tar.gz \"$URL\"\nif ! echo \"${SUM}  /tmp/openrct2.tar.gz\" | sha256sum -c --quiet -; then\n    rm -f /tmp/openrct2.tar.gz\n    echo \"Installation failed: the download doesn't match its SHA-256.\"\n    exit 1\nfi\nrm -rf /tmp/openrct2\nmkdir -p /tmp/openrct2 /mnt/server\ntar -xzf /tmp/openrct2.tar.gz -C /tmp/openrct2\nif [ ! -f /tmp/openrct2/OpenRCT2/openrct2-cli ]; then\n    echo \"Installation failed: ${ASSET} has no openrct2-cli.\"\n    exit 1\nfi\n\ncd /mnt/server\nrm -rf data\ncp -a /tmp/openrct2/OpenRCT2/openrct2-cli /tmp/openrct2/OpenRCT2/libopenrct2.so /tmp/openrct2/OpenRCT2/data /mnt/server/\nrm -rf /tmp/openrct2 /tmp/openrct2.tar.gz\nchmod +x openrct2-cli\nmkdir -p parks userdata rct2\n\n## The RollerCoaster Tycoon 2 data files: from the operator's own archive when a URL is set.\nif [ -n \"${RCT2_DATA_URL:-}\" ]; then\n    echo \"Downloading the RollerCoaster Tycoon 2 data files from the RCT2 data URL\"\n    curl -fsSL -o /tmp/rct2-data \"$RCT2_DATA_URL\"\n    if [ -n \"${RCT2_DATA_SHA256:-}\" ]; then\n        if ! echo \"${RCT2_DATA_SHA256,,}  /tmp/rct2-data\" | sha256sum -c --quiet -; then\n            rm -f /tmp/rct2-data\n            echo \"Installation failed: the RCT2 data archive doesn't match its SHA-256.\"\n            exit 1\n        fi\n    fi\n    rm -rf /tmp/rct2-x\n    mkdir -p /tmp/rct2-x\n    if unzip -tq /tmp/rct2-data > /dev/null 2>&1; then\n        unzip -q /tmp/rct2-data -d /tmp/rct2-x\n    elif ! tar -xf /tmp/rct2-data -C /tmp/rct2-x; then\n        rm -f /tmp/rct2-data\n        echo \"Installation failed: the RCT2 data URL is neither a zip nor a tar archive.\"\n        exit 1\n    fi\n    rm -f /tmp/rct2-data\n    # The folder that holds Data/g1.dat (any letter case), wherever it sits in the archive.\n    G1=$(find /tmp/rct2-x -ipath '*/data/g1.dat' -print -quit)\n    if [ -z \"$G1\" ]; then\n        rm -rf /tmp/rct2-x\n        echo \"Installation failed: the RCT2 data archive has no Data/g1.dat.\"\n        exit 1\n    fi\n    cp -a \"$(dirname \"$(dirname \"$G1\")\")/.\" /mnt/server/rct2/\n    rm -rf /tmp/rct2-x\nfi\nif [ -z \"$(find /mnt/server/rct2 -maxdepth 2 -ipath '*/data/g1.dat' -print -quit)\" ]; then\n    echo \"NOTE: the RollerCoaster Tycoon 2 data files are not there yet. Upload your copy of RCT2 (the folder with\"\n    echo \"Data/, ObjData/ and Scenarios/ from a Steam or GOG install) to rct2/, then start the server.\"\nfi\n\nif [ ! -x /mnt/server/openrct2-cli ]; then\n    echo \"Installation failed: openrct2-cli is missing.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: OpenRCT2 ${TAG}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server name",
+      "description": "The name in the server list (no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "OpenRCT2 on Octail",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 1,
+      "field_type": "text"
+    },
+    {
+      "name": "Description",
+      "description": "Shown in the server list (no double quotes or backslashes).",
+      "env_variable": "DESCRIPTION",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:256",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 2,
+      "field_type": "text"
+    },
+    {
+      "name": "Greeting",
+      "description": "Shown to players when they join (no double quotes or backslashes).",
+      "env_variable": "GREETING",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:256",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 3,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "How many players may be connected at once (1-255).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,255"
+      ],
+      "sort": 4,
+      "field_type": "text"
+    },
+    {
+      "name": "Public listing",
+      "description": "true lists the server on the OpenRCT2 master server; false: players join by address.",
+      "env_variable": "ADVERTISE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ],
+      "sort": 5,
+      "field_type": "text"
+    },
+    {
+      "name": "Password",
+      "description": "Optional: players must enter it to join. One word, no quotes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:64",
+        "regex:/^[^\\s\"'\\\\]*$/"
+      ],
+      "sort": 6,
+      "field_type": "text"
+    },
+    {
+      "name": "Park file",
+      "description": "The park or scenario to host, relative to the server folder (.park, .sv6, .sc6). Upload your own to parks/.",
+      "env_variable": "PARK_FILE",
+      "default_value": "parks/park.park",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:128",
+        "regex:/^[A-Za-z0-9 _.()\\/-]+\\.(park|sv6|sv4|sc6|sc4|PARK|SV6|SV4|SC6|SC4)$/",
+        "not_regex:/\\.\\.\\//",
+        "not_regex:/\\.\\.$/"
+      ],
+      "sort": 7,
+      "field_type": "text"
+    },
+    {
+      "name": "Resume autosave",
+      "description": "true hosts the newest autosave when it's newer than the park file, so a restart keeps the park's progress; false always hosts the park file.",
+      "env_variable": "RESUME_AUTOSAVE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ],
+      "sort": 8,
+      "field_type": "text"
+    },
+    {
+      "name": "OpenRCT2 version",
+      "description": "latest or a release such as 0.5.6 (players need the same version). Reinstall to switch.",
+      "env_variable": "OPENRCT2_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|v?\\d+\\.\\d+\\.\\d+)$/"
+      ],
+      "sort": 9,
+      "field_type": "text"
+    },
+    {
+      "name": "RCT2 data URL",
+      "description": "Optional, for staff: an https URL of a zip or tar archive of your own RollerCoaster Tycoon 2 files (the folder with Data/g1.dat), unpacked into rct2/ on install. Empty: upload them to rct2/ yourself.",
+      "env_variable": "RCT2_DATA_URL",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^(https:\\/\\/\\S+)?$/"
+      ],
+      "sort": 10,
+      "field_type": "text"
+    },
+    {
+      "name": "RCT2 data SHA-256",
+      "description": "Optional: the SHA-256 of that archive, checked on install.",
+      "env_variable": "RCT2_DATA_SHA256",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([0-9A-Fa-f]{64})?$/"
+      ],
+      "sort": 11,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "OpenRCT2",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "sleep": {
+        "mode": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

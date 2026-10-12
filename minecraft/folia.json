@@ -1,0 +1,125 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Paper egg (minecraft-paper.yaml): the jar from PaperMC's Fill API v3 (project folia) with its SHA-256 checked, latest meaning the newest Minecraft version with a stable build, a version or build that does not exist fails the install, the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 17 images (Folia starts at 1.19.4), a User Agent variable staff set once like Paper's, install sandbox defaults and resource hints. No idle sleep: Folia is for servers too large to pause.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/folia.json"
+  },
+  "uuid": "c4e4814d-f87e-4bfd-b54b-fd8365d1623c",
+  "name": "Folia",
+  "author": "octail@meowgafactory.com",
+  "description": "Folia is PaperMC's fork of Paper that runs regions of the world on several threads, for very large servers. Many Paper plugins do not support it.",
+  "tags": [
+    "minecraft",
+    "folia"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Folia installation (Octail): the jar from PaperMC's download service (Fill API v3, project folia),\n# its SHA-256 checked. \"latest\" picks the newest Minecraft version with a stable Folia build (the\n# newest one when none is stable yet). A version or build that doesn't exist fails the install.\n#\n# Server files: /mnt/server\nset -eu\n\nAPI=https://fill.papermc.io/v3/projects/folia\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nBUILD=\"${BUILD_NUMBER:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\n\nif [ -z \"${USER_AGENT:-}\" ]; then\n\tfail \"PaperMC's download service needs a User-Agent: staff set the egg's User Agent variable (see https://docs.papermc.io/misc/downloads-service/)\"\nfi\nget() { curl -fsSL --retry 3 --connect-timeout 20 -H \"User-Agent: ${USER_AGENT}\" \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nPROJECT_JSON=$(get \"${API}\") || fail \"can't reach PaperMC's download service (${API})\"\n# Newest first: the version groups (\"26.2\", \"1.21\", ...) and the versions in each.\nALL=$(echo \"${PROJECT_JSON}\" | jq -r '.versions | to_entries[] | .value[]')\n[ -n \"${ALL}\" ] || fail \"PaperMC lists no Folia versions\"\n\nif [ -z \"${VERSION}\" ] || [ \"${VERSION}\" = \"latest\" ]; then\n\tVERSION=\"\"\n\tfor v in ${ALL}; do\n\t\tCHANNEL=$(get \"${API}/versions/${v}/builds/latest\" | jq -r '.channel // empty') || CHANNEL=\"\"\n\t\tif [ \"${CHANNEL}\" = \"STABLE\" ]; then\n\t\t\tVERSION=\"${v}\"\n\t\t\tbreak\n\t\tfi\n\tdone\n\tif [ -z \"${VERSION}\" ]; then\n\t\tVERSION=$(echo \"${ALL}\" | head -n 1)\n\t\techo \"No Minecraft version has a stable Folia build yet; using ${VERSION}.\"\n\tfi\nfi\necho \"${ALL}\" | grep -qxF \"${VERSION}\" ||\n\tfail \"Folia has no Minecraft ${VERSION}. The versions are listed at https://papermc.io/downloads/folia\"\n\nif [ -z \"${BUILD}\" ] || [ \"${BUILD}\" = \"latest\" ]; then\n\tBUILD_URL=\"${API}/versions/${VERSION}/builds/latest\"\nelse\n\tcase \"${BUILD}\" in\n\t*[!0-9]*) fail \"the build number (${BUILD}) must be a number or latest\" ;;\n\tesac\n\tBUILD_URL=\"${API}/versions/${VERSION}/builds/${BUILD}\"\nfi\nINFO=$(get \"${BUILD_URL}\") || fail \"Folia has no build ${BUILD} for ${VERSION}\"\nBUILD=$(echo \"${INFO}\" | jq -r '.id // empty')\nCHANNEL=$(echo \"${INFO}\" | jq -r '.channel // empty')\nURL=$(echo \"${INFO}\" | jq -r '.downloads.\"server:default\".url // empty')\nSHA256=$(echo \"${INFO}\" | jq -r '.downloads.\"server:default\".checksums.sha256 // empty' | tr 'A-F' 'a-f')\ncase \"${URL}\" in\nhttps://*) ;;\n*) fail \"PaperMC gave no download for Folia ${VERSION} build ${BUILD}\" ;;\nesac\necho \"${SHA256}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"PaperMC gave no SHA-256 for Folia ${VERSION} build ${BUILD}\"\nif [ \"${CHANNEL}\" != \"STABLE\" ]; then\n\techo \"Note: Folia ${VERSION} build ${BUILD} is marked ${CHANNEL}, not stable.\"\nfi\n\necho \"Installing Folia ${VERSION} build ${BUILD} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -H \"User-Agent: ${USER_AGENT}\" -o \"${JAR}.download\" \"${URL}\" ||\n\tfail \"the download of Folia ${VERSION} build ${BUILD} failed\"\nGOT=$(sha256sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA256}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-256 mismatch for Folia ${VERSION} build ${BUILD} (expected ${SHA256}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Folia ${VERSION} build ${BUILD} installed (SHA-256 checked).\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.11, or latest for the newest version with a stable Folia build. A version Folia has no build for fails the install.\n\nThe Startup image must fit it: Java 25 for the newest releases, Java 21 for 1.20.5 to 1.21.x, Java 17 for 1.19.4 to 1.20.4.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9A-Za-z.-]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Build Number",
+      "description": "The Folia build to install, or latest for the newest build of that Minecraft version.",
+      "env_variable": "BUILD_NUMBER",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "User Agent",
+      "description": "Required by PaperMC's download service: something that identifies your panel, such as Octail/1.0 (https://panel.example.com).\nSee https://docs.papermc.io/misc/downloads-service/",
+      "env_variable": "USER_AGENT",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:200"
+      ],
+      "sort": 4
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

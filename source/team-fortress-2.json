@@ -123,6 +123,11 @@
         "memory_mb": 2048,
         "disk_mb": 20480
       }
+    },
+    "variables": {
+      "STEAM_ACC": {
+        "secret": true
+      }
     }
   }
 }

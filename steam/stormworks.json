@@ -1,0 +1,167 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd stormworks/egg-pterodactyl-stormworks--build-and-rescue.json (pelican-eggs, MIT licence) at 8dd208975977aa24a6c53008a65a630c150806b8. Upstream configured nothing (its README: edit server_config.xml by hand, port included). Octail writes a first server_data/server_config.xml in the install (the mission playlists from the installed rom/data/missions) and sets the port, name, password, max players and save name in it with sed before every start, whatever the layout the server wrote it back in (Octail has no xml parser), removes Wine's 32-bit cmd.exe before every start (the server clears its console through it every few seconds, which stutters clients), starts with the image's Xvfb instead of xvfb-run, detects the start from 'Server Version : v...' or the bound game port (x_octail.features.ready), reserves the two ports the server opens after the game port (Steam query +1 and +2, fixed_ports), adds the stormworks tag, the no_console_input flag, install sandbox defaults and resource hints, stops with Ctrl+C handed to the server by a trap (the wine image runs the line in bash as PID 1, which ignores it otherwise) and waits for it so the config and world are saved, turns Auto Update on (upstream: off and hidden), refuses \" < > & \\ ~ in the name and password (they go into XML through sed), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/stormworks.json"
+  },
+  "exported_at": "2026-10-12T08:00:00+00:00",
+  "name": "Stormworks: Build and Rescue",
+  "author": "iamkubi@gmail.com",
+  "uuid": "b3d47e19-2c8a-4f05-8e6b-7a90c1d5e2f3",
+  "description": "Design, build and pilot your own air-sea rescue service. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "stormworks",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine",
+    "Wine Staging": "ghcr.io/sneakywrld/octail-yolks:wine_staging"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export SteamAppId=573090; rm -f \"${WINEPREFIX:-/home/container/.wine}/drive_c/windows/syswow64/cmd.exe\"; CFG=server_data/server_config.xml; sw_set() { sed -i -E \"s~(^|[[:space:]])$1=\\\"[^\\\"]*\\\"~\\1$1=\\\"$2\\\"~\" \"${CFG}\"; }; if [ -f \"${CFG}\" ]; then sw_set port \"{{SERVER_PORT}}\"; sw_set name \"{{SERVER_NAME}}\"; sw_set password \"{{SERVER_PASSWORD}}\"; sw_set max_players \"{{MAX_PLAYERS}}\"; sw_set save_name \"{{SAVE_NAME}}\"; else echo \"Octail: ${CFG} is missing; reinstall the server to get it back.\"; fi; wine ./server64.exe +server_dir server_data & SW_PID=$!; trap \"kill -INT ${SW_PID} 2>/dev/null; wait ${SW_PID}\" INT TERM; wait ${SW_PID}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "regex:Server\\s+Version\\s*:\\s*v\\d+"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/server64.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Stormworks dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: the server reads server_data/server_config.xml (+server_dir server_data) and writes it back when it stops.\n## A first config with the mission playlists the installed game ships, so the server's port is right from the first\n## start; Octail sets the port, name, password, max players and save name in it before every start.\nmkdir -p /mnt/server/server_data\nCFG=/mnt/server/server_data/server_config.xml\nif [[ ! -f \"$CFG\" ]]; then\n    {\n        echo '<?xml version=\"1.0\" encoding=\"UTF-8\"?>'\n        echo '<server_data port=\"25564\" name=\"Octail Stormworks Server\" save_name=\"autosave_server\" max_players=\"16\" password=\"\">'\n        printf '\\t<admins>\\n\\t</admins>\\n\\t<authorized>\\n\\t</authorized>\\n\\t<blacklist>\\n\\t</blacklist>\\n\\t<whitelist>\\n\\t</whitelist>\\n'\n        if [[ -d /mnt/server/rom/data/missions ]]; then\n            printf '\\t<playlists>\\n'\n            for mission in /mnt/server/rom/data/missions/*/; do\n                printf '\\t\\t<path path=\"rom/data/missions/%s\"/>\\n' \"$(basename \"$mission\")\"\n            done\n            printf '\\t</playlists>\\n'\n        fi\n        echo '</server_data>'\n    } > \"$CFG\"\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server list (no \" < > & \\ or ~). Written to server_config.xml.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Stormworks Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"<>&\\\\~]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (no \" < > & \\ or ~).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"<>&\\\\~]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "How many players may join at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Save Name",
+      "description": "The world save (server_data/saves/<name>). A new name starts a new world; the old one stays.",
+      "env_variable": "SAVE_NAME",
+      "default_value": "autosave_server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "alpha_dash",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "1247090",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1247090"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Stormworks",
+    "features": {
+      "no_console_input": true,
+      "fixed_ports": {
+        "Steam query": "primary+1",
+        "third game port": "primary+2"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd the_isle/evrima/egg-the-isle.json (pelican-eggs, MIT licence). Octail keeps the Linux server of the evrima branch (app 412680, -beta evrima also on every automatic update, so the server never falls back to Legacy) and the public Epic Online Services client the game's own server guide gives (passed on the command line as upstream does), and changes the rest: Game.ini is edited before every start with the ini parser (upstream overwrote the whole file at every reinstall, admins included, and set nothing at start), so settings and lines the owner adds survive; RCON and queue ports come from automatic port variables (+1 and +2) instead of upstream's shared 44000; RCON is off and its password is required to be one word; the password switch follows the password variable's own true/false setting; the map is a setting; the stop is Ctrl+C (upstream's ^^C was a kill) and the no_console_input flag hides the command box (the server reads no console commands; its RCON is The Isle's own protocol, not Source RCON); the start also counts once the game port (UDP) is bound; install sandbox defaults and resource hints; and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/the-isle.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "The Isle (Evrima)",
+  "author": "fredrik.johansenfuun@gmail.com",
+  "uuid": "6fbfb5fe-d337-44b9-bcc7-5bad094b4df8",
+  "description": "The Isle is an open-world survival game: play as a dinosaur on a hostile island. Hunt. Prey. Survive. This is the Evrima branch's Linux dedicated server.",
+  "tags": [
+    "the-isle",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./TheIsle/Binaries/Linux/TheIsleServer-Linux-Shipping -Port={{SERVER_PORT}} -log '-ini:Engine:[EpicOnlineServices]:DedicatedServerClientId=xyza7891gk5PRo3J7G9puCJGFJjmEguW' '-ini:Engine:[EpicOnlineServices]:DedicatedServerClientSecret=pKWl6t5i9NJK8gTpVlAxzENZ65P8hYzodV8Dqe5Rlc8'",
+  "config": {
+    "files": "{\n    \"TheIsle/Saved/Config/LinuxServer/Game.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"/Script/TheIsle.TIGameSession.ServerName\": \"{{server.environment.SERVER_NAME}}\",\n            \"/Script/TheIsle.TIGameSession.MaxPlayerCount\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"/Script/TheIsle.TIGameSession.MapName\": \"{{server.environment.MAP_NAME}}\",\n            \"/Script/TheIsle.TIGameSession.bServerPassword\": \"{{server.environment.PASSWORD_ENABLED}}\",\n            \"/Script/TheIsle.TIGameSession.ServerPassword\": \"{{server.environment.SERVER_PASSWORD}}\",\n            \"/Script/TheIsle.TIGameSession.bRconEnabled\": \"{{server.environment.RCON_ENABLED}}\",\n            \"/Script/TheIsle.TIGameSession.RconPort\": \"{{server.environment.RCON_PORT}}\",\n            \"/Script/TheIsle.TIGameSession.RconPassword\": \"{{server.environment.RCON_PASSWORD}}\",\n            \"/Script/TheIsle.TIGameSession.bQueueEnabled\": \"{{server.environment.QUEUE_ENABLED}}\",\n            \"/Script/TheIsle.TIGameSession.QueuePort\": \"{{server.environment.QUEUE_PORT}}\",\n            \"/Script/TheIsle.TIGameSession.Discord\": \"{{server.environment.DISCORD}}\",\n            \"/Script/TheIsle.TIGameSession.bEnableHumans\": \"{{server.environment.HUMANS}}\",\n            \"/Script/TheIsle.TIGameSession.bServerDynamicWeather\": \"{{server.environment.DYNAMIC_WEATHER}}\",\n            \"/Script/TheIsle.TIGameSession.bAllowReplay\": \"{{server.environment.ALLOW_REPLAY}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"Session started successfully\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# SteamCMD installation script (Octail)\n#\n# Server Files: /mnt/server\n# Variables: SRCDS_APPID (the app), SRCDS_BETAID / SRCDS_BETAPASS (a beta branch), anonymous login.\n\n## anonymous login: these servers need no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/TheIsle/Binaries/Linux/TheIsleServer-Linux-Shipping\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the The Isle (Evrima) dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/TheIsle/Binaries/Linux/TheIsleServer-Linux-Shipping\"\n\n## Game.ini is filled before every start (Octail's ini parser); its folder must exist\nmkdir -p /mnt/server/TheIsle/Saved/Config/LinuxServer\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server list.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "An Octail The Isle server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:70",
+        "regex:/^[^\\r\\n]*$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "The most players at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "100",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The map the server loads (Gateway is Evrima's map).",
+      "env_variable": "MAP_NAME",
+      "default_value": "Gateway",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|alpha_dash|max:40",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Password Required",
+      "description": "true: players need the Server Password to join.",
+      "env_variable": "PASSWORD_ENABLED",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "The join password (letters, digits, - and _), used when Password Required is true.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|alpha_dash|max:32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Queue",
+      "description": "true: players wait in a queue when the server is full.",
+      "env_variable": "QUEUE_ENABLED",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Humans",
+      "description": "true: humans are playable.",
+      "env_variable": "HUMANS",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Dynamic Weather",
+      "description": "true: the weather changes.",
+      "env_variable": "DYNAMIC_WEATHER",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Allow Replay",
+      "description": "true: players may replay as a new dinosaur after death.",
+      "env_variable": "ALLOW_REPLAY",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Discord",
+      "description": "An optional Discord invite code shown in the server list.",
+      "env_variable": "DISCORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|alpha_dash|max:40",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON",
+      "description": "true: The Isle's own RCON listens on the RCON port (for tools made for The Isle; set a password first).",
+      "env_variable": "RCON_ENABLED",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "The RCON password (8 to 64 letters, digits, - and _).",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|alpha_dash|between:8,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Port",
+      "description": "Set by Octail when the server is created (one after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "7778",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Queue Port",
+      "description": "Set by Octail when the server is created (two after the game port).",
+      "env_variable": "QUEUE_PORT",
+      "default_value": "7779",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam App ID",
+      "description": "The Isle's dedicated server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "412680",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:412680",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Branch",
+      "description": "Evrima is a beta branch of the dedicated server; installs and updates stay on it.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "evrima",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:evrima",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Update the server (on the evrima branch) at every start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "The Isle",
+    "features": {
+      "no_console_input": true,
+      "port_vars": {
+        "RCON_PORT": "primary+1",
+        "QUEUE_PORT": "primary+2"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

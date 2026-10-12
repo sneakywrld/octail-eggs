@@ -1,0 +1,270 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), written from the server's own files (AskaServer.bat, the shipped \"server properties.txt\") and Sand Sailor Studio's setup guide; there is no pelican-eggs ASKA egg. The server runs on octail-server-properties.txt (-propertiesPath), made once from the shipped file because updates overwrite that one, with the Startup tab's name, session name, seed, password, ports, token, region, keep-alive, autosave style and mode set in it (file parser, \"key = value\") before every start; the install makes sure each of those keys has a line. Unity's log goes to the console (-logFile -), the start is detected from the bound game port (x_octail.features.ready) or a session line (a guess until a real run shows the server's own), the query port gets its own automatic port (port_vars) with the Steam query (A2S) for player counts, Ctrl+C is handed to the server by a trap (the wine image runs the line in bash as PID 1) and waited for, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/aska.json"
+  },
+  "exported_at": "2026-10-12T08:00:00+00:00",
+  "name": "ASKA",
+  "author": "eggs@octail.net",
+  "uuid": "c73e77f4-86ab-4f45-a3d0-3f60add7e61b",
+  "description": "Lead a Viking clan: build a village, give your villagers tasks and survive the seasons with up to four players. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "aska",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export SteamAppId=1898300; wine ./AskaServer.exe -nographics -batchmode -propertiesPath octail-server-properties.txt -logFile - & ASKA_PID=$!; trap \"kill -INT ${ASKA_PID} 2>/dev/null; wait ${ASKA_PID}\" INT TERM; wait ${ASKA_PID}"
+  },
+  "config": {
+    "files": {
+      "octail-server-properties.txt": {
+        "parser": "file",
+        "find": {
+          "display name =": "display name = {{server.environment.SESSION_NAME}}",
+          "server name =": "server name = {{server.environment.SERVER_NAME}}",
+          "seed =": "seed = {{server.environment.SEED}}",
+          "password =": "password = {{server.environment.SERVER_PASSWORD}}",
+          "steam game port =": "steam game port = {{server.allocations.default.port}}",
+          "steam query port =": "steam query port = {{server.environment.QUERY_PORT}}",
+          "authentication token =": "authentication token = {{server.environment.AUTH_TOKEN}}",
+          "region =": "region = {{server.environment.REGION}}",
+          "keep server world alive =": "keep server world alive = {{server.environment.KEEP_WORLD_ALIVE}}",
+          "autosave style =": "autosave style = {{server.environment.AUTOSAVE_STYLE}}",
+          "mode =": "mode = {{server.environment.GAME_MODE}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "regex:[Ss]ession (is )?(open|opened|started)"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/AskaServer.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the ASKA dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: updates overwrite the shipped \"server properties.txt\" (AskaServer.bat says to keep a copy elsewhere), so\n## the server runs on its own copy, octail-server-properties.txt (-propertiesPath), made once from the shipped file\n## (or a short one when the game ships none); an existing copy is kept. Every line Octail sets before each start\n## (\"key = value\", the file parser matches \"key =\") must be there, so a missing key gets a line of its own.\nCFG=/mnt/server/octail-server-properties.txt\nif [[ ! -f \"$CFG\" ]]; then\n    if [[ -f \"/mnt/server/server properties.txt\" ]]; then\n        cp \"/mnt/server/server properties.txt\" \"$CFG\"\n    else\n        printf '%s\\n' \"// ASKA dedicated server settings, written by the Octail install.\" > \"$CFG\"\n    fi\nfi\nsed -i 's/\\r$//' \"$CFG\"\nfor key in \"save id\" \"display name\" \"server name\" \"seed\" \"password\" \"steam game port\" \"steam query port\" \\\n    \"authentication token\" \"region\" \"keep server world alive\" \"autosave style\" \"mode\"; do\n    grep -q \"^${key} =\" \"$CFG\" || echo \"${key} = \" >> \"$CFG\"\ndone\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The host name in the session list.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail ASKA Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Session Name",
+      "description": "The name of a new save (an existing save keeps its own).",
+      "env_variable": "SESSION_NAME",
+      "default_value": "Octail Session",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (no spaces).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Seed",
+      "description": "Optional: the seed of a new save. Empty = random.",
+      "env_variable": "SEED",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Region",
+      "description": "The region the session opens in; default pings the best one.",
+      "env_variable": "REGION",
+      "default_value": "default",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:default,asia,japan,europe,south america,south korea,usa east,usa west,australia,canada east,hong kong,india,turkey,united arab emirates,usa south central"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Keep World Alive",
+      "description": "true: the world keeps running with nobody online. false: it loads when the first player joins and unloads when the last one leaves.",
+      "env_variable": "KEEP_WORLD_ALIVE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Autosave",
+      "description": "When the server saves: every morning (in game), every 5, 10, 15 or 20 minutes, or disabled.",
+      "env_variable": "AUTOSAVE_STYLE",
+      "default_value": "every morning",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:every morning,every 5 minutes,every 10 minutes,every 15 minutes,every 20 minutes,disabled"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Game Mode",
+      "description": "normal, or custom to use the terrain, season and population settings in octail-server-properties.txt (for a new save).",
+      "env_variable": "GAME_MODE",
+      "default_value": "normal",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:normal,custom"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Authentication Token",
+      "description": "Optional: a Steam game server login token for the ASKA game (app 1898300, steamcommunity.com/dev/managegameservers), so the server can sign in to Steam without a Steam client.",
+      "env_variable": "AUTH_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_num",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "3246670",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:3246670"
+      ]
+    },
+    {
+      "sort": 13,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "ASKA",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

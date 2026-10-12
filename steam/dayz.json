@@ -1,0 +1,289 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd dayz egg was read as a reference only). App 223350 (DayZ Server) is not available to anonymous SteamCMD logins, so the egg uses Octail's steam_login feature (required): the Steam account picked on the Startup tab logs in, Steam Guard codes are asked for in the console and the login is cached for start-time updates. An account that owns DayZ is recommended: the vanilla missions only update with it, and Steam Workshop downloads (app 221100, the steam.workshop tool) need it. The Linux depot (DayZServer) is downloaded, SteamCMD is retried up to 3 times and the install fails when DayZServer is missing. serverDZ.cfg is written by the install when missing; its name, passwords, slots, view, time, query port and mission lines are set by the file parser before every start (steamQueryPort is appended when the file has none), and a missing mission folder stops the start. Mods as in arma-3.json. The Steam (+2) and BattlEye (+4) ports are reserved with fixed_ports, the query port (+1) and the optional BattlEye RCon port (+3) are variables. The server reads no console input and stops on Ctrl+C.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/dayz.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "DayZ",
+  "author": "eggs@octail.net",
+  "uuid": "c2d8a4e1-6f3b-4a97-b05c-7e19d3f2a846",
+  "description": "Bohemia Interactive's DayZ: the official Linux dedicated server (DayZServer) from SteamCMD, with Workshop and uploaded mods. Needs a logged-in Steam account; one that owns DayZ is recommended.",
+  "tags": [
+    "dayz",
+    "bohemia",
+    "steamcmd",
+    "battleye"
+  ],
+  "features": [
+    "steam_disk_space",
+    "no_console_input"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "if [ ! -d \"mpmissions/${MISSION}\" ]; then echo \"The mission folder mpmissions/${MISSION} is missing: upload it or pick another mission on the Startup tab.\"; exit 1; fi; grep -q \"^steamQueryPort\" serverDZ.cfg || printf \"\\nsteamQueryPort = %s;\\n\" \"${QUERY_PORT}\" >> serverDZ.cfg; octail_mods=\"\"; for octail_id in ${WORKSHOP_MODS//,/ }; do octail_mods=\"${octail_mods}workshop/${octail_id};\"; done; octail_mods=\"${octail_mods}${MODS}\"; octail_mods=\"${octail_mods%;}\"; mkdir -p keys; IFS=\";\" read -ra octail_dirs <<< \"${octail_mods};${SERVER_MODS}\"; for octail_d in \"${octail_dirs[@]}\"; do [ -n \"${octail_d}\" ] || continue; if [ ! -d \"${octail_d}\" ]; then echo \"Mod folder ${octail_d} is missing; the server starts without it.\"; continue; fi; if [ \"${MODS_LOWERCASE}\" = 1 ]; then find \"${octail_d}\" -mindepth 1 -depth -name \"*[A-Z]*\" -exec sh -c 'for p; do n=\"${p%/*}/$(printf %s \"${p##*/}\" | tr \"[:upper:]\" \"[:lower:]\")\"; [ -e \"$n\" ] || mv \"$p\" \"$n\"; done' sh {} +; fi; find \"${octail_d}\" -iname \"*.bikey\" -exec cp -f -t keys {} +; done; if [ -d battleye ]; then for octail_be in battleye/beserver_x64.cfg battleye/launch/beserver_x64.cfg; do [ -d \"${octail_be%/*}\" ] || continue; touch \"${octail_be}\"; sed -i -e \"/^RConPassword /d\" -e \"/^RConPort /d\" -e \"/^RConIP /d\" \"${octail_be}\"; [ -z \"${RCON_PASSWORD}\" ] || printf \"RConPassword %s\\nRConPort %s\\nRConIP 0.0.0.0\\n\" \"${RCON_PASSWORD}\" \"${RCON_PORT}\" >> \"${octail_be}\"; done; fi; exec ./DayZServer -config=serverDZ.cfg -port=\"${SERVER_PORT}\" -profiles=profiles -bepath=battleye \"-mod=${octail_mods}\" \"-serverMod=${SERVER_MODS}\" -dologs -adminlog -netlog -freezecheck",
+  "config": {
+    "files": "{\n    \"serverDZ.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"hostname =\": \"hostname = \\\"{{server.environment.SERVER_NAME}}\\\";\",\n            \"password =\": \"password = \\\"{{server.environment.SERVER_PASSWORD}}\\\";\",\n            \"passwordAdmin =\": \"passwordAdmin = \\\"{{server.environment.ADMIN_PASSWORD}}\\\";\",\n            \"maxPlayers =\": \"maxPlayers = {{server.environment.MAX_PLAYERS}};\",\n            \"disable3rdPerson =\": \"disable3rdPerson = {{server.environment.DISABLE_THIRD_PERSON}};\",\n            \"disableCrosshair =\": \"disableCrosshair = {{server.environment.DISABLE_CROSSHAIR}};\",\n            \"serverTimeAcceleration =\": \"serverTimeAcceleration = {{server.environment.TIME_ACCELERATION}};\",\n            \"serverNightTimeAcceleration =\": \"serverNightTimeAcceleration = {{server.environment.NIGHT_ACCELERATION}};\",\n            \"serverTimePersistent =\": \"serverTimePersistent = {{server.environment.PERSISTENT_TIME}};\",\n            \"steamQueryPort =\": \"steamQueryPort = {{server.environment.QUERY_PORT}};\",\n            \"template =\": \"template = \\\"{{server.environment.MISSION}}\\\";\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"Mission read.\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# DayZ dedicated server (Octail's own install script; pelican-eggs' egg was read as a reference only).\n# App 223350 can't be downloaded anonymously: the server needs a logged-in Steam account (one that owns DayZ is recommended: mission updates and Workshop downloads need it).\n# Octail's steam_login feature fills STEAM_USER and, for this install only, STEAM_PASS; Steam Guard codes are asked\n# for in the console.\nset -uo pipefail\n\nif [ -z \"${STEAM_USER:-}\" ] || [ \"${STEAM_USER}\" = anonymous ]; then\n    echo \"The DayZ server can't be downloaded anonymously: pick a Steam account on the Startup tab\"\n    echo \"(Steam account), then reinstall the server.\"\n    exit 1\nfi\necho \"Logging in to Steam as ${STEAM_USER}\"\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || exit 1\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\n\n## the account's saved login (Tentacle's login cache), so later updates log in without the password\nif [ -n \"${STEAM_LOGIN_CACHE:-}\" ]; then\n    rm -rf /mnt/server/steamcmd/config && ln -s \"${STEAM_LOGIN_CACHE}\" /mnt/server/steamcmd/config\nfi\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\nLOGIN=(\"${STEAM_USER}\")\n[ -n \"${STEAM_PASS:-}\" ] && LOGIN+=(\"${STEAM_PASS}\")\n[ -n \"${STEAM_AUTH:-}\" ] && LOGIN+=(\"${STEAM_AUTH}\")\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${LOGIN[@]}\" +app_update \"${SRCDS_APPID}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/DayZServer\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the DayZ dedicated server. The download needs a logged-in Steam account;\"\n    echo \"Check the login lines above, then reinstall.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/DayZServer\"\ncd /mnt/server || exit 1\n\nmkdir -p keys profiles workshop\nif [ ! -d mpmissions ]; then\n    echo \"No mpmissions/ folder in the download: upload your mission folder (e.g. mpmissions/dayzOffline.chernarusplus).\"\n    mkdir -p mpmissions\nfi\n## Octail: a default serverDZ.cfg, only when there is none (a reinstall keeps yours)\nif [ ! -f serverDZ.cfg ]; then\n    echo \"Writing a default serverDZ.cfg. Octail sets the name, passwords, slots, view, time and query port\"\n    echo \"before every start; the rest is yours to edit.\"\n    cat > serverDZ.cfg <<'OCTAIL_EOF'\n// DayZ server config: https://community.bistudio.com/wiki/DayZ:Server_Configuration\n// Octail rewrites the lines that start with hostname, password, passwordAdmin, maxPlayers, disable3rdPerson,\n// disableCrosshair, serverTimeAcceleration, serverNightTimeAcceleration, serverTimePersistent, steamQueryPort\n// and template before every start (the Startup tab). Keep them on one line each, at the start of the line.\nhostname = \"DayZ server\";\npassword = \"\";\npasswordAdmin = \"\";\nenableWhitelist = 0;\nmaxPlayers = 60;\nverifySignatures = 2;\nforceSameBuild = 1;\ndisableVoN = 0;\nvonCodecQuality = 20;\ndisable3rdPerson = 0;\ndisableCrosshair = 0;\ndisablePersonalLight = 1;\nlightingConfig = 0;\nserverTime = \"SystemTime\";\nserverTimeAcceleration = 12;\nserverNightTimeAcceleration = 1;\nserverTimePersistent = 0;\nguaranteedUpdates = 1;\nloginQueueConcurrentPlayers = 5;\nloginQueueMaxPlayers = 500;\ninstanceId = 1;\nstorageAutoFix = 1;\nsteamQueryPort = 27016;\n\nclass Missions\n{\nclass DayZ\n{\ntemplate = \"dayzOffline.chernarusplus\";\n};\n};\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto update",
+      "description": "Update the server with SteamCMD (the saved login of the server's Steam account) before every start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "223350",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:223350",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server name",
+      "description": "The name in the server browser (up to 64 characters, no \" or \\).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "DayZ server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]{1,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Password",
+      "description": "Players need it to join; empty for an open server. Letters, digits and _.@%+!- only.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_.@%+!-]{0,40}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin password",
+      "description": "Typed in the game's chat as #login <password> to become admin. 8 to 40 letters, digits or _.@%+!-.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_.@%+!-]{8,40}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "Slots.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "60",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,127",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Mission",
+      "description": "The mission folder in mpmissions/ (mission.map): dayzOffline.chernarusplus (Chernarus), dayzOffline.enoch (Livonia), dayzOffline.sakhal (Sakhal), or an uploaded one.",
+      "env_variable": "MISSION",
+      "default_value": "dayzOffline.chernarusplus",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:128|regex:/^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Third person off",
+      "description": "1 forces first-person view.",
+      "env_variable": "DISABLE_THIRD_PERSON",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Crosshair off",
+      "description": "1 hides the crosshair.",
+      "env_variable": "DISABLE_CROSSHAIR",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Time acceleration",
+      "description": "How much faster the in-game day runs than real time.",
+      "env_variable": "TIME_ACCELERATION",
+      "default_value": "12",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:0,24",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Night acceleration",
+      "description": "Extra speed-up of the night, multiplied with the time acceleration.",
+      "env_variable": "NIGHT_ACCELERATION",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|numeric|between:0.1,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Persistent time",
+      "description": "1 keeps the in-game time across restarts.",
+      "env_variable": "PERSISTENT_TIME",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query port",
+      "description": "The Steam query port (UDP) for the server browser. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Workshop mods",
+      "description": "Steam Workshop item ids, comma-separated, in load order. The Steam Workshop tool fills this in and downloads them to workshop/<id> (needs a Steam account that owns the game); they load before the mods below.",
+      "env_variable": "WORKSHOP_MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:2048|regex:/^([0-9]{1,20}(,[0-9]{1,20})*)?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Mods",
+      "description": "Uploaded mod folders in the server folder, separated by ; in load order (for example @cba_a3;@ace). Players need the same mods.",
+      "env_variable": "MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:2048|regex:/^([A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*(;[A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*)*)?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server-side mods",
+      "description": "Mod folders only the server loads (-serverMod), separated by ;. Players don't need them.",
+      "env_variable": "SERVER_MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:2048|regex:/^([A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*(;[A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*)*)?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Lowercase mod files",
+      "description": "1 renames every file and folder inside the listed mod folders to lowercase before each start. Linux is case-sensitive: turn it on when the server can't find files of a mod made on Windows.",
+      "env_variable": "MODS_LOWERCASE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "BattlEye RCon password",
+      "description": "Turns on BattlEye RCon for RCon tools (BEC, BattleWarden, …) when set: 8 to 40 letters, digits or _.@%+!-. Empty leaves RCon off. Octail's console doesn't use it.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^([A-Za-z0-9_.@%+!-]{8,40})?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "BattlEye RCon port",
+      "description": "The BattlEye RCon port (UDP). Set by Octail when the server is created (three after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "DayZ",
+    "features": {
+      "steam_login": {
+        "required": true
+      },
+      "steam_workshop": {
+        "label": "DayZ",
+        "app_id": 221100,
+        "method": "steamcmd",
+        "mods_dir": "workshop",
+        "ids_variable": "WORKSHOP_MODS"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1",
+        "RCON_PORT": "primary+3"
+      },
+      "fixed_ports": {
+        "Steam": "primary+2",
+        "BattlEye": "primary+4"
+      },
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "players": {
+        "list": "a2s"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

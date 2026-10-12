@@ -1,0 +1,164 @@
+{
+  "_comment": "Octail's own egg (no upstream file). Robust.Server (the Space Station 14 server) for linux-x64 from the official build manifest (wizards.cdn.spacestation14.com, or a fork's manifest), checked against the SHA-256 the manifest lists for that build, failures exit non-zero. The build is framework-dependent .NET 10, so it runs on dotnet_10 (DOTNET_ROLL_FORWARD=Major lets an older .NET build start there too). server_config.toml (TOML, edited with the ini parser: sections and key=value) gets the port, the IPv4 bind, name, description, soft player cap, hub listing, local-login off and the host user before every start; the database and the rest stay in data/. The start is the game ticker's first round restart or the status API's TCP port once bound; shutdown stops it cleanly.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/space-station-14.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Space Station 14",
+  "author": "eggs@octail.net",
+  "uuid": "21aba426-ad52-4ac9-b3c9-d0c343561f3c",
+  "description": "Space Station 14, the open-source remake of Space Station 13: a round-based roleplay game about a space station crew. Runs the official Robust.Server build from the Space Wizards CDN (or a fork's).",
+  "tags": [
+    "space-station-14",
+    "ss14",
+    "dotnet"
+  ],
+  "features": null,
+  "docker_images": {
+    ".NET 10": "ghcr.io/sneakywrld/octail-yolks:dotnet_10"
+  },
+  "file_denylist": [],
+  "startup": "DOTNET_ROLL_FORWARD=Major exec dotnet Robust.Server.dll --config-file server_config.toml --data-dir data",
+  "config": {
+    "files": "{\n    \"server_config.toml\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"net.port\": \"{{server.allocations.default.port}}\",\n            \"net.bindto\": \"\\\"0.0.0.0\\\"\",\n            \"game.hostname\": \"\\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"game.desc\": \"\\\"{{server.environment.DESCRIPTION}}\\\"\",\n            \"game.soft_max_players\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"hub.advertise\": \"{{server.environment.ADVERTISE}}\",\n            \"console.loginlocal\": \"false\",\n            \"console.login_host_user\": \"\\\"{{server.environment.HOST_USER}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Restarting round!\"\n}",
+    "logs": "{}",
+    "stop": "shutdown"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Space Station 14 (Octail's own install script): Robust.Server for linux-x64 from the build manifest of the official\n# Wizard's Den CDN (or a fork's manifest), checked against the SHA-256 the manifest lists, failures exit non-zero.\n# server_config.toml (the sample in the build) is only written when there is none; data/ (the SQLite database,\n# preferences, bans) is never touched.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq unzip ca-certificates > /dev/null\n\nMANIFEST=\"${SS14_MANIFEST:-https://wizards.cdn.spacestation14.com/fork/wizards/manifest}\"\nBUILD=\"${SS14_BUILD:-latest}\"\n\nif ! curl -fsSL -o /tmp/ss14-manifest.json \"$MANIFEST\"; then\n    echo \"Installation failed: the build manifest ${MANIFEST} couldn't be read.\"\n    exit 1\nfi\nif [ \"$BUILD\" = \"latest\" ]; then\n    # The newest build (by its time) that has a linux-x64 server.\n    BUILD=$(jq -r '[.builds | to_entries[] | select(.value.server[\"linux-x64\"].url != null)] | max_by(.value.time) | .key // empty' /tmp/ss14-manifest.json)\nfi\nURL=$(jq -r --arg b \"$BUILD\" '.builds[$b].server[\"linux-x64\"].url // empty' /tmp/ss14-manifest.json)\nSUM=$(jq -r --arg b \"$BUILD\" '.builds[$b].server[\"linux-x64\"].sha256 // empty' /tmp/ss14-manifest.json | tr 'A-F' 'a-f')\nif [ -z \"$BUILD\" ] || [ -z \"$URL\" ] || [ -z \"$SUM\" ]; then\n    echo \"Installation failed: build ${BUILD:-latest} has no linux-x64 server with a checksum in ${MANIFEST}.\"\n    exit 1\nfi\n\necho \"Downloading Space Station 14 build ${BUILD} from ${URL}\"\ncurl -fsSL -o /tmp/ss14-server.zip \"$URL\"\nif ! echo \"${SUM}  /tmp/ss14-server.zip\" | sha256sum -c --quiet -; then\n    rm -f /tmp/ss14-server.zip\n    echo \"Installation failed: the download doesn't match the manifest's SHA-256.\"\n    exit 1\nfi\nrm -rf /tmp/ss14-server\nmkdir -p /tmp/ss14-server\nunzip -q /tmp/ss14-server.zip -d /tmp/ss14-server\nif [ ! -f /tmp/ss14-server/Robust.Server.dll ]; then\n    echo \"Installation failed: the build has no Robust.Server.dll.\"\n    exit 1\nfi\n\nmkdir -p /mnt/server\ncd /mnt/server\n# The owner's config stays; a new build's prototypes replace the old ones completely (no stale files).\nif [ -f server_config.toml ]; then\n    rm -f /tmp/ss14-server/server_config.toml\nfi\nrm -rf Resources\ncp -a /tmp/ss14-server/. /mnt/server/\nrm -rf /tmp/ss14-server /tmp/ss14-server.zip /tmp/ss14-manifest.json\nchmod +x Robust.Server 2>/dev/null || true\nmkdir -p data\necho \"$BUILD\" > .ss14-build\n\nif [ ! -f /mnt/server/Robust.Server.dll ]; then\n    echo \"Installation failed: Robust.Server.dll is missing.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Space Station 14 build ${BUILD}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server name",
+      "description": "The name in the server list and the lobby (no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Space Station 14 on Octail",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 1,
+      "field_type": "text"
+    },
+    {
+      "name": "Description",
+      "description": "Shown in the server list (no double quotes or backslashes).",
+      "env_variable": "DESCRIPTION",
+      "default_value": "A Space Station 14 server.",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:256",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": 2,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "The player cap shown in the server list (admins can still join above it).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "30",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,256"
+      ],
+      "sort": 3,
+      "field_type": "text"
+    },
+    {
+      "name": "List on the hub",
+      "description": "true lists the server on the public hub (read and follow the Space Wizards hub rules first); false: players join by address (ss14://host:port).",
+      "env_variable": "ADVERTISE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ],
+      "sort": 4,
+      "field_type": "text"
+    },
+    {
+      "name": "Host user",
+      "description": "A Space Station 14 account name that gets full admin rights when it joins, to set up the first admins in game. Empty: nobody. Clear it once permanent admins are set.",
+      "env_variable": "HOST_USER",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_]{0,32}$/"
+      ],
+      "sort": 5,
+      "field_type": "text"
+    },
+    {
+      "name": "Build",
+      "description": "latest (the newest build in the manifest) or a build id from it (the commit hash). Reinstall to switch.",
+      "env_variable": "SS14_BUILD",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64",
+        "regex:/^(latest|[A-Za-z0-9._-]{1,64})$/"
+      ],
+      "sort": 6,
+      "field_type": "text"
+    },
+    {
+      "name": "Build manifest",
+      "description": "The build manifest to install from: the official Wizard's Den one, or a fork's (https://<cdn>/fork/<fork>/manifest). Reinstall to switch.",
+      "env_variable": "SS14_MANIFEST",
+      "default_value": "https://wizards.cdn.spacestation14.com/fork/wizards/manifest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:255",
+        "regex:/^https:\\/\\/[A-Za-z0-9.-]+(:[0-9]+)?\\/[A-Za-z0-9._~\\/-]*$/"
+      ],
+      "sort": 7,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Space Station 14",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 4096
+      }
+    }
+  }
+}

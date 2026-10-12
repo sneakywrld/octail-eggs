@@ -1,0 +1,190 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd insurgency/egg-insurgency.yaml (pelican-eggs, MIT licence), converted to JSON, on Octail's source image (32-bit libraries). App 237410 (anonymous SteamCMD only) with the game folder (insurgency) fixed. Octail adds the insurgency tags, Source RCON on the game port with a generated password hidden from customers, the Players tab (source preset) and the Steam query (A2S) for player counts, a max players setting (-maxplayers), a game mode after the map (+map <map> <mode>), an optional Game Server Login Token (+sv_setsteamaccount only when one is set), start detection by the Steam ID line or the Steam connection line with the UDP game port as a fallback (ready after 60 s), generic UDP idle sleep (off until staff enable it per server), the say broadcast, the update before start (AUTO_UPDATE, on by default), an optional beta branch, a starter server.cfg, install sandbox defaults and resource hints, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". srcds_run ships with Windows line ends, so the install and every start strip them (upstream: dos2unix).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/source/insurgency.json"
+  },
+  "uuid": "8e4b2a61-3c9d-4f7e-b05a-d2c7f1e94a68",
+  "name": "Insurgency (2014)",
+  "author": "octail@meowgafactory.com",
+  "description": "Insurgency (2014) is New World Interactive's tactical shooter on the Source engine: close-quarters versus and co-op modes without a HUD, where every round counts.",
+  "tags": [
+    "insurgency",
+    "insurgency-2014",
+    "source",
+    "steamcmd"
+  ],
+  "features": [
+    "gsl_token",
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Source": "ghcr.io/sneakywrld/octail-yolks:source"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "sed -i 's/\\r$//' srcds_run; ./srcds_run -game insurgency -console -port {{SERVER_PORT}} +ip 0.0.0.0 +map {{SRCDS_MAP}} {{GAME_MODE}} -maxplayers {{MAX_PLAYERS}} +rcon_password \"{{RCON_PASSWORD}}\" -strictportbind -norestart $( [ -z \"${STEAM_ACC}\" ] || printf %s \"+sv_setsteamaccount ${STEAM_ACC}\" )"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "gameserver Steam ID",
+        "Connection to Steam servers successful"
+      ]
+    },
+    "logs": {},
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Insurgency (2014) Dedicated Server (app 237410) Installation Script\n#\n# Server Files: /mnt/server\n# Based on the pelican-eggs steamcmd base script (games-steamcmd, MIT licence).\n#\n# Variables\n# SRCDS_APPID - 237410 (Insurgency (2014) Dedicated Server, anonymous)\n# SRCDS_BETAID - an optional beta branch\n\n## The Insurgency (2014) dedicated server installs anonymously\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\nbeta=()\n[[ -z ${SRCDS_BETAID} ]] || beta=(-beta \"${SRCDS_BETAID}\")\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${STEAM_USER}\" +app_update \"${SRCDS_APPID}\" \"${beta[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/srcds_run\" || ! -d \"/mnt/server/insurgency\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Insurgency (2014) dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## The server's srcds_run ships with Windows line ends (CRLF), which bash can't run\nsed -i 's/\\r$//' /mnt/server/srcds_run\n\n## A server.cfg to start from; an existing one is kept\nif [[ ! -f \"/mnt/server/insurgency/cfg/server.cfg\" ]]; then\n    mkdir -p /mnt/server/insurgency/cfg\n    printf '%s\\n' 'hostname \"Insurgency (2014) server on Octail\"' 'sv_password \"\"' 'sv_lan 0' > /mnt/server/insurgency/cfg/server.cfg\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "App ID",
+      "description": "The Steam app id of the Insurgency (2014) Dedicated Server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "237410",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "in:237410"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Map",
+      "description": "The first map, for example ministry_coop, embassy_coop, market, sinjar or contact.",
+      "env_variable": "SRCDS_MAP",
+      "default_value": "ministry_coop",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^\\w{1,64}$/"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Game Mode",
+      "description": "The game mode of the first map, for example checkpoint (co-op, on the _coop maps), hunt, push, firefight, skirmish, ambush or occupy.",
+      "env_variable": "GAME_MODE",
+      "default_value": "checkpoint",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[a-z_]{1,32}$/"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Max Players",
+      "description": "How many players may join (2-32).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "24",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:2,32"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Steam Game Server Login Token",
+      "description": "Optional: a Steam Game Server Login Token (app id 222880) so the server keeps the same Steam ID and shows in the server list reliably. Generate one at https://steamcommunity.com/dev/managegameservers",
+      "env_variable": "STEAM_ACC",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "alpha_num",
+        "size:32"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "RCON Password",
+      "description": "Source RCON password. Octail generates one when the server is created, keeps it from customers and sends console commands over RCON.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[\\w.-]+$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Beta branch",
+      "description": "An optional Steam beta branch; empty for the public build. Reinstall after changing it.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[\\w.-]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Auto-update server",
+      "description": "Check for a server update with SteamCMD at every start (1 on, 0 off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Insurgency (2014)",
+    "features": {
+      "players": "source",
+      "player_query": "a2s",
+      "rcon": {
+        "type": "source",
+        "port_var": "SERVER_PORT",
+        "password_var": "RCON_PASSWORD"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 60
+      },
+      "sleep": {
+        "mode": "udp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 3072,
+        "disk_mb": 16384
+      }
+    }
+  }
+}

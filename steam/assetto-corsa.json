@@ -1,0 +1,207 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd assetto_corsa egg was read as a reference only). App 302550 is not available to anonymous SteamCMD logins, so the egg uses Octail's steam_login feature (required): the Steam account picked on the Startup tab logs in, Steam Guard codes are asked for in the console and the login is cached for start-time updates. The Windows depot is downloaded (it carries the Linux acServer), SteamCMD is retried up to 3 times, and the install fails when acServer is missing. cfg/server_cfg.ini is edited with the ini parser before every start (name, passwords, ports, cars, track, slots, lobby), cfg/entry_list.ini is written from the cars and slots before every start unless the entry list is set to manual. The HTTP port gets a port of its own (port_vars). acServer reads no console input and stops on Ctrl+C; the start is its start line or the TCP game port once bound.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/assetto-corsa.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Assetto Corsa",
+  "author": "eggs@octail.net",
+  "uuid": "3ab45c2a-03e8-4a85-ba0c-df0abe6c5a0b",
+  "description": "Kunos Simulazioni's Assetto Corsa racing simulator: the official dedicated server (acServer) from SteamCMD. Needs a Steam account that owns Assetto Corsa.",
+  "tags": [
+    "assetto-corsa",
+    "steamcmd",
+    "racing"
+  ],
+  "features": [
+    "steam_disk_space",
+    "no_console_input"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "if [ \"${ENTRY_LIST}\" = auto ]; then case \"${MAX_CLIENTS}\" in ''|*[!0-9]*) echo 'Max players must be a number.'; exit 1;; esac; IFS=\";\" read -ra octail_cars <<< \"${CARS}\"; octail_n=0; while [ \"$octail_n\" -lt \"${MAX_CLIENTS}\" ]; do printf '[CAR_%d]\\nMODEL=%s\\nSKIN=\\nSPECTATOR_MODE=0\\nDRIVERNAME=\\nTEAM=\\nGUID=\\nBALLAST=0\\nRESTRICTOR=0\\n\\n' \"$octail_n\" \"${octail_cars[octail_n % ${#octail_cars[@]}]}\"; octail_n=$((octail_n + 1)); done > cfg/entry_list.ini; fi; exec ./acServer",
+  "config": {
+    "files": "{\n    \"cfg/server_cfg.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"SERVER.NAME\": \"{{server.environment.SERVER_NAME}}\",\n            \"SERVER.PASSWORD\": \"{{server.environment.SERVER_PASSWORD}}\",\n            \"SERVER.ADMIN_PASSWORD\": \"{{server.environment.ADMIN_PASSWORD}}\",\n            \"SERVER.UDP_PORT\": \"{{server.allocations.default.port}}\",\n            \"SERVER.TCP_PORT\": \"{{server.allocations.default.port}}\",\n            \"SERVER.HTTP_PORT\": \"{{server.environment.HTTP_PORT}}\",\n            \"SERVER.CARS\": \"{{server.environment.CARS}}\",\n            \"SERVER.TRACK\": \"{{server.environment.TRACK}}\",\n            \"SERVER.CONFIG_TRACK\": \"{{server.environment.CONFIG_TRACK}}\",\n            \"SERVER.MAX_CLIENTS\": \"{{server.environment.MAX_CLIENTS}}\",\n            \"SERVER.REGISTER_TO_LOBBY\": \"{{server.environment.REGISTER_TO_LOBBY}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"Server started\",\n        \"Lobby registration successful\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Assetto Corsa dedicated server (Octail's own install script; pelican-eggs' egg was read as a reference only).\n# App 302550 can't be downloaded anonymously: the server needs a Steam account (Octail's steam_login feature fills\n# STEAM_USER and, for this install only, STEAM_PASS; Steam Guard codes are asked for in the console).\nset -uo pipefail\n\nif [ -z \"${STEAM_USER:-}\" ] || [ \"${STEAM_USER}\" = anonymous ]; then\n    echo \"The Assetto Corsa server can't be downloaded anonymously: pick a Steam account on the Startup tab\"\n    echo \"(Steam account), then reinstall the server.\"\n    exit 1\nfi\necho \"Logging in to Steam as ${STEAM_USER}\"\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || exit 1\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\n\n## the account's saved login (Tentacle's login cache), so later updates log in without the password\nif [ -n \"${STEAM_LOGIN_CACHE:-}\" ]; then\n    rm -rf /mnt/server/steamcmd/config && ln -s \"${STEAM_LOGIN_CACHE}\" /mnt/server/steamcmd/config\nfi\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\nLOGIN=(\"${STEAM_USER}\")\n[ -n \"${STEAM_PASS:-}\" ] && LOGIN+=(\"${STEAM_PASS}\")\n[ -n \"${STEAM_AUTH:-}\" ] && LOGIN+=(\"${STEAM_AUTH}\")\n\n## install the server with steamcmd: the Windows depot carries the Linux acServer too\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +@sSteamCmdForcePlatformType windows +login \"${LOGIN[@]}\" +app_update ${SRCDS_APPID} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/acServer\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Assetto Corsa dedicated server. The Steam account must own Assetto Corsa;\"\n    echo \"check the login lines above, then reinstall.\"\n    exit 1\nfi\nchmod +x /mnt/server/acServer\n\nmkdir -p /mnt/server/cfg\ncd /mnt/server/cfg\nif [ ! -f server_cfg.ini ]; then\n    echo \"No cfg/server_cfg.ini in the download: writing a default one (practice, pickup mode).\"\n    cat > server_cfg.ini <<'OCTAIL_EOF'\n[SERVER]\nNAME=Assetto Corsa server\nCARS=abarth500\nCONFIG_TRACK=\nTRACK=magione\nSUN_ANGLE=48\nPASSWORD=\nADMIN_PASSWORD=\nUDP_PORT=9600\nTCP_PORT=9600\nHTTP_PORT=8081\nMAX_BALLAST_KG=0\nQUALIFY_MAX_WAIT_PERC=120\nRACE_PIT_WINDOW_START=0\nRACE_PIT_WINDOW_END=0\nREVERSED_GRID_RACE_POSITIONS=0\nLOCKED_ENTRY_LIST=0\nPICKUP_MODE_ENABLED=1\nLOOP_MODE=1\nSLEEP_TIME=1\nCLIENT_SEND_INTERVAL_HZ=18\nSEND_BUFFER_SIZE=0\nRECV_BUFFER_SIZE=0\nRACE_OVER_TIME=180\nKICK_QUORUM=85\nVOTING_QUORUM=80\nVOTE_DURATION=20\nBLACKLIST_MODE=1\nFUEL_RATE=100\nDAMAGE_MULTIPLIER=100\nTYRE_WEAR_RATE=100\nALLOWED_TYRES_OUT=2\nABS_ALLOWED=1\nTC_ALLOWED=1\nSTABILITY_ALLOWED=0\nAUTOCLUTCH_ALLOWED=1\nTYRE_BLANKETS_ALLOWED=1\nFORCE_VIRTUAL_MIRROR=0\nSTART_RULE=0\nRACE_GAS_PENALTY_DISABLED=0\nTIME_OF_DAY_MULT=1\nRESULT_SCREEN_TIME=60\nMAX_CONTACTS_PER_KM=-1\nREGISTER_TO_LOBBY=1\nMAX_CLIENTS=10\nNUM_THREADS=2\nUDP_PLUGIN_LOCAL_PORT=0\nUDP_PLUGIN_ADDRESS=\nAUTH_PLUGIN_ADDRESS=\nLEGAL_TYRES=\nWELCOME_MESSAGE=\n\n[PRACTICE]\nNAME=Practice\nTIME=60\nIS_OPEN=1\n\n[DYNAMIC_TRACK]\nSESSION_START=95\nRANDOMNESS=2\nSESSION_TRANSFER=90\nLAP_GAIN=10\n\n[WEATHER_0]\nGRAPHICS=3_clear\nBASE_TEMPERATURE_AMBIENT=20\nBASE_TEMPERATURE_ROAD=7\nVARIATION_AMBIENT=1\nVARIATION_ROAD=1\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto update",
+      "description": "Update the server with SteamCMD (the saved login of the server's Steam account) before every start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "302550",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:302550",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Windows depot",
+      "description": "Updates fetch the Windows depot, which carries the Linux acServer.",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server name",
+      "description": "The name in the server list (up to 64 characters, no ; or #).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Assetto Corsa server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\\r\\n;#]{1,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Password",
+      "description": "Players need it to join; empty for an open server. Letters, digits and _.@%+!- only.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_.@%+!-]{0,40}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin password",
+      "description": "Typed in the game's chat as /admin <password> to kick, ban and change sessions. 8 to 40 letters, digits or _.@%+!-.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_.@%+!-]{8,40}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Cars",
+      "description": "Car folder names (content/cars), separated by ; (for example ks_mazda_miata;ks_toyota_gt86).",
+      "env_variable": "CARS",
+      "default_value": "abarth500",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:1024|regex:/^[A-Za-z0-9_.-]+(;[A-Za-z0-9_.-]+)*$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Track",
+      "description": "The track's folder name (content/tracks), for example magione or ks_vallelunga.",
+      "env_variable": "TRACK",
+      "default_value": "magione",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:128|regex:/^[A-Za-z0-9_.-]+$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Track layout",
+      "description": "The layout folder for tracks with several (ks_vallelunga: club_circuit, classic_circuit, extended_circuit); empty for tracks with one.",
+      "env_variable": "CONFIG_TRACK",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:128|regex:/^[A-Za-z0-9_.-]*$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "Slots; no more than the track has pit boxes.",
+      "env_variable": "MAX_CLIENTS",
+      "default_value": "10",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Entry list",
+      "description": "auto: cfg/entry_list.ini is written before every start with one slot per player, the cars taking turns; manual: the file is left as you edit it.",
+      "env_variable": "ENTRY_LIST",
+      "default_value": "auto",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:auto,manual",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Show in the lobby",
+      "description": "1 lists the server in the game's server browser, 0 only allows joining by address.",
+      "env_variable": "REGISTER_TO_LOBBY",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "HTTP Port",
+      "description": "The server's HTTP port (TCP), used by the lobby and the game's server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "HTTP_PORT",
+      "default_value": "8081",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Racing",
+    "features": {
+      "steam_login": {
+        "required": true
+      },
+      "port_vars": {
+        "HTTP_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 4096
+      }
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail because Waterfall (PaperMC's BungeeCord fork, the usual egg) is end of life: BungeeCord.jar from md_5's Jenkins (ci.md-5.net, now hub.spigotmc.org/jenkins), the last successful build or a build number. Jenkins publishes no checksum for the archived jar, so the install checks the build result, HTTPS and that the file is a BungeeCord jar. Tagged proxy (no server.properties or player tools, no eula flag: a proxy has no EULA prompt); a first config.yml with one listener so the panel sets its port; Java 25 to 17 images (BungeeCord needs Java 17); install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/bungeecord.json"
+  },
+  "uuid": "87d496d2-74cb-4841-b9e2-6417d5da7128",
+  "name": "BungeeCord",
+  "author": "octail@meowgafactory.com",
+  "description": "BungeeCord is md_5's Minecraft proxy: it links several Minecraft Java servers into one network. (Waterfall, PaperMC's fork, is end of life; use Velocity or BungeeCord.)",
+  "tags": [
+    "minecraft",
+    "proxy",
+    "bungeecord"
+  ],
+  "features": [
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "config.yml": {
+        "parser": "yaml",
+        "find": {
+          "listeners.0.host": "0.0.0.0:{{server.allocations.default.port}}",
+          "listeners.0.query_port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": "Listening on /"
+    },
+    "logs": {},
+    "stop": "end"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# BungeeCord installation (Octail): BungeeCord.jar from md_5's Jenkins (ci.md-5.net, which redirects to\n# hub.spigotmc.org/jenkins), the last successful build or a build number. Waterfall, PaperMC's fork, is\n# end of life, so this egg installs BungeeCord itself.\n# Jenkins publishes no checksum for the archived jar (its fingerprint list is for the Maven-deployed jar,\n# which differs), so the build must be marked SUCCESS, the download comes over HTTPS and the file must be\n# a jar holding BungeeCord's bootstrap class. A build that doesn't exist or failed fails the install.\n#\n# Server files: /mnt/server\nset -eu\n\nJOB=https://hub.spigotmc.org/jenkins/job/BungeeCord\nJAR=\"${SERVER_JARFILE:-bungeecord.jar}\"\nBUILD=\"${BUNGEE_BUILD:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nif [ -z \"${BUILD}\" ] || [ \"${BUILD}\" = \"latest\" ]; then\n\tBUILD=lastSuccessfulBuild\nelse\n\tcase \"${BUILD}\" in\n\t*[!0-9]*) fail \"the build number (${BUILD}) must be a number or latest\" ;;\n\tesac\nfi\n\nINFO=$(get \"${JOB}/${BUILD}/api/json?tree=number,result,artifacts%5BrelativePath%5D\") ||\n\tfail \"BungeeCord's Jenkins has no build ${BUILD}\"\nNUMBER=$(echo \"${INFO}\" | jq -r '.number // empty')\nRESULT=$(echo \"${INFO}\" | jq -r '.result // empty')\n[ -n \"${NUMBER}\" ] || fail \"BungeeCord's Jenkins named no build number\"\n[ \"${RESULT}\" = \"SUCCESS\" ] || fail \"BungeeCord build ${NUMBER} did not succeed (${RESULT}). Pick another build.\"\necho \"${INFO}\" | jq -e '.artifacts | any(.relativePath == \"bootstrap/target/BungeeCord.jar\")' >/dev/null ||\n\tfail \"BungeeCord build ${NUMBER} has no BungeeCord.jar\"\n\necho \"Installing BungeeCord build ${NUMBER} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -o \"${JAR}.download\" \"${JOB}/${NUMBER}/artifact/bootstrap/target/BungeeCord.jar\" ||\n\tfail \"the download of BungeeCord build ${NUMBER} failed\"\nif ! unzip -l \"${JAR}.download\" 2>/dev/null | grep -q 'net/md_5/bungee/Bootstrap.class'; then\n\trm -f \"${JAR}.download\"\n\tfail \"the download of BungeeCord build ${NUMBER} isn't a BungeeCord jar\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\n# A first config.yml with one listener, so the panel can set its port before the first start; BungeeCord\n# fills in every other setting itself. An existing config.yml is kept.\nif [ ! -f config.yml ]; then\n\tprintf 'listeners:\\n- host: 0.0.0.0:25577\\n  query_port: 25577\\n  query_enabled: false\\n' >config.yml\nfi\n\necho \"BungeeCord build ${NUMBER} installed. Add your servers under servers: in config.yml.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "BungeeCord Build",
+      "description": "The BungeeCord build to install from ci.md-5.net, or latest for the last successful build. BungeeCord supports every current Minecraft version in one build.",
+      "env_variable": "BUNGEE_BUILD",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the proxy jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "bungeecord.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

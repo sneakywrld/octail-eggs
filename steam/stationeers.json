@@ -293,6 +293,11 @@
         "memory_mb": 8192,
         "disk_mb": 10240
       }
+    },
+    "variables": {
+      "SERVER_AUTH_SECRET": {
+        "secret": true
+      }
     }
   }
 }

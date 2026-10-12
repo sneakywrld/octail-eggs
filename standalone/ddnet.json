@@ -1,0 +1,133 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-standalone ddracenetwork/egg-d-d-race-network.json (pelican-eggs, MIT licence). Octail changes the install script (the release from ddnet.org found without scraping attributes, checked against ddnet.org's published sha256sums.txt, the client left out, failures exit non-zero; upstream also uncommented sv_port in data/autoexec_server.cfg, which every reinstall overwrites), writes a storage.cfg that puts the server folder first (settings, maps and the scores database where the file manager shows them) and the settings into myServerconfig.cfg, which the release's autoexec runs last and a reinstall keeps, edited with the file parser before every start (port, name, password, map, public listing, slots, rcon password); DDNet reads no standard input, so the startup passes console lines to its input FIFO (sv_input_fifo) and console commands, the say broadcast and the Ctrl+C stop work; adds the ddnet tag, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/ddnet.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "DDraceNetwork (DDNet)",
+  "author": "eggs@octail.net",
+  "uuid": "95b1c12b-dc38-4eac-803c-63c3da6e5190",
+  "description": "DDraceNetwork (DDNet) is a free, open-source cooperative platformer based on Teeworlds: race through maps together with hooks, weapons and freeze tiles.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "exec 3<&0; rm -f .octail-console; while IFS= read -r OCTAIL_LINE; do [ -p .octail-console ] && printf '%s\\n' \"${OCTAIL_LINE}\" > .octail-console; done <&3 & exec ./DDNet-Server 'sv_input_fifo .octail-console' 3<&-",
+  "config": {
+    "files": "{\n    \"myServerconfig.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"sv_port \": \"sv_port {{server.allocations.default.port}}\",\n            \"sv_name \": \"sv_name \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"password \": \"password \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"sv_map \": \"sv_map \\\"{{server.environment.MAP}}\\\"\",\n            \"sv_register \": \"sv_register {{server.environment.SERVER_REGISTER}}\",\n            \"sv_max_clients \": \"sv_max_clients {{server.environment.MAX_CLIENTS}}\",\n            \"sv_rcon_password \": \"sv_rcon_password \\\"{{server.environment.RCON_PASSWORD}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"server name is '\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# DDraceNetwork (DDNet) installation script (Octail): the official Linux release from ddnet.org, checked against the\n# SHA-256 list ddnet.org publishes (sha256sums.txt), the server, its tools and data/ unpacked (not the game client).\n# Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl xz-utils tar ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: DDNet publishes its Linux server for x86_64 only (this node is $(uname -m)).\"\n    exit 1\nfi\n\nBASE=https://ddnet.org/downloads\nVERSION=\"${DDNET_VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    ## the downloads page lists the newest release first\n    FILE=$(curl -fsSL \"$BASE/\" | grep -o 'DDNet-[0-9][0-9.]*-linux_x86_64\\.tar\\.xz' | head -n 1 || true)\nelse\n    FILE=\"DDNet-${VERSION}-linux_x86_64.tar.xz\"\nfi\nif [ -z \"$FILE\" ]; then\n    echo \"Installation failed: the newest DDNet release couldn't be read from ${BASE}/.\"\n    exit 1\nfi\nSUM=$(curl -fsSL \"$BASE/sha256sums.txt\" | awk -v f=\"$FILE\" '$2 == f { print $1; exit }' || true)\nif [ -z \"$SUM\" ]; then\n    echo \"Installation failed: ${FILE} isn't in ddnet.org's sha256sums.txt (check the version).\"\n    exit 1\nfi\n\necho \"Downloading ${BASE}/${FILE}\"\ncurl -fsSL -o \"/tmp/${FILE}\" \"${BASE}/${FILE}\"\nif ! echo \"${SUM}  /tmp/${FILE}\" | sha256sum -c --quiet -; then\n    rm -f \"/tmp/${FILE}\"\n    echo \"Installation failed: the download doesn't match its checksum.\"\n    exit 1\nfi\n\n## the release's own files (data/autoexec_server.cfg included); myServerconfig.cfg, maps/ and your other files stay\ncd /mnt/server\ntar -xJf \"/tmp/${FILE}\" --strip-components=1 --exclude='*/DDNet' --exclude='*/discord_game_sdk.so' -C /mnt/server\nrm -f \"/tmp/${FILE}\"\nif [ ! -x /mnt/server/DDNet-Server ]; then\n    echo \"Installation failed: DDNet-Server is missing after unpacking ${FILE}.\"\n    exit 1\nfi\n\n## the server folder itself first: its settings, maps, logs and the scores database are where the file manager shows\n## them (the release's storage.cfg would put them in ~/.local/share/ddnet)\n# shellcheck disable=SC2016\nprintf '%s\\n' '# Octail: the server folder first (where settings, maps and saves go), then the release data/.' \\\n    'add_path $CURRENTDIR' 'add_path $DATADIR' > storage.cfg\nmkdir -p maps\n\n## your settings file, only when there is none: DDNet runs it after data/autoexec_server.cfg, and Octail sets the\n## lines below before every start (Startup tab)\nif [ ! -f myServerconfig.cfg ]; then\n    cat > myServerconfig.cfg <<'EOF'\n# Your DDNet server settings (https://ddnet.org/settingscommands/), run after data/autoexec_server.cfg.\n# Octail sets the lines below before every start (Startup tab); add your own settings under them.\nsv_port 8303\nsv_name \"My DDNet server\"\npassword \"\"\nsv_map \"Tutorial\"\nsv_register 1\nsv_max_clients 64\nsv_rcon_password \"\"\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: ${FILE%-linux_x86_64.tar.xz}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "DDNet Version",
+      "description": "latest (the newest release on ddnet.org) or a version such as 20.1.1. Reinstall to switch.",
+      "env_variable": "DDNET_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^(latest|\\d+\\.\\d+(\\.\\d+)?)$/|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My DDNet server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password. No double quotes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The map loaded at start, without .map: Tutorial, LearnToPlay, Gold Mine, Sunny Side Up, Tsunami, or a map you upload into maps/.",
+      "env_variable": "MAP",
+      "default_value": "Tutorial",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9 _.()-]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 registers the server in the DDNet server browser; 0 keeps it off the list (players join by address).",
+      "env_variable": "SERVER_REGISTER",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (1-128).",
+      "env_variable": "MAX_CLIENTS",
+      "default_value": "64",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,128",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Optional: the admin password for the in-game remote console (F2). Empty = DDNet makes a random one at every start and prints it in the console. No spaces, quotes or backslashes.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\;]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "ddnet",
+    "teeworlds",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "DDNet",
+    "features": {
+      "broadcast_command": "say {message}",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 1024
+      }
+    }
+  }
+}

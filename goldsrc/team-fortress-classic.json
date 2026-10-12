@@ -1,0 +1,171 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence) with the app id (90) and mod (tfc) fixed, on Octail's source image (32-bit libraries). HLDS needs its mod set before app_update (+app_set_config 90 mod tfc) and several app_update runs before every file is there: each of the 3 tries runs app_update 90 validate twice and only counts when hlds_run, hlds_linux, engine_i486.so, valve/liblist.gam and tfc/liblist.gam exist; an appmanifest_90.acf without SharedDepots is replaced before the next try (LinuxGSM's fix, MIT licence). Octail adds the team-fortress-classic, tfc, goldsrc tags, max players (+maxplayers), a map name of letters, digits, _ and -, an RCON password hidden from customers (+rcon_password only when set, so an empty one doesn't override server.cfg; since Octail has no GoldSrc RCON client the console is the container's stdin), the Players tab (A2S list, kick by name over the console) and the Steam query (A2S) for player counts, start detection by the Steam connection line with the UDP game port as a fallback (ready after 30 s), generic UDP idle sleep (off until staff enable it per server), the say broadcast, the update before start (AUTO_UPDATE, on by default; the image hook sets the mod again before app_update), install sandbox defaults and resource hints, anonymous SteamCMD only, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". Plays Team Fortress Classic; built like counter-strike-16.json (same install script); drops -strictportbind and the VAC port variable (srcds options HLDS doesn't have).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/goldsrc/team-fortress-classic.json"
+  },
+  "uuid": "398d4b01-8db9-4602-a241-62f928b21ecc",
+  "name": "Team Fortress Classic",
+  "author": "octail@meowgafactory.com",
+  "description": "Team Fortress Classic, the class-based team shooter that came before Team Fortress 2, on the GoldSrc engine: capture the flag on 2fort and push on dustbowl, on the Half-Life Dedicated Server (HLDS).",
+  "tags": [
+    "team-fortress-classic",
+    "tfc",
+    "goldsrc",
+    "hlds",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Source": "ghcr.io/sneakywrld/octail-yolks:source"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./hlds_run -console -game tfc -port {{SERVER_PORT}} +ip 0.0.0.0 +maxplayers {{MAX_PLAYERS}} +map {{SRCDS_MAP}} -norestart $( [ -z \"${RCON_PASSWORD}\" ] || printf %s \"+rcon_password ${RCON_PASSWORD}\" )"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Connection to Steam servers successful",
+        "VAC secure mode is activated"
+      ]
+    },
+    "logs": {},
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# GoldSrc (HLDS, app 90) Installation Script\n#\n# Server Files: /mnt/server\n# Based on the pelican-eggs HLDS egg (games-steamcmd hlds_server/vanilla, MIT licence).\n#\n# Variables\n# SRCDS_APPID - always 90 (the Half-Life Dedicated Server); the game is picked with HLDS_GAME\n# HLDS_GAME   - the mod folder: cstrike (Counter-Strike 1.6), valve (Half-Life Deathmatch), ...\n# SRCDS_BETAID - an optional beta branch (steam_legacy: the build from before the 25th anniversary update)\n#\n# HLDS needs its mod set before app_update (+app_set_config 90 mod <game>) and, as Valve's SteamCMD page says,\n# \"currently requires multiple runs of the app_update command before all the required files are successfully\n# installed\": each try runs app_update twice, and a try only counts when the engine, the valve folder and the mod\n# folder are all there. When SteamCMD leaves an appmanifest_90.acf without the SharedDepots it needs for the valve\n# files (apps 70 and 10), the manifest is replaced before the next try (LinuxGSM's fix, MIT licence).\n\nHLDS_GAME=${HLDS_GAME:-cstrike}\nif ! [[ ${HLDS_GAME} =~ ^[A-Za-z0-9_-]+$ ]]; then\n    echo \"HLDS_GAME must be a folder name such as cstrike or valve.\"\n    exit 1\nfi\n\n## GoldSrc dedicated servers install anonymously\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\nhlds_complete() {\n    [[ -f /mnt/server/hlds_run && -f /mnt/server/hlds_linux && -f /mnt/server/engine_i486.so ]] &&\n        [[ -f /mnt/server/valve/liblist.gam && -f \"/mnt/server/${HLDS_GAME}/liblist.gam\" ]]\n}\n\nhlds_manifest() {\n    cat >/mnt/server/steamapps/appmanifest_90.acf <<ACF\n\"AppState\"\n{\n\t\"appid\"\t\t\"90\"\n\t\"Universe\"\t\t\"1\"\n\t\"name\"\t\t\"Half-Life Dedicated Server\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"Half-Life\"\n\t\"LastUpdated\"\t\t\"0\"\n\t\"SizeOnDisk\"\t\t\"0\"\n\t\"buildid\"\t\t\"0\"\n\t\"InstalledDepots\"\n\t{\n\t\t\"4\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"8690279432129063737\"\n\t\t\t\"size\"\t\t\"25737094\"\n\t\t}\n\t\t\"1006\"\n\t\t{\n\t\t\t\"manifest\"\t\t\"6912453647411644579\"\n\t\t\t\"size\"\t\t\"72573740\"\n\t\t}\n\t}\n\t\"SharedDepots\"\n\t{\n\t\t\"1\"\t\t\"70\"\n\t\t\"11\"\t\t\"10\"\n\t\t\"71\"\t\t\"70\"\n\t}\n\t\"UserConfig\"\n\t{\n\t\t\"mod\"\t\t\"${HLDS_GAME}\"\n\t}\n\t\"MountedConfig\"\n\t{\n\t\t\"mod\"\t\t\"${HLDS_GAME}\"\n\t}\n}\nACF\n}\n\n## install game using steamcmd: the mod first, then app_update 90 twice per try\nbeta=()\n[[ -z ${SRCDS_BETAID} ]] || beta=(-beta \"${SRCDS_BETAID}\")\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if [[ -f /mnt/server/steamapps/appmanifest_90.acf ]] && ! grep -q SharedDepots /mnt/server/steamapps/appmanifest_90.acf; then\n        echo \"appmanifest_90.acf has no SharedDepots: writing one that has them.\"\n        hlds_manifest\n    fi\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${STEAM_USER}\" +app_set_config 90 mod \"${HLDS_GAME}\" +app_update 90 \"${beta[@]}\" validate +app_update 90 \"${beta[@]}\" validate +quit && hlds_complete; then break; fi\n    echo \"SteamCMD did not finish the Half-Life Dedicated Server (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif ! hlds_complete; then\n    echo -e \"\\nSteamCMD failed to install the Half-Life Dedicated Server with ${HLDS_GAME}; try reinstalling.\"\n    exit 1\nfi\n\n## Empty ban lists, so the first start doesn't complain that it can't exec them; existing ones are kept\nfor cfg in listip.cfg banned.cfg; do\n    [[ -f \"/mnt/server/${HLDS_GAME}/${cfg}\" ]] || touch \"/mnt/server/${HLDS_GAME}/${cfg}\"\ndone\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "App ID",
+      "description": "The Steam app id of the Half-Life Dedicated Server (HLDS); the game is the mod below.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "90",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "in:90"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Game (mod)",
+      "description": "The HLDS mod folder: tfc is Team Fortress Classic.",
+      "env_variable": "HLDS_GAME",
+      "default_value": "tfc",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "in:tfc"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Map",
+      "description": "The first map, for example 2fort, dustbowl, well, rock2 or hunted.",
+      "env_variable": "SRCDS_MAP",
+      "default_value": "2fort",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[\\w-]{1,64}$/"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Max Players",
+      "description": "How many players may join (2-32).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:2,32"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "RCON Password",
+      "description": "GoldSrc RCON password (rcon_password) for RCON tools and the in-game rcon command, passed only when set. Hidden from customers: staff set it; empty leaves RCON to the game folder's server.cfg (rcon_password), off when that has none. The panel console doesn't need it.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[\\w.-]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Beta branch",
+      "description": "Empty for the current build, or steam_legacy for the build from before the 25th anniversary update (for old plugins). Reinstall after changing it.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "in:steam_legacy"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Auto-update server",
+      "description": "Check for a server update with SteamCMD at every start (1 on, 0 off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Team Fortress",
+    "features": {
+      "players": {
+        "list": "a2s",
+        "kick": "kick \"{name}\""
+      },
+      "player_query": "a2s",
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 30
+      },
+      "sleep": {
+        "mode": "udp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "_comment": "Octail's own egg (no upstream file; pelican-eggs' games-standalone minetest egg was read as a reference only). Luanti publishes no Linux server build of its own (only Windows, macOS and Android), so the install takes Alpine 3.22's luanti-server package and its libraries with apk, which checks them against Alpine's signed index, into luanti/ (the C library comes from the runtime image, also Alpine 3.22), and the chosen game from ContentDB, pinned with a SHA-256 recorded in the script since ContentDB publishes none: Minetest Game or VoxeLibre, or any game the owner uploads into games/. The server runs with MINETEST_USER_PATH at the server folder, so worlds/, mods/, games/ and minetest.conf are where the file manager shows them; the game is passed with --gameid only while the world doesn't exist yet (Luanti would otherwise run the world with another game). minetest.conf is written once by the install and edited with the properties parser before every start. The dedicated server reads no console input (--terminal is a full-screen ncurses console); it saves and stops on Ctrl+C.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/luanti.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Luanti",
+  "author": "eggs@octail.net",
+  "uuid": "f54bcd77-a72a-4fb3-9f8f-31d43a589fe1",
+  "description": "Luanti (formerly Minetest) is a free, open-source voxel game engine: build, mine and explore in Minetest Game, VoxeLibre or any game from ContentDB, with thousands of mods.",
+  "features": null,
+  "docker_images": {
+    "Alpine": "ghcr.io/sneakywrld/octail-yolks:alpine"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./luanti/usr/bin/luantiserver ] || { echo \"Luanti is not installed: reinstall the server.\"; exit 1; }; export LD_LIBRARY_PATH=\"$(pwd)/luanti/usr/lib\" MINETEST_USER_PATH=\"$(pwd)\"; case \"${LUANTI_GAME}\" in voxelibre) LUANTI_ID=mineclone2 ;; *) LUANTI_ID=\"${LUANTI_GAME}\" ;; esac; exec ./luanti/usr/bin/luantiserver --port {{SERVER_PORT}} --config minetest.conf --world \"worlds/{{WORLD_NAME}}\" $( [ -f \"worlds/${WORLD_NAME}/world.mt\" ] || printf -- '--gameid %s' \"${LUANTI_ID}\" )",
+  "config": {
+    "files": "{\n    \"minetest.conf\": {\n        \"parser\": \"properties\",\n        \"find\": {\n            \"port\": \"{{server.allocations.default.port}}\",\n            \"server_name\": \"{{server.environment.SERVER_NAME}}\",\n            \"server_description\": \"{{server.environment.SERVER_DESCRIPTION}}\",\n            \"motd\": \"{{server.environment.MOTD}}\",\n            \"max_users\": \"{{server.environment.MAX_USERS}}\",\n            \"server_announce\": \"{{server.environment.SERVER_ANNOUNCE}}\",\n            \"name\": \"{{server.environment.ADMIN_NAME}}\",\n            \"creative_mode\": \"{{server.environment.CREATIVE_MODE}}\",\n            \"enable_damage\": \"{{server.environment.ENABLE_DAMAGE}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Server for gameid=\\\"\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Luanti (formerly Minetest) installation script (Octail): Alpine's signed luanti-server package and the libraries it\n# needs, installed with apk into /mnt/server/luanti (apk checks every package against Alpine's signed index), since\n# the game container can't install packages, and the chosen game from ContentDB, pinned and checked by SHA-256.\n# The runtime image is Alpine 3.22 like this installer, so the libraries match; the C library always comes from the\n# image. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## The games offered by name, pinned: ContentDB publishes no checksums, so each release's SHA-256 is recorded here.\n## To update: pick the release on https://content.luanti.org/api/packages/<author>/<name>/releases/ (its\n## min_minetest_version must be at most the Luanti version Alpine ships), download its zip, put its url and sha256sum\n## here.\nMTG_URL=https://cdn.content.luanti.org/uploads/c1c185d0c4.zip # Minetest Game 2026-08-17\nMTG_SHA256=5b364f6b0cf31ec336319492e14106d932eb86b65a91ded99f4b25f4876519dc\nVL_URL=https://cdn.content.luanti.org/uploads/6b12075e71.zip # VoxeLibre 0.92.3\nVL_SHA256=51ea9242aabb1f29575abbfb599c79bcde9435616ea097c0582e11ac1b2b279d\n\ncd /mnt/server\nALPINE=$(cut -d. -f1,2 /etc/alpine-release)\n\n## Luanti and its libraries into luanti/ (the program only: worlds, mods, games and minetest.conf stay on a reinstall)\nrm -rf /mnt/server/luanti\nif ! apk add --quiet --root /mnt/server/luanti --initdb --no-scripts --no-cache \\\n    --keys-dir /etc/apk/keys --repositories-file /etc/apk/repositories luanti-server; then\n    echo \"Installation failed: apk couldn't install luanti-server from Alpine ${ALPINE}.\"\n    exit 1\nfi\nVERSION=$(apk info --root /mnt/server/luanti -e -v luanti-server 2>/dev/null || true)\n## the C library comes from the image (the same Alpine release): never a second copy\nrm -f /mnt/server/luanti/lib/ld-musl-* /mnt/server/luanti/lib/libc.musl-*\n## Alpine still names the program minetestserver; Luanti's own name is luantiserver\nif [ ! -e /mnt/server/luanti/usr/bin/luantiserver ] && [ -x /mnt/server/luanti/usr/bin/minetestserver ]; then\n    ln -s minetestserver /mnt/server/luanti/usr/bin/luantiserver\nfi\nif [ ! -x /mnt/server/luanti/usr/bin/luantiserver ] || [ ! -d /mnt/server/luanti/usr/share/luanti/builtin ]; then\n    echo \"Installation failed: the Luanti server is missing after installing luanti-server.\"\n    exit 1\nfi\n\n## the chosen game: downloaded, checked, and unpacked over an older copy of the same game\ninstall_game() { # <url> <sha256> <folder> <title>\n    echo \"Downloading $4 from $1\"\n    if ! curl -fsSL -o /tmp/game.zip \"$1\"; then\n        echo \"Installation failed: $4 couldn't be downloaded.\"\n        exit 1\n    fi\n    if ! echo \"$2  /tmp/game.zip\" | sha256sum -c --quiet -; then\n        rm -f /tmp/game.zip\n        echo \"Installation failed: the $4 download doesn't match its checksum.\"\n        exit 1\n    fi\n    rm -rf \"games/$3\"\n    unzip -q -o /tmp/game.zip -d games\n    rm -f /tmp/game.zip\n    if [ ! -f \"games/$3/game.conf\" ]; then\n        echo \"Installation failed: $4 is missing after unpacking.\"\n        exit 1\n    fi\n}\nmkdir -p games mods worlds\ncase \"${LUANTI_GAME:-minetest_game}\" in\n    minetest_game) install_game \"$MTG_URL\" \"$MTG_SHA256\" minetest_game \"Minetest Game\" ;;\n    voxelibre) install_game \"$VL_URL\" \"$VL_SHA256\" mineclone2 \"VoxeLibre\" ;;\n    *) echo \"Game ${LUANTI_GAME}: not downloaded; upload it into games/ (its folder name is the game id).\" ;;\nesac\n\n## a minimal minetest.conf, only when there is none; Octail sets the port, name, description, slots, listing, admin and\n## game mode before every start\nif [ ! -f minetest.conf ]; then\n    cat > minetest.conf <<'EOF'\n# Luanti server settings: https://docs.luanti.org/for-server-hosts/ (every setting: luanti/usr/share/luanti/builtin/settingtypes.txt).\n# Octail sets port, server_name, server_description, motd, max_users, server_announce, name, creative_mode and\n# enable_damage before every start (Startup tab); the other settings are yours.\nport = 30000\nserver_name = Luanti Server\nserver_description =\nmotd =\nmax_users = 15\nserver_announce = false\nname =\ncreative_mode = false\nenable_damage = true\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: ${VERSION:-Luanti} (Alpine ${ALPINE}), game ${LUANTI_GAME:-minetest_game}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Game",
+      "description": "The game a new world is created with: minetest_game (Minetest Game) or voxelibre (VoxeLibre), both downloaded by the install, or the id (folder name) of a game you upload into games/. An existing world keeps its game. Reinstall after switching to minetest_game or voxelibre.",
+      "env_variable": "LUANTI_GAME",
+      "default_value": "minetest_game",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[a-z0-9_]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "World Name",
+      "description": "The world folder in worlds/ (letters, digits, _ and -). A new name starts a new world.",
+      "env_variable": "WORLD_NAME",
+      "default_value": "world",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_-]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the public server list (up to 64 characters, no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Luanti Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Description",
+      "description": "Optional: the description in the public server list (no double quotes or backslashes).",
+      "env_variable": "SERVER_DESCRIPTION",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown to players when they join (no double quotes or backslashes).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "How many players may be online at once (1-200).",
+      "env_variable": "MAX_USERS",
+      "default_value": "15",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "true lists the server on servers.luanti.org; false keeps it off the list (players join by address).",
+      "env_variable": "SERVER_ANNOUNCE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin Player",
+      "description": "Optional: the player name that gets every privilege on this server (up to 20 letters, digits, _ or -). Register that name first, or anyone who joins with it becomes admin.",
+      "env_variable": "ADMIN_NAME",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_-]+$/|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Creative Mode",
+      "description": "true gives everyone unlimited blocks (for games that support it, such as Minetest Game).",
+      "env_variable": "CREATIVE_MODE",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Damage",
+      "description": "false makes players unable to take damage or die.",
+      "env_variable": "ENABLE_DAMAGE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "luanti",
+    "minetest",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "Luanti",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

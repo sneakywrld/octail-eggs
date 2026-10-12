@@ -1,0 +1,132 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-standalone xonotic/egg-xonotic.json (pelican-eggs, MIT licence). Octail changes the install script (the release zip over HTTPS with mirrors, checked against xonotic.org's published SHA-512 list and, for 0.8.6, against the sum recorded in the script; no switch to the unchecked rsync autobuild; only the Linux dedicated binary, its key and data/ unpacked; a reinstall keeps data/server.cfg and added files but removes an older release's packages; failures exit non-zero), runs it on octail-yolks' Debian image (upstream: a SteamCMD image), writes a minimal data/server.cfg once (upstream's copy in .xonotic/data was never edited, so name and slots stayed the defaults) and edits it with the file parser before every start (port, name, slots, public listing, message of the day, game type, rcon password), keeps the port also on the command line for the first bind, and adds the xonotic tag, the say broadcast, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/xonotic.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Xonotic",
+  "author": "eggs@octail.net",
+  "uuid": "134d1818-3464-475e-8445-c0e32b3902a6",
+  "description": "Xonotic is a free, fast-paced open-source arena shooter (deathmatch, CTF, clan arena and more), the successor of Nexuiz.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "./xonotic-linux64-dedicated +port {{SERVER_PORT}}",
+  "config": {
+    "files": "{\n    \"data/server.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"port \": \"port {{server.allocations.default.port}}\",\n            \"hostname \": \"hostname \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"maxplayers \": \"maxplayers {{server.environment.MAX_PLAYERS}}\",\n            \"sv_public \": \"sv_public {{server.environment.SV_PUBLIC}}\",\n            \"sv_motd \": \"sv_motd \\\"{{server.environment.MOTD}}\\\"\",\n            \"gametype \": \"gametype {{server.environment.GAMETYPE}}\",\n            \"rcon_password \": \"rcon_password \\\"{{server.environment.RCON_PASSWORD}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Server listening on address\"\n}",
+    "logs": "{}",
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Xonotic installation script (Octail): the official release zip from dl.xonotic.org (a mirror when it's down),\n# checked against the SHA-512 list xonotic.org publishes (and, for 0.8.6, against the sum recorded here), with only\n# what the dedicated server needs unpacked: the Linux 64-bit dedicated binary, its key and data/. Failures exit\n# non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## Xonotic 0.8.6's sum from https://dl.xonotic.org/xonotic-0.8.6.sha512, so a changed list can't pass for it\nSHA512_086=cb39879e96f19abb2877588c2d50c5d3e64dd68153bec3dd1bebedf4d765e506afa419c28381d7005aed664cb1a042571c132b5b319e4308cab67745d996c2a6\n\napt-get update -qq\napt-get install -y -qq curl unzip ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: Xonotic ships its Linux dedicated server for x86_64 only (this node is $(uname -m)).\"\n    exit 1\nfi\n\nVERSION=\"${XONOTIC_VERSION:-0.8.6}\"\nZIP=\"xonotic-${VERSION}.zip\"\nif ! SUMS=$(curl -fsSL \"https://dl.xonotic.org/xonotic-${VERSION}.sha512\"); then\n    echo \"Installation failed: xonotic.org lists no SHA-512 sums for Xonotic ${VERSION} (check the version).\"\n    exit 1\nfi\nSUM=$(echo \"$SUMS\" | awk -v f=\"$ZIP\" '$2 == f { print $1; exit }')\nif [ -z \"$SUM\" ]; then\n    echo \"Installation failed: ${ZIP} isn't in xonotic.org's SHA-512 list.\"\n    exit 1\nfi\nif [ \"$VERSION\" = 0.8.6 ] && [ \"$SUM\" != \"$SHA512_086\" ]; then\n    echo \"Installation failed: xonotic.org's SHA-512 for ${ZIP} isn't the one recorded in this egg.\"\n    exit 1\nfi\n\ncd /mnt/server\n## about 1.2 GB: downloaded into the server folder (the installer's /tmp may be small), removed afterwards\nDL=/mnt/server/.xonotic-download.zip\nOK=\nfor MIRROR in https://dl.xonotic.org https://xonotic.antzucaro.com https://download.evil-ant-colony.org/xonotic; do\n    echo \"Downloading ${MIRROR}/${ZIP}\"\n    if curl -fSL --retry 2 -o \"$DL\" \"${MIRROR}/${ZIP}\" && echo \"$SUM  $DL\" | sha512sum -c --quiet -; then\n        OK=1\n        break\n    fi\n    echo \"That download failed or doesn't match its checksum; trying the next mirror.\"\ndone\nif [ -z \"$OK\" ]; then\n    rm -f \"$DL\"\n    echo \"Installation failed: no mirror gave a download matching xonotic.org's SHA-512.\"\n    exit 1\nfi\n\n## the game's own files only: server.cfg, maps and anything else you added to data/ stay on a reinstall\nrm -rf /mnt/server/.xonotic-unpack\nmkdir -p /mnt/server/.xonotic-unpack data\nunzip -q -o \"$DL\" 'Xonotic/xonotic-linux64-dedicated' 'Xonotic/key_0.d0pk' 'Xonotic/data/*' 'Xonotic/server/*' \\\n    -d /mnt/server/.xonotic-unpack\nrm -f \"$DL\"\nU=/mnt/server/.xonotic-unpack/Xonotic\nif [ ! -f \"$U/xonotic-linux64-dedicated\" ] || ! ls \"$U\"/data/xonotic-*-data.pk3 > /dev/null 2>&1; then\n    rm -rf /mnt/server/.xonotic-unpack\n    echo \"Installation failed: the dedicated server or its data is missing from ${ZIP}.\"\n    exit 1\nfi\n## an older release's packages would load next to the new ones\nrm -f data/xonotic-*.pk3 data/font-*.pk3\nmv -f \"$U\"/data/* data/\nmv -f \"$U/xonotic-linux64-dedicated\" \"$U/key_0.d0pk\" .\nchmod +x xonotic-linux64-dedicated\nrm -rf server\nmv \"$U/server\" server\nrm -rf /mnt/server/.xonotic-unpack\n\n## a minimal data/server.cfg, only when there is none; Octail sets the lines below before every start, and\n## server/server.cfg is the release's example with every common setting explained\nif [ ! -f data/server.cfg ]; then\n    cat > data/server.cfg <<'EOF'\n// Xonotic server settings. Octail sets the lines below before every start (Startup tab); add your own settings\n// under them. Examples with explanations: server/server.cfg. All settings: 'cvarlist' in the console.\nport 26000\nhostname \"Xonotic Server\"\nmaxplayers 16\nsv_public 1\nsv_motd \"\"\ngametype dm\nrcon_password \"\"\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Xonotic ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Xonotic Version",
+      "description": "The release to install, such as 0.8.6 (xonotic.org must list its SHA-512). Players need the same release. Reinstall to switch.",
+      "env_variable": "XONOTIC_VERSION",
+      "default_value": "0.8.6",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^\\d+\\.\\d+\\.\\d+$/|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the server list (up to 64 characters, no double quotes or backslashes; $g_xonoticversion shows the version).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Xonotic Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots, spectators included (2-64).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 lists the server in the in-game server browser; 0 keeps it off the list (players join by address).",
+      "env_variable": "SV_PUBLIC",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown when players connect, a good place for contact details (no double quotes or backslashes).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Type",
+      "description": "The game mode from the next map on: dm, tdm, ctf, ca (clan arena), ft (freeze tag), kh, as, dom, lms, ka, inv, ons, rc, cts, nb or duel.",
+      "env_variable": "GAMETYPE",
+      "default_value": "dm",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:dm,tdm,ctf,ca,ft,kh,as,dom,lms,ka,inv,ons,rc,cts,nb,duel",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Optional: the remote console password for the in-game rcon command (8-64 characters, no spaces, quotes or backslashes). Empty = rcon off.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\;]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "xonotic",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "Xonotic",
+    "features": {
+      "broadcast_command": "say {message}",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 3600
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 5120
+      }
+    }
+  }
+}

@@ -142,6 +142,11 @@
         "memory_mb": 4096,
         "disk_mb": 16384
       }
+    },
+    "variables": {
+      "API_KEY": {
+        "secret": true
+      }
     }
   }
 }

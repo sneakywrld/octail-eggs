@@ -179,6 +179,11 @@
       "sleep": {
         "mode": "udp"
       }
+    },
+    "variables": {
+      "STEAM_ACC": {
+        "secret": true
+      }
     }
   }
 }

@@ -159,6 +159,11 @@
         "memory_mb": 3072,
         "disk_mb": 6144
       }
+    },
+    "variables": {
+      "GITHUB_OAUTH_TOKEN": {
+        "secret": true
+      }
     }
   }
 }

@@ -1,0 +1,149 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd starbound egg, which downloads the whole game (211820), was read as a reference only). App 533830 (Starbound Dedicated Server) is not available to anonymous SteamCMD logins and needs an account that owns Starbound, so the egg uses Octail's steam_login feature (required): the Steam account picked on the Startup tab logs in, Steam Guard codes are asked for in the console and the login is cached for start-time updates. The Linux depot is downloaded, SteamCMD is retried up to 3 times and the install fails when linux/starbound_server is missing. storage/starbound_server.config is written by the install when missing (with the game's configurationVersion, without which the server resets the file); the json parser sets the port, IPv4 binds, name, slots, anonymous joins, the A2S query server on the game port and Source RCON (its own port, generated password) before every start. Console commands go over RCON; the start is its listening line or the TCP game port once bound; Ctrl+C stops it cleanly.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/starbound.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Starbound",
+  "author": "eggs@octail.net",
+  "uuid": "8e4c1b9d-2a7f-4d35-9c06-f5b3e8a17d42",
+  "description": "Chucklefish's Starbound: the official dedicated server (starbound_server) from SteamCMD. Needs a Steam account that owns Starbound.",
+  "tags": [
+    "starbound",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "cd linux && exec ./starbound_server",
+  "config": {
+    "files": "{\n    \"storage/starbound_server.config\": {\n        \"parser\": \"json\",\n        \"find\": {\n            \"gameServerPort\": \"{{server.allocations.default.port}}\",\n            \"gameServerBind\": \"*\",\n            \"queryServerBind\": \"*\",\n            \"rconServerBind\": \"*\",\n            \"serverName\": \"{{server.environment.SERVER_NAME}}\",\n            \"maxPlayers\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"allowAnonymousConnections\": \"{{server.environment.ALLOW_ANONYMOUS}}\",\n            \"runQueryServer\": \"true\",\n            \"queryServerPort\": \"{{server.allocations.default.port}}\",\n            \"runRconServer\": \"true\",\n            \"rconServerPort\": \"{{server.environment.RCON_PORT}}\",\n            \"rconServerPassword\": \"{{server.environment.RCON_PASSWORD}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"UniverseServer: listening for incoming TCP connections\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Starbound dedicated server (Octail's own install script; pelican-eggs' egg was read as a reference only).\n# App 533830 can't be downloaded anonymously: the server needs a Steam account that owns Starbound.\n# Octail's steam_login feature fills STEAM_USER and, for this install only, STEAM_PASS; Steam Guard codes are asked\n# for in the console.\nset -uo pipefail\n\nif [ -z \"${STEAM_USER:-}\" ] || [ \"${STEAM_USER}\" = anonymous ]; then\n    echo \"The Starbound server can't be downloaded anonymously: pick a Steam account on the Startup tab\"\n    echo \"(Steam account), then reinstall the server.\"\n    exit 1\nfi\necho \"Logging in to Steam as ${STEAM_USER}\"\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || exit 1\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\n\n## the account's saved login (Tentacle's login cache), so later updates log in without the password\nif [ -n \"${STEAM_LOGIN_CACHE:-}\" ]; then\n    rm -rf /mnt/server/steamcmd/config && ln -s \"${STEAM_LOGIN_CACHE}\" /mnt/server/steamcmd/config\nfi\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\nLOGIN=(\"${STEAM_USER}\")\n[ -n \"${STEAM_PASS:-}\" ] && LOGIN+=(\"${STEAM_PASS}\")\n[ -n \"${STEAM_AUTH:-}\" ] && LOGIN+=(\"${STEAM_AUTH}\")\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${LOGIN[@]}\" +app_update \"${SRCDS_APPID}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/linux/starbound_server\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Starbound dedicated server. The Steam account must own Starbound;\"\n    echo \"Check the login lines above, then reinstall.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/linux/starbound_server\"\ncd /mnt/server || exit 1\n\nmkdir -p storage mods\n## Octail: a starting starbound_server.config, only when there is none (a reinstall keeps yours). It carries the\n## game's configurationVersion: a file without it is set aside (.old) by the server and replaced by the defaults.\nif [ ! -f storage/starbound_server.config ]; then\n    echo \"Writing a default storage/starbound_server.config. Octail sets the port, name, slots, query and RCON\"\n    echo \"before every start; accounts (serverUsers) and the rest are yours to edit.\"\n    cat > storage/starbound_server.config <<'OCTAIL_EOF'\n{\n  \"allowAdminCommands\" : true,\n  \"allowAdminCommandsFromAnyone\" : false,\n  \"allowAnonymousConnections\" : true,\n  \"allowAssetsMismatch\" : true,\n  \"anonymousConnectionsAreAdmin\" : false,\n  \"bannedIPs\" : [],\n  \"bannedUuids\" : [],\n  \"checkAssetsDigest\" : false,\n  \"clearPlayerFiles\" : false,\n  \"clearUniverseFiles\" : false,\n  \"configurationVersion\" : {\n    \"basic\" : 2,\n    \"server\" : 4\n  },\n  \"gameServerBind\" : \"*\",\n  \"gameServerPort\" : 21025,\n  \"maxPlayers\" : 8,\n  \"maxTeamSize\" : 4,\n  \"queryServerBind\" : \"*\",\n  \"queryServerPort\" : 21025,\n  \"rconServerBind\" : \"*\",\n  \"rconServerPassword\" : \"\",\n  \"rconServerPort\" : 21026,\n  \"rconServerTimeout\" : 1000,\n  \"runQueryServer\" : true,\n  \"runRconServer\" : false,\n  \"safeScripts\" : true,\n  \"scriptInstructionLimit\" : 10000000,\n  \"scriptInstructionMeasureInterval\" : 10000,\n  \"scriptProfilingEnabled\" : false,\n  \"scriptRecursionLimit\" : 100,\n  \"serverFidelity\" : \"automatic\",\n  \"serverName\" : \"A Starbound Server\",\n  \"serverOverrideAssetsDigest\" : null,\n  \"serverUsers\" : {},\n  \"tutorialMessages\" : true\n}\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto update",
+      "description": "Update the server with SteamCMD (the saved login of the server's Steam account) before every start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "533830",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:533830",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server name",
+      "description": "The name in the server list (up to 64 characters, with at least one letter).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Starbound server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|not_in:true,false|regex:/^(?=.*[A-Za-z])[^\\r\\n]{1,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "Slots.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,100",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Anonymous joins",
+      "description": "true lets anyone join; false only the accounts in serverUsers of storage/starbound_server.config (a name and password per player).",
+      "env_variable": "ALLOW_ANONYMOUS",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON password",
+      "description": "Source RCON password. Octail generates one when the server is created and sends console commands over RCON. 8 to 64 letters, digits, _ or -, with at least one letter.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^(?=[^A-Za-z]*[A-Za-z])[A-Za-z0-9_-]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON port",
+      "description": "The RCON port (TCP). Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Starbound",
+    "features": {
+      "steam_login": {
+        "required": true
+      },
+      "port_vars": {
+        "RCON_PORT": "primary+1"
+      },
+      "rcon": {
+        "type": "source",
+        "port_var": "RCON_PORT",
+        "password_var": "RCON_PASSWORD"
+      },
+      "broadcast_command": "say {message}",
+      "player_query": "a2s",
+      "players": {
+        "list": "a2s"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 4096
+      }
+    }
+  }
+}

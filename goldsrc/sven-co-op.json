@@ -1,0 +1,157 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd svencoop/egg-sven-co-op.json (pelican-eggs, MIT licence), on Octail's source image (32-bit libraries, with OpenSSL 3 and zlib for svends_i686) instead of steamcmd:debian. Octail adds the sven-co-op, svencoop, goldsrc tags, max players (+maxplayers), a map name of letters, digits, _ and -, an RCON password hidden from customers (+rcon_password only when set, so an empty one doesn't override server.cfg; since Octail has no GoldSrc RCON client the console is the container's stdin), the Players tab (A2S list, kick by name over the console) and the Steam query (A2S) for player counts, start detection by the Steam connection line with the UDP game port as a fallback (ready after 30 s), generic UDP idle sleep (off until staff enable it per server), the say broadcast, the update before start (AUTO_UPDATE, on by default), install sandbox defaults and resource hints, anonymous SteamCMD only, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The server name, password and region stay in svencoop/server.cfg (upstream rewrote them at every start); the 32-bit steamclient.so is copied too (svends_i686 is 32-bit; upstream had it commented out).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/goldsrc/sven-co-op.json"
+  },
+  "uuid": "308f8b8f-0176-4ad9-bf1a-a2dcaaa2f9fc",
+  "name": "Sven Co-op",
+  "author": "octail@meowgafactory.com",
+  "description": "Sven Co-op, the free co-operative Half-Life mod on the GoldSrc engine: up to 32 players against monsters through Half-Life, Opposing Force and custom campaigns.",
+  "tags": [
+    "sven-co-op",
+    "svencoop",
+    "goldsrc",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Source": "ghcr.io/sneakywrld/octail-yolks:source"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./svends_run -console -port {{SERVER_PORT}} +ip 0.0.0.0 +maxplayers {{MAX_PLAYERS}} +map {{SRCDS_MAP}} -norestart $( [ -z \"${RCON_PASSWORD}\" ] || printf %s \"+rcon_password ${RCON_PASSWORD}\" )"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Connection to Steam servers successful"
+      ]
+    },
+    "logs": {},
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Sven Co-op Dedicated Server (app 276060) Installation Script\n#\n# Server Files: /mnt/server\n# Based on the pelican-eggs Sven Co-op egg (games-steamcmd svencoop, MIT licence).\n#\n# Variables\n# SRCDS_APPID - 276060 (Sven Co-op Dedicated Server, anonymous)\n# SRCDS_BETAID - an optional beta branch\n\n## Sven Co-op's dedicated server installs anonymously\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\nbeta=()\n[[ -z ${SRCDS_BETAID} ]] || beta=(-beta \"${SRCDS_BETAID}\")\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${STEAM_USER}\" +app_update \"${SRCDS_APPID}\" \"${beta[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries (svends_i686 is a 32-bit server)\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/svends_run\" || ! -f \"/mnt/server/svends_i686\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Sven Co-op dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Empty ban lists, so the first start doesn't complain that it can't exec them; existing ones are kept\nfor cfg in listip.cfg banned.cfg; do\n    [[ -f \"/mnt/server/svencoop/${cfg}\" ]] || touch \"/mnt/server/svencoop/${cfg}\"\ndone\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "App ID",
+      "description": "The Steam app id of the Sven Co-op Dedicated Server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "276060",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "in:276060"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Map",
+      "description": "The first map, for example svencoop1, svencoop2, hl_c01_a1 or stadium4.",
+      "env_variable": "SRCDS_MAP",
+      "default_value": "svencoop1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[\\w-]{1,64}$/"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "How many players may join (2-32).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "12",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:2,32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "RCON Password",
+      "description": "GoldSrc RCON password (rcon_password) for RCON tools and the in-game rcon command, passed only when set. Hidden from customers: staff set it; empty leaves RCON to the game folder's server.cfg (rcon_password), off when that has none. The panel console doesn't need it.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[\\w.-]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Beta branch",
+      "description": "An optional Steam beta branch; empty for the public build. Reinstall after changing it.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[\\w.-]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Auto-update server",
+      "description": "Check for a server update with SteamCMD at every start (1 on, 0 off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Sven Co-op",
+    "features": {
+      "players": {
+        "list": "a2s",
+        "kick": "kick \"{name}\""
+      },
+      "player_query": "a2s",
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 30
+      },
+      "sleep": {
+        "mode": "udp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

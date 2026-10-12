@@ -1,0 +1,243 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd arma3 egg was read as a reference only). App 233780 (Arma 3 Server) is not available to anonymous SteamCMD logins, so the egg uses Octail's steam_login feature (required): the Steam account picked on the Startup tab logs in, Steam Guard codes are asked for in the console and the login is cached for start-time updates. Bohemia says the account doesn't need to own Arma 3 for the server itself; Steam Workshop downloads (app 107410, the steam.workshop tool) do. The Linux depot is downloaded, SteamCMD is retried up to 3 times and the install fails when arma3server_x64 is missing. basic.cfg and server.cfg are written by the install when missing; server.cfg's name, passwords, slots, BattlEye, signature check and persistence lines are set by the file parser before every start. Mods: Workshop items (workshop/<id>), uploaded folders and server-side mods go to -mod/-serverMod, their .bikey files to keys/, optionally lowercased. The Steam query (+1), Steam (+2) and BattlEye (+4) ports are reserved with fixed_ports; BattlEye RCon (optional, its own port) is written to battleye/beserver_x64.cfg. The server reads no console input and stops on Ctrl+C.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/arma-3.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Arma 3",
+  "author": "eggs@octail.net",
+  "uuid": "5b0e3f7c-9d2a-4c61-8e47-a3f1d6b20c95",
+  "description": "Bohemia Interactive's Arma 3: the official Linux dedicated server (arma3server_x64) from SteamCMD, with Workshop and uploaded mods. Needs a logged-in Steam account (anonymous SteamCMD can't download it).",
+  "tags": [
+    "arma-3",
+    "arma",
+    "bohemia",
+    "steamcmd",
+    "battleye"
+  ],
+  "features": [
+    "steam_disk_space",
+    "no_console_input"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "octail_mods=\"\"; for octail_id in ${WORKSHOP_MODS//,/ }; do octail_mods=\"${octail_mods}workshop/${octail_id};\"; done; octail_mods=\"${octail_mods}${MODS}\"; octail_mods=\"${octail_mods%;}\"; mkdir -p keys; IFS=\";\" read -ra octail_dirs <<< \"${octail_mods};${SERVER_MODS}\"; for octail_d in \"${octail_dirs[@]}\"; do [ -n \"${octail_d}\" ] || continue; if [ ! -d \"${octail_d}\" ]; then echo \"Mod folder ${octail_d} is missing; the server starts without it.\"; continue; fi; if [ \"${MODS_LOWERCASE}\" = 1 ]; then find \"${octail_d}\" -mindepth 1 -depth -name \"*[A-Z]*\" -exec sh -c 'for p; do n=\"${p%/*}/$(printf %s \"${p##*/}\" | tr \"[:upper:]\" \"[:lower:]\")\"; [ -e \"$n\" ] || mv \"$p\" \"$n\"; done' sh {} +; fi; find \"${octail_d}\" -iname \"*.bikey\" -exec cp -f -t keys {} +; done; if [ -d battleye ]; then for octail_be in battleye/beserver_x64.cfg battleye/launch/beserver_x64.cfg; do [ -d \"${octail_be%/*}\" ] || continue; touch \"${octail_be}\"; sed -i -e \"/^RConPassword /d\" -e \"/^RConPort /d\" -e \"/^RConIP /d\" \"${octail_be}\"; [ -z \"${RCON_PASSWORD}\" ] || printf \"RConPassword %s\\nRConPort %s\\nRConIP 0.0.0.0\\n\" \"${RCON_PASSWORD}\" \"${RCON_PORT}\" >> \"${octail_be}\"; done; fi; exec ./arma3server_x64 -ip=0.0.0.0 -port=\"${SERVER_PORT}\" -name=server -profiles=profiles -cfg=basic.cfg -config=server.cfg -bepath=battleye \"-mod=${octail_mods}\" \"-serverMod=${SERVER_MODS}\" -loadMissionToMemory",
+  "config": {
+    "files": "{\n    \"server.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"hostname =\": \"hostname = \\\"{{server.environment.SERVER_NAME}}\\\";\",\n            \"password =\": \"password = \\\"{{server.environment.SERVER_PASSWORD}}\\\";\",\n            \"passwordAdmin =\": \"passwordAdmin = \\\"{{server.environment.ADMIN_PASSWORD}}\\\";\",\n            \"maxPlayers =\": \"maxPlayers = {{server.environment.MAX_PLAYERS}};\",\n            \"BattlEye =\": \"BattlEye = {{server.environment.BATTLEYE}};\",\n            \"verifySignatures =\": \"verifySignatures = {{server.environment.VERIFY_SIGNATURES}};\",\n            \"persistent =\": \"persistent = {{server.environment.PERSISTENT}};\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"Host identity created.\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Arma 3 dedicated server (Octail's own install script; pelican-eggs' egg was read as a reference only).\n# App 233780 can't be downloaded anonymously: the server needs a logged-in Steam account (Bohemia: it doesn't have to own Arma 3; Workshop downloads do).\n# Octail's steam_login feature fills STEAM_USER and, for this install only, STEAM_PASS; Steam Guard codes are asked\n# for in the console.\nset -uo pipefail\n\nif [ -z \"${STEAM_USER:-}\" ] || [ \"${STEAM_USER}\" = anonymous ]; then\n    echo \"The Arma 3 server can't be downloaded anonymously: pick a Steam account on the Startup tab\"\n    echo \"(Steam account), then reinstall the server.\"\n    exit 1\nfi\necho \"Logging in to Steam as ${STEAM_USER}\"\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || exit 1\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\n\n## the account's saved login (Tentacle's login cache), so later updates log in without the password\nif [ -n \"${STEAM_LOGIN_CACHE:-}\" ]; then\n    rm -rf /mnt/server/steamcmd/config && ln -s \"${STEAM_LOGIN_CACHE}\" /mnt/server/steamcmd/config\nfi\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\nLOGIN=(\"${STEAM_USER}\")\n[ -n \"${STEAM_PASS:-}\" ] && LOGIN+=(\"${STEAM_PASS}\")\n[ -n \"${STEAM_AUTH:-}\" ] && LOGIN+=(\"${STEAM_AUTH}\")\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${LOGIN[@]}\" +app_update \"${SRCDS_APPID}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/arma3server_x64\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Arma 3 dedicated server. The download needs a logged-in Steam account;\"\n    echo \"Check the login lines above, then reinstall.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/arma3server_x64\"\ncd /mnt/server || exit 1\n\nmkdir -p mpmissions keys profiles workshop\n## Octail: default config files, only when there are none (a reinstall keeps yours)\nif [ ! -f basic.cfg ]; then\n    echo \"Writing a default basic.cfg (network settings).\"\n    cat > basic.cfg <<'OCTAIL_EOF'\n// Network settings: https://community.bistudio.com/wiki/Arma_3:_Basic_Server_Config_File\nMaxMsgSend = 128;\nMaxSizeGuaranteed = 512;\nMaxSizeNonguaranteed = 256;\nMinBandwidth = 131072;\nMaxBandwidth = 10000000000;\nMinErrorToSend = 0.001;\nMinErrorToSendNear = 0.01;\nMaxCustomFileSize = 0;\nclass sockets\n{\n    maxPacketSize = 1400;\n};\nOCTAIL_EOF\nfi\nif [ ! -f server.cfg ]; then\n    echo \"Writing a default server.cfg. Octail sets the name, passwords, slots, BattlEye, signatures and\"\n    echo \"persistence before every start; missions, MOTD and the rest are yours to edit.\"\n    cat > server.cfg <<'OCTAIL_EOF'\n// Arma 3 server config: https://community.bistudio.com/wiki/Arma_3:_Server_Config_File\n// Octail rewrites the lines that start with hostname, password, passwordAdmin, maxPlayers, BattlEye,\n// verifySignatures and persistent before every start (the Startup tab). Keep them on one line each.\nhostname = \"Arma 3 server\";\npassword = \"\";\npasswordAdmin = \"\";\nmaxPlayers = 32;\nBattlEye = 1;\nverifySignatures = 2;\npersistent = 1;\nkickDuplicate = 1;\nvoteThreshold = 0.33;\nvoteMissionPlayers = 1;\ndisableVoN = 0;\nvonCodecQuality = 20;\nlogFile = \"server_console.log\";\ntimeStampFormat = \"short\";\nmotd[] = { \"Welcome to the server\" };\nmotdInterval = 5;\n\n// Missions: put the mission's .pbo into mpmissions/ and list it here, for example\n//     class Mission1 { template = \"MyMission.Altis\"; difficulty = \"Regular\"; };\n// With no mission listed, a logged-in admin picks one in game (#missions).\nclass Missions\n{\n};\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto update",
+      "description": "Update the server with SteamCMD (the saved login of the server's Steam account) before every start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "233780",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:233780",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server name",
+      "description": "The name in the server browser (up to 64 characters, no \" or \\).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Arma 3 server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]{1,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Password",
+      "description": "Players need it to join; empty for an open server. Letters, digits and _.@%+!- only.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_.@%+!-]{0,40}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin password",
+      "description": "Typed in the game's chat as #login <password> to become admin (#missions, #kick, #restart). 8 to 40 letters, digits or _.@%+!-.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_.@%+!-]{8,40}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "Slots.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "32",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,256",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "BattlEye",
+      "description": "1 turns BattlEye anti-cheat on, 0 off.",
+      "env_variable": "BATTLEYE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Signature check",
+      "description": "2 kicks players whose mod files aren't signed by a key in keys/; 0 turns the check off.",
+      "env_variable": "VERIFY_SIGNATURES",
+      "default_value": "2",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,2",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Persistent",
+      "description": "1 keeps the mission running when the last player leaves, 0 restarts it.",
+      "env_variable": "PERSISTENT",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Workshop mods",
+      "description": "Steam Workshop item ids, comma-separated, in load order. The Steam Workshop tool fills this in and downloads them to workshop/<id> (needs a Steam account that owns the game); they load before the mods below.",
+      "env_variable": "WORKSHOP_MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:2048|regex:/^([0-9]{1,20}(,[0-9]{1,20})*)?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Mods",
+      "description": "Uploaded mod folders in the server folder, separated by ; in load order (for example @cba_a3;@ace). Players need the same mods.",
+      "env_variable": "MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:2048|regex:/^([A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*(;[A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*)*)?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server-side mods",
+      "description": "Mod folders only the server loads (-serverMod), separated by ;. Players don't need them.",
+      "env_variable": "SERVER_MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:2048|regex:/^([A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*(;[A-Za-z0-9@][A-Za-z0-9_@.-]*(\\/[A-Za-z0-9@][A-Za-z0-9_@.-]*)*)*)?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Lowercase mod files",
+      "description": "1 renames every file and folder inside the listed mod folders to lowercase before each start. Linux is case-sensitive: turn it on when the server can't find files of a mod made on Windows.",
+      "env_variable": "MODS_LOWERCASE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "BattlEye RCon password",
+      "description": "Turns on BattlEye RCon for RCon tools (BEC, BattleWarden, …) when set: 8 to 40 letters, digits or _.@%+!-. Empty leaves RCon off. Octail's console doesn't use it.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^([A-Za-z0-9_.@%+!-]{8,40})?$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "BattlEye RCon port",
+      "description": "The BattlEye RCon port (UDP). Set by Octail when the server is created (five after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Arma",
+    "features": {
+      "steam_login": {
+        "required": true
+      },
+      "steam_workshop": {
+        "game": "arma3",
+        "ids_variable": "WORKSHOP_MODS"
+      },
+      "port_vars": {
+        "RCON_PORT": "primary+5"
+      },
+      "fixed_ports": {
+        "Steam query": "primary+1",
+        "Steam": "primary+2",
+        "BattlEye": "primary+4"
+      },
+      "player_query": {
+        "type": "a2s",
+        "port_offset": 1
+      },
+      "players": {
+        "list": "a2s"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

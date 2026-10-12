@@ -1,0 +1,149 @@
+{
+  "_comment": "Octail's own egg (no upstream file; Pelican's BeamMP egg was not used). The official BeamMP-Server build for Debian 12 (x86_64) from the GitHub release (latest or a vX.Y.Z tag), its SHA-256 digest from the GitHub API checked, failures exit non-zero. ServerConfig.toml is edited line by line with the file parser before every start (BeamMP rewrites it in the same key = value form): port, AuthKey, name, description, map, players, cars per player, private flag, and the bind address 0.0.0.0. The AuthKey (keymaster.beammp.com) is the operator's: required, empty by default, never shipped. The start is BeamMP's ALL SYSTEMS STARTED line or the TCP port once bound; say is the broadcast; Ctrl+C stops it cleanly.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/beammp.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "BeamMP Server",
+  "author": "eggs@octail.net",
+  "uuid": "653c7aa6-7ba9-4b1d-a5db-089cd1e73453",
+  "description": "BeamMP, the multiplayer mod for BeamNG.drive: the official BeamMP-Server for Linux. Needs an AuthKey from keymaster.beammp.com.",
+  "tags": [
+    "beammp",
+    "beamng-drive",
+    "racing"
+  ],
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "exec ./BeamMP-Server",
+  "config": {
+    "files": "{\n    \"ServerConfig.toml\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"Port =\": \"Port = {{server.allocations.default.port}}\",\n            \"IP =\": \"IP = \\\"0.0.0.0\\\"\",\n            \"AuthKey =\": \"AuthKey = \\\"{{server.environment.AUTH_KEY}}\\\"\",\n            \"Name =\": \"Name = \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"Description =\": \"Description = \\\"{{server.environment.DESCRIPTION}}\\\"\",\n            \"Map =\": \"Map = \\\"{{server.environment.MAP}}\\\"\",\n            \"MaxPlayers =\": \"MaxPlayers = {{server.environment.MAX_PLAYERS}}\",\n            \"MaxCars =\": \"MaxCars = {{server.environment.MAX_CARS}}\",\n            \"Private =\": \"Private = {{server.environment.PRIVATE}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"ALL SYSTEMS STARTED SUCCESSFULLY\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# BeamMP server (Octail's own install script): the official Linux build for Debian 12 from BeamMP's GitHub releases,\n# its SHA-256 digest checked, failures exit non-zero. ServerConfig.toml is written only when there is none.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq ca-certificates > /dev/null\n\nASSET=\"BeamMP-Server.debian.12.x86_64\"\nVERSION=\"${VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    API=\"https://api.github.com/repos/BeamMP/BeamMP-Server/releases/latest\"\nelse\n    API=\"https://api.github.com/repos/BeamMP/BeamMP-Server/releases/tags/${VERSION}\"\nfi\nif ! RELEASE=$(curl -fsSL \"$API\"); then\n    echo \"Installation failed: BeamMP-Server release ${VERSION} wasn't found on GitHub.\"\n    exit 1\nfi\nTAG=$(echo \"$RELEASE\" | jq -r '.tag_name')\nURL=$(echo \"$RELEASE\" | jq -r --arg a \"$ASSET\" '.assets[] | select(.name == $a) | .browser_download_url')\nDIGEST=$(echo \"$RELEASE\" | jq -r --arg a \"$ASSET\" '.assets[] | select(.name == $a) | .digest // empty')\nif [ -z \"$URL\" ]; then\n    echo \"Installation failed: release ${TAG} has no ${ASSET}.\"\n    exit 1\nfi\n\necho \"Installing BeamMP-Server ${TAG} from ${URL}\"\ncd /mnt/server\ncurl -fsSL -o BeamMP-Server.new \"$URL\"\nif [ -n \"$DIGEST\" ]; then\n    if ! echo \"${DIGEST#sha256:}  BeamMP-Server.new\" | sha256sum -c --quiet -; then\n        rm -f BeamMP-Server.new\n        echo \"Installation failed: the download doesn't match its checksum.\"\n        exit 1\n    fi\nelse\n    echo \"GitHub lists no checksum for this release; not checked.\"\nfi\nchmod +x BeamMP-Server.new\nmv -f BeamMP-Server.new BeamMP-Server\n\nmkdir -p \"Resources/Client\" \"Resources/Server\"\nif [ ! -f ServerConfig.toml ]; then\n    echo \"Writing a default ServerConfig.toml\"\n    cat > ServerConfig.toml <<'OCTAIL_EOF'\n# This is the BeamMP-Server config file.\n# Help & Documentation: `https://docs.beammp.com/server/server-maintenance/`\n# IMPORTANT: Fill in the AuthKey with the key you got from `https://keymaster.beammp.com/` on the left under \"Keys\"\n\n[General]\n# AuthKey has to be filled out in order to run the server\nAuthKey = \"\"\n# Whether to allow guests\nAllowGuests = true\nDebug = false\nDescription = \"BeamMP Default Description\"\n# Whether to allow unconnected clients to get the public server information without joining\nInformationPacket = true\n# The IP address to bind the server to, this is NOT related to your public IP. Can be used if your machine has multiple network interfaces\nIP = \"0.0.0.0\"\n# Whether to log chat messages in the console / log\nLogChat = true\nMap = \"/levels/gridmap_v2/info.json\"\nMaxCars = 1\nMaxPlayers = 8\nName = \"BeamMP Server\"\nPort = 30814\nPrivate = true\nResourceFolder = \"Resources\"\n# Add custom identifying tags to your server to make it easier to find. Format should be TagA,TagB,TagC. Note the comma seperation.\nTags = \"Freeroam\"\n\n[Misc]\n# Hides the periodic update message which notifies you of a new server version. You should really keep this on and always update as soon as possible. For more information visit https://wiki.beammp.com/en/home/server-maintenance#updating-the-server. An update message will always appear at startup regardless.\nImScaredOfUpdates = false\n# Specifies the time between update reminders. You can use any of \"s, min, h, d\" at the end to specify the units seconds, minutes, hours or days. So 30d or 0.5min will print the update message every 30 days or half a minute.\nUpdateReminderTime = \"30s\"\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: BeamMP-Server ${TAG}.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "AuthKey",
+      "description": "The server's key from https://keymaster.beammp.com (Keys). Required: BeamMP doesn't start without one. Each key runs one server at a time.",
+      "env_variable": "AUTH_KEY",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9-]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Version",
+      "description": "latest, or a release tag such as v3.9.3. Applied on reinstall.",
+      "env_variable": "VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:20|regex:/^(latest|v\\d+\\.\\d+\\.\\d+)$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server name",
+      "description": "The name in the server list (no double quotes or backslashes; ^ colour codes work).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "BeamMP Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:64|regex:/^[^\"\\\\\\r\\n]*$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Description",
+      "description": "Shown in the server list (no double quotes or backslashes).",
+      "env_variable": "DESCRIPTION",
+      "default_value": "BeamMP server on Octail",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:256|regex:/^[^\"\\\\\\r\\n]*$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The level, as /levels/<name>/info.json: gridmap_v2, west_coast_usa, east_coast_usa, italy, utah, jungle_rock_island, industrial, small_island, automation_test_track, hirochi_raceway, johnson_valley, derby, driver_training.",
+      "env_variable": "MAP",
+      "default_value": "/levels/gridmap_v2/info.json",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:128|regex:/^\\/levels\\/[A-Za-z0-9_.-]+\\/info\\.json$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max players",
+      "description": "",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max cars per player",
+      "description": "",
+      "env_variable": "MAX_CARS",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Private",
+      "description": "true keeps the server out of the public server list (join by address); false lists it.",
+      "env_variable": "PRIVATE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Racing",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    },
+    "variables": {
+      "AUTH_KEY": {
+        "secret": true
+      }
+    }
+  }
+}

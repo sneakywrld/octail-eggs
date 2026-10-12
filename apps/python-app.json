@@ -1,0 +1,225 @@
+{
+  "_comment": "Octail's own egg (plan §6.4): a Python app such as a Discord bot, from a git repository or uploaded. The install only fetches the code; at start a virtual environment in .venv (in the server folder) gets requirements.txt with pip, as the server's own user. Nothing is pulled unless the owner sets a repository and turns Auto Update on; a private repository's token travels as an HTTP header in git's environment.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/python-app.json"
+  },
+  "uuid": "5ac00fa5-f73d-423a-9fc9-fe2f265cbe69",
+  "name": "Python App",
+  "author": "octail@meowgafactory.com",
+  "description": "Any Python app: Discord and Telegram bots, small web services and scripts. Install from a git repository (public, or private with a token) or upload the files. requirements.txt is installed into a virtual environment in the server folder when the app starts; it runs with python <main file>.",
+  "tags": [
+    "app",
+    "python",
+    "discord-bot"
+  ],
+  "features": [],
+  "docker_images": {
+    "Python 3.12": "ghcr.io/sneakywrld/octail-yolks:python_3.12"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ -n \"${GIT_REPO}\" ] && [ \"${AUTO_UPDATE}\" = 1 ] && [ -d .git ]; then echo '[Octail] Auto Update: pulling the latest code'; GIT_TERMINAL_PROMPT=0 GIT_CONFIG_COUNT=${GIT_TOKEN:+1} GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0=\"Authorization: Basic $(printf '%s:%s' \"${GIT_USERNAME:-x-access-token}\" \"$GIT_TOKEN\" | base64 -w0)\" git pull -q --ff-only || echo '[Octail] git pull failed: starting the code that is already here'; fi; if [ ! -x .venv/bin/python ]; then echo '[Octail] Creating the virtual environment in .venv'; python -m venv .venv || exit 1; fi; if [ -f \"${REQUIREMENTS_FILE}\" ] && { [ \"${PIP_INSTALL}\" = always ] || { [ \"${PIP_INSTALL}\" = auto ] && { [ ! -f .venv/.octail-installed ] || [ \"${REQUIREMENTS_FILE}\" -nt .venv/.octail-installed ]; }; }; }; then echo '[Octail] Installing requirements'; .venv/bin/pip install --no-cache-dir -r \"${REQUIREMENTS_FILE}\" || exit 1; touch .venv/.octail-installed; fi; if [ ! -f \"${MAIN_FILE}\" ]; then echo \"[Octail] ${MAIN_FILE} wasn't found: upload the app, or set Git Repository and reinstall\"; exit 1; fi; octail_app() { .venv/bin/python ${PYTHON_ARGS} \"${MAIN_FILE}\" ${APP_ARGS}; }; if [ -z \"${READY_TEXT}\" ]; then printf '[Octail] App is %s\\n' running; octail_app; else set -o pipefail; octail_app 2>&1 | { while IFS= read -r l || [ -n \"$l\" ]; do printf '%s\\n' \"$l\"; case \"$l\" in *\"${READY_TEXT}\"*) printf '[Octail] App is %s\\n' running; break;; esac; done; exec cat; }; fi"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "[Octail] App is running"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Octail Python app install: fetches the app from its git repository when one is set (Git Repository on the\n# Startup tab); without one the server stays empty for an upload. Requirements are installed when the server\n# starts, into a virtual environment in .venv.\n# Reinstalling resets the files git tracks to the branch; untracked files (.env, databases, uploads) stay.\n#\n# Server Files: /mnt/server\nset -euo pipefail\ncd /mnt/server\n\nif [ -z \"${GIT_REPO:-}\" ]; then\n    echo \"No git repository set: upload your app with the file manager or SFTP, then start the server.\"\n    exit 0\nfi\ncase \"${GIT_REPO}\" in\n    https://*) ;;\n    *)\n        echo \"Installation failed: Git Repository must be an https:// address.\"\n        exit 1\n        ;;\nesac\n\nexport GIT_TERMINAL_PROMPT=0\ngit config --global --add safe.directory /mnt/server\ngit config --global init.defaultBranch main\nif [ -n \"${GIT_TOKEN:-}\" ]; then\n    # Private repositories: HTTP basic auth with the token (GitHub, GitLab, Gitea, Bitbucket app passwords).\n    GIT_CONFIG_VALUE_0=\"Authorization: Basic $(printf '%s:%s' \"${GIT_USERNAME:-x-access-token}\" \"${GIT_TOKEN}\" | base64 -w0)\"\n    export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0\nfi\n\n[ -d .git ] || git init -q\nif git remote get-url origin > /dev/null 2>&1; then\n    git remote set-url origin \"${GIT_REPO}\"\nelse\n    git remote add origin \"${GIT_REPO}\"\nfi\n\nBRANCH=\"${GIT_BRANCH:-}\"\nif [ -z \"${BRANCH}\" ]; then\n    BRANCH=$(git ls-remote --symref origin HEAD | sed -n 's|^ref: refs/heads/\\(.*\\)\\tHEAD$|\\1|p') || true\n    if [ -z \"${BRANCH}\" ]; then\n        echo \"Installation failed: ${GIT_REPO} couldn't be read (a wrong address, or a private repository without a token).\"\n        exit 1\n    fi\nfi\n\necho \"Fetching ${GIT_REPO}, branch ${BRANCH}\"\nif ! git fetch -q --depth 1 origin \"+refs/heads/${BRANCH}:refs/remotes/origin/${BRANCH}\"; then\n    echo \"Installation failed: branch ${BRANCH} of ${GIT_REPO} couldn't be fetched.\"\n    exit 1\nfi\ngit checkout -q -f -B \"${BRANCH}\" \"origin/${BRANCH}\"\ngit branch -q --set-upstream-to=\"origin/${BRANCH}\" \"${BRANCH}\"\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: $(git log -1 --format='%h %s')\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Git Repository",
+      "description": "The app's git repository as an https:// address (https://github.com/you/your-bot), fetched by the install. Empty: upload the app yourself. Reinstall after changing it.",
+      "env_variable": "GIT_REPO",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^https:\\/\\/[^\\s\"'\\x60$\\\\]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Git Branch",
+      "description": "The branch to install and pull. Empty: the repository's default branch.",
+      "env_variable": "GIT_BRANCH",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:128",
+        "regex:/^[A-Za-z0-9_][A-Za-z0-9._\\/-]*$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Git Username",
+      "description": "Only for private repositories: the account the token belongs to. Empty works for GitHub tokens.",
+      "env_variable": "GIT_USERNAME",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:128",
+        "regex:/^[A-Za-z0-9._@-]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Git Access Token",
+      "description": "Only for private repositories: a read-only access token (GitHub: a fine-grained token with Contents read). Never written to the server folder or the console.",
+      "env_variable": "GIT_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^[A-Za-z0-9._~+\\/=:-]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Auto Update",
+      "description": "1: pull the newest commit of the branch at every start (git pull --ff-only; a failed pull starts the code already there). 0: only Reinstall updates the code.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Main File",
+      "description": "The file python runs, relative to the server folder: main.py, bot.py, src/app.py.",
+      "env_variable": "MAIN_FILE",
+      "default_value": "main.py",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:256",
+        "regex:/^[A-Za-z0-9_][A-Za-z0-9._\\/-]*$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Requirements File",
+      "description": "The pip requirements file. Nothing is installed when it is missing.",
+      "env_variable": "REQUIREMENTS_FILE",
+      "default_value": "requirements.txt",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:256",
+        "regex:/^[A-Za-z0-9_][A-Za-z0-9._\\/-]*$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Install Requirements",
+      "description": "auto: pip install -r when the requirements file changed. always: at every start. never: you manage .venv.",
+      "env_variable": "PIP_INSTALL",
+      "default_value": "auto",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:auto,always,never"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Python Options",
+      "description": "Extra python flags before the main file, such as -O.",
+      "env_variable": "PYTHON_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:256",
+        "regex:/^(-\\S+(\\s+-\\S+)*)?\\s*$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "App Arguments",
+      "description": "Extra arguments passed to the app, split at spaces.",
+      "env_variable": "APP_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Ready Text",
+      "description": "Console text that means the app is up, such as 'Logged in as'. The server shows Running once a line contains it (or once the app listens on the main port). Empty: Running as soon as the app starts.",
+      "env_variable": "READY_TEXT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:128"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 900
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 2048
+      }
+    },
+    "variables": {
+      "GIT_TOKEN": {
+        "secret": true
+      }
+    }
+  }
+}

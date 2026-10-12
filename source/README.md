@@ -2,7 +2,7 @@
 
 # Source
 
-Source and Source 2 dedicated servers (srcds): 7 eggs.
+Source and Source 2 dedicated servers (srcds): 11 eggs.
 Back to [all eggs](../README.md#source).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
@@ -10,9 +10,13 @@ Back to [all eggs](../README.md#source).
 | Counter-Strike 2 | [counter-strike-2.json](counter-strike-2.json) | [`steamcmd_sniper`](https://github.com/sneakywrld/octail-yolks#steamcmd_sniper) | TV_PORT +1 | [—](../TESTED.md#source-counter-strike-2) | RCON (source), Players tab, sleep (udp) |
 | Counter-Strike: Source | [counter-strike-source.json](counter-strike-source.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [✓ 2026-10-10](../TESTED.md#source-counter-strike-source) | RCON (source), Players tab, sleep (udp) |
 | Day of Defeat: Source | [day-of-defeat-source.json](day-of-defeat-source.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-day-of-defeat-source) | RCON (source), Players tab, sleep (udp) |
+| Day of Infamy | [day-of-infamy.json](day-of-infamy.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-day-of-infamy) | RCON (source), Players tab, sleep (udp), start detected by port |
+| Fistful of Frags | [fistful-of-frags.json](fistful-of-frags.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-fistful-of-frags) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Garry's Mod | [garrysmod.json](garrysmod.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-garrysmod) | RCON (source), Players tab, sleep (udp), Steam Workshop |
 | Source Engine Game (SRCDS) | [generic.json](generic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-generic) | RCON (source), Players tab, sleep (udp) |
+| Insurgency (2014) | [insurgency.json](insurgency.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-insurgency) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Left 4 Dead 2 | [left-4-dead-2.json](left-4-dead-2.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-left-4-dead-2) | RCON (source), Players tab, sleep (udp) |
+| No More Room in Hell | [no-more-room-in-hell.json](no-more-room-in-hell.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-no-more-room-in-hell) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Team Fortress 2 | [team-fortress-2.json](team-fortress-2.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-team-fortress-2) | RCON (source), Players tab, sleep (udp) |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.

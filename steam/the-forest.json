@@ -1,0 +1,303 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd the_forest/egg-pterodactyl-the-forest.json (pelican-eggs, MIT licence) at 8dd208975977aa24a6c53008a65a630c150806b8. Octail fixes the config edits ({{server.environment.X}} instead of {{server.build.env.X}}, keys matched with their trailing space so serverPassword doesn't also replace serverPasswordAdmin), writes a first config.cfg only when there is none (upstream overwrote it on every reinstall) and makes sure each key it sets has a line, moves the admin password from the command line into config.cfg and makes it optional (upstream: a fixed default), gives the query and Steam ports their own automatic ports (port_vars) instead of fixed 27016 and 8766, starts with initType Continue (the save in the slot, a new game when there is none; upstream: New), adds the save slot and autosave interval, the the-forest tag, the no_console_input flag, the Steam query (A2S) for player counts, install sandbox defaults and resource hints, port readiness (x_octail.features.ready) besides the autosave line, starts with the image's Xvfb instead of xvfb-run and filters the RenderTexture warnings without hiding the server's process, stops with Ctrl+C handed to the server by a trap (the wine image runs the line in bash as PID 1, which ignores it otherwise) and waits for it, drops the hidden WINEDEBUG/WINEARCH variables (the image sets them), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/the-forest.json"
+  },
+  "exported_at": "2026-10-12T08:00:00+00:00",
+  "name": "The Forest",
+  "author": "admin@softwarenoob.com",
+  "uuid": "89547eb4-227a-4205-90bd-5d355f2f0af2",
+  "description": "Survive a plane crash in a forest full of cannibals: build, explore and hold out together. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "the-forest",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export SteamAppId=242760; wine ./TheForestDedicatedServer.exe -batchmode -nographics -nosteamclient -savefolderpath /home/container/TheForestDedicatedServer_Data/Saves/ -configfilepath /home/container/TheForestDedicatedServer_Data/forest/config/config.cfg > >(grep --line-buffered -v 'RenderTexture.Create failed') 2>&1 & FOREST_PID=$!; trap \"kill -INT ${FOREST_PID} 2>/dev/null; wait ${FOREST_PID}\" INT TERM; wait ${FOREST_PID}"
+  },
+  "config": {
+    "files": {
+      "TheForestDedicatedServer_Data/forest/config/config.cfg": {
+        "parser": "file",
+        "find": {
+          "serverIP ": "serverIP 0.0.0.0",
+          "serverSteamPort ": "serverSteamPort {{server.environment.STEAM_PORT}}",
+          "serverGamePort ": "serverGamePort {{server.allocations.default.port}}",
+          "serverQueryPort ": "serverQueryPort {{server.environment.QUERY_PORT}}",
+          "serverName ": "serverName {{server.environment.SERVER_NAME}}",
+          "serverPlayers ": "serverPlayers {{server.environment.MAX_PLAYERS}}",
+          "serverPassword ": "serverPassword {{server.environment.SERVER_PASSWORD}}",
+          "serverPasswordAdmin ": "serverPasswordAdmin {{server.environment.ADMIN_PASSWORD}}",
+          "serverSteamAccount ": "serverSteamAccount {{server.environment.STEAM_ACCOUNT_TOKEN}}",
+          "enableVAC ": "enableVAC {{server.environment.ENABLE_VAC}}",
+          "serverAutoSaveInterval ": "serverAutoSaveInterval {{server.environment.AUTOSAVE_INTERVAL}}",
+          "difficulty ": "difficulty {{server.environment.DIFFICULTY}}",
+          "initType ": "initType {{server.environment.INIT_TYPE}}",
+          "slot ": "slot {{server.environment.SAVE_SLOT}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Game autosave started"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/TheForestDedicatedServer.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install The Forest dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: the server reads TheForestDedicatedServer_Data/forest/config/config.cfg (-configfilepath). A first one\n## is written here; an existing one is kept. Every line Octail sets before each start (\"key value\", the file parser\n## matches \"key \") must be there, so a key that is missing or has no value yet gets a line of its own.\nCFG_DIR=/mnt/server/TheForestDedicatedServer_Data/forest/config\nCFG=\"${CFG_DIR}/config.cfg\"\nmkdir -p \"${CFG_DIR}\" /mnt/server/TheForestDedicatedServer_Data/Saves\nif [[ ! -f \"$CFG\" ]]; then\n    cat > \"$CFG\" <<'EOF'\n// The Forest dedicated server settings, written by the Octail install.\n// The Startup tab sets the ports, name, players, passwords, Steam account token, VAC, difficulty, start type,\n// save slot and autosave interval before every start. The rest can be edited here with the server stopped.\nserverIP 0.0.0.0\nserverSteamPort 8766\nserverGamePort 27015\nserverQueryPort 27016\nserverName Octail The Forest Server\nserverPlayers 8\nserverPassword\nserverPasswordAdmin\nserverSteamAccount\nenableVAC off\nserverAutoSaveInterval 15\ndifficulty Normal\ninitType Continue\nslot 1\nshowLogs off\nserverContact\nveganMode off\nvegetarianMode off\nresetHolesMode off\ntreeRegrowMode off\nallowBuildingDestruction on\nallowEnemiesCreativeMode off\nallowCheats off\nrealisticPlayerDamage off\nsaveFolderPath\ntargetFpsIdle 5\ntargetFpsActive 60\nEOF\nfi\nfor key in serverIP serverSteamPort serverGamePort serverQueryPort serverName serverPlayers serverPassword \\\n    serverPasswordAdmin serverSteamAccount enableVAC serverAutoSaveInterval difficulty initType slot; do\n    if grep -qE \"^${key}( |$)\" \"$CFG\"; then\n        sed -i -E \"s/^${key}$/${key} /\" \"$CFG\"\n    else\n        echo \"${key} \" >> \"$CFG\"\n    fi\ndone\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server list (no double quotes or backslashes). Written to config.cfg.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail The Forest Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (no spaces, quotes or backslashes).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"\\\\\\s]*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Admin Password",
+      "description": "Optional: the password for the in-game admin commands. Empty = nobody can log in as admin.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"\\\\\\s]*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Max Players",
+      "description": "How many players may join at once (The Forest allows 8).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,8"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Difficulty",
+      "description": "Peaceful, Normal or Hard.",
+      "env_variable": "DIFFICULTY",
+      "default_value": "Normal",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:Peaceful,Normal,Hard"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Start Type",
+      "description": "Continue loads the save in the save slot (a new game when there is none); New starts a new game in it.",
+      "env_variable": "INIT_TYPE",
+      "default_value": "Continue",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:New,Continue"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Save Slot",
+      "description": "The save slot (1 to 5) the server loads and saves.",
+      "env_variable": "SAVE_SLOT",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,5"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Autosave Interval",
+      "description": "Minutes between autosaves.",
+      "env_variable": "AUTOSAVE_INTERVAL",
+      "default_value": "15",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,120"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Steam Account Token",
+      "description": "Optional: a Steam game server login token for app 242760 (steamcommunity.com/dev/managegameservers). Without one the server runs anonymously and players' progress on it may not be kept.",
+      "env_variable": "STEAM_ACCOUNT_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_num",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "VAC",
+      "description": "Valve Anti-Cheat: on or off.",
+      "env_variable": "ENABLE_VAC",
+      "default_value": "off",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:on,off"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Steam Port",
+      "description": "Steam communication port (UDP). Set by Octail when the server is created (two after the game port).",
+      "env_variable": "STEAM_PORT",
+      "default_value": "8766",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 13,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 14,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "556450",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:556450"
+      ]
+    },
+    {
+      "sort": 15,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "The Forest",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1",
+        "STEAM_PORT": "primary+2"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

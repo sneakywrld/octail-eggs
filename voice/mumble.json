@@ -1,0 +1,110 @@
+{
+  "_comment": "Octail's own egg (no upstream file; Pelican's and Pterodactyl's Mumble eggs were read as a reference only). Mumble has no Linux server build of its own since 1.3 (only Windows and macOS binaries), so the install takes Debian 12's mumble-server package (Murmur 1.3.4, security-patched by Debian; current Mumble clients connect) and the libraries it needs with apt, which checks them against Debian's signed archive, and unpacks them into murmur/ (the C library always comes from the image, also Debian 12). murmur.ini is written once by the install and edited with the ini parser before every start (port, slots, name, password, welcome text, the log on the console); values are quoted, since Qt reads commas as lists. The SuperUser password is set with -supw before the start when given. murmurd reads no console input; it stops on Ctrl+C.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/voice/mumble.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "Mumble Server",
+  "author": "eggs@octail.net",
+  "uuid": "7e09e63c-cd85-44ad-9241-e827b07100d9",
+  "description": "Mumble server (Murmur): open-source, low-latency, encrypted voice chat with channels and positional audio.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "MURMUR_LIB=\"$(pwd)/murmur/usr/lib/$(uname -m)-linux-gnu\"; export LD_LIBRARY_PATH=\"${MURMUR_LIB}\" QT_PLUGIN_PATH=\"${MURMUR_LIB}/qt5/plugins\"; [ -z \"${SUPERUSER_PASSWORD}\" ] || ./murmur/usr/sbin/murmurd -ini murmur.ini -supw \"${SUPERUSER_PASSWORD}\"; exec ./murmur/usr/sbin/murmurd -fg -ini murmur.ini",
+  "config": {
+    "files": "{\n    \"murmur.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"port\": \"{{server.allocations.default.port}}\",\n            \"users\": \"{{server.environment.MAX_USERS}}\",\n            \"registerName\": \"\\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"serverpassword\": \"\\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"welcometext\": \"\\\"{{server.environment.WELCOME_TEXT}}\\\"\",\n            \"logfile\": \"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Server listening on\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Mumble server (Murmur) installation script (Octail): Debian 12's signed mumble-server package and the libraries it\n# needs, downloaded with apt (which checks every package against Debian's signed archive) and unpacked into\n# /mnt/server/murmur, since the game container can't install packages. The runtime image is Debian 12 too, so the\n# libraries match; glibc is never copied (the image's own is used). Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\ncd /mnt/server\nexport DEBIAN_FRONTEND=noninteractive\nif ! apt-get update -qq; then\n    echo \"Installation failed: apt couldn't read Debian's package lists.\"\n    exit 1\nfi\nVERSION=$(apt-cache policy mumble-server | awk '$1 == \"Candidate:\" { print $2 }')\nif [ -z \"$VERSION\" ] || [ \"$VERSION\" = \"(none)\" ]; then\n    echo \"Installation failed: Debian has no mumble-server package for this architecture.\"\n    exit 1\nfi\n\n## mumble-server and every library it needs, following library dependencies only (no adduser, debconf, systemd);\n## the C library and its loader always come from the image\nPKGS=\" \"\nQUEUE=(mumble-server)\nwhile [ \"${#QUEUE[@]}\" -gt 0 ]; do\n    PKG=\"${QUEUE[0]}\"\n    QUEUE=(\"${QUEUE[@]:1}\")\n    case \"$PKGS\" in *\" $PKG \"*) continue ;; esac\n    PKGS=\"$PKGS$PKG \"\n    for DEP in $(apt-cache depends --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \"$PKG\" |\n        awk '$1 ~ /^\\|?(Pre)?Depends:$/ && $2 !~ /^</ { print $2 }'); do\n        DEP=\"${DEP%%:*}\"\n        case \"$DEP\" in\n            libc6 | libc-bin | libc-l10n | libc6-* | libpam* | *-data | *-common) ;;\n            lib* | zlib1g) QUEUE+=(\"$DEP\") ;;\n        esac\n    done\ndone\n\necho \"Installing the Mumble server (mumble-server ${VERSION}) and its libraries:${PKGS% }\"\nTMP=$(mktemp -d)\nchmod 755 \"$TMP\"\n## apt checks each download against the signed package lists\n# shellcheck disable=SC2086\nif ! (cd \"$TMP\" && apt-get download -qq $PKGS); then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: the packages couldn't be downloaded from Debian.\"\n    exit 1\nfi\n\n## the program and its libraries only: murmur.ini, the database (murmur.sqlite) and the certificate stay on a reinstall\nrm -rf /mnt/server/murmur\nmkdir -p /mnt/server/murmur\nfor DEB in \"$TMP\"/*.deb; do\n    dpkg-deb -x \"$DEB\" /mnt/server/murmur\ndone\nrm -rf \"$TMP\"\n\nif [ ! -x /mnt/server/murmur/usr/sbin/murmurd ]; then\n    echo \"Installation failed: murmurd is missing after unpacking mumble-server.\"\n    exit 1\nfi\n\n## a minimal murmur.ini, only when there is none; Octail sets the port, name, passwords, slots and welcome text before\n## every start\nif [ ! -f murmur.ini ]; then\n    cat > murmur.ini <<'EOF'\n; Mumble server (Murmur) configuration. Octail sets port, registerName, serverpassword, users and welcometext\n; before every start; the other settings are yours: https://www.mumble.info/documentation/administration/config-file/\ndatabase=murmur.sqlite\nlogfile=\npidfile=\nhost=\nport=64738\nusers=100\nbandwidth=558000\nbonjour=false\nregisterName=\nserverpassword=\nwelcometext=\"\"\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Mumble server ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name of the root channel, shown to everyone who joins (up to 64 characters, no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Mumble Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: the password everyone needs to join. Empty = anyone can join. No double quotes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Users",
+      "description": "How many people may be connected at once (1-1000).",
+      "env_variable": "MAX_USERS",
+      "default_value": "50",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,1000",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Welcome Text",
+      "description": "Optional: the message shown when someone joins (basic HTML such as <br /> works; no double quotes or backslashes).",
+      "env_variable": "WELCOME_TEXT",
+      "default_value": "Welcome to this Mumble server, hosted with Octail.",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\]*$/|max:512",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "SuperUser Password",
+      "description": "Optional: the SuperUser password (8-64 characters, no spaces), set before every start; log in as SuperUser to manage channels and users. Empty = keep the one printed on the first start. Never shown in the console.",
+      "env_variable": "SUPERUSER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^\\S{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "mumble",
+    "voice"
+  ],
+  "x_octail": {
+    "category": "Voice",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 256,
+        "disk_mb": 512
+      }
+    }
+  }
+}

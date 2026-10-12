@@ -1,0 +1,146 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail (GeyserMC's own Pterodactyl egg was only read for reference): Geyser-Standalone.jar from GeyserMC's download API v2 with the SHA-256 it lists checked, latest or a pinned version and build; a build that does not exist fails the install. Bedrock clients join on the allocation (UDP); the Bedrock bind address and port, the Java server and the auth type are passed as Geyser's --key=value options, so they apply from the first start, before Geyser has written config.yml. Tagged minecraft, bedrock and proxy with the minecraft_bedrock flag: the node pings it like a Bedrock server (Geyser answers with the Java server's MOTD and players), and a Bedrock proxy gets no Minecraft tools (no server.properties, players, plugins or version changer of its own). No EULA prompt (Geyser is not a Mojang server). Java 25 and 21 images (Geyser needs Java 21), install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/geyser.json"
+  },
+  "uuid": "82c36782-e768-486c-bf0d-7d7523932c45",
+  "name": "Geyser Standalone",
+  "author": "octail@meowgafactory.com",
+  "description": "Geyser lets Minecraft: Bedrock Edition players (phones, consoles, Windows) join a Minecraft: Java Edition server. The standalone proxy runs next to the Java server, which it connects to like a Java client.",
+  "tags": [
+    "minecraft",
+    "bedrock",
+    "proxy",
+    "geyser"
+  ],
+  "features": [
+    "java_version",
+    "pid_limit",
+    "minecraft_bedrock"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -jar {{SERVER_JARFILE}} --nogui --bedrock.address=0.0.0.0 --bedrock.port={{SERVER_PORT}} --java.address={{JAVA_ADDRESS}} --java.port={{JAVA_PORT}} --java.auth-type={{AUTH_TYPE}}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": ")! Run /geyser help for help!"
+    },
+    "logs": {},
+    "stop": "geyser stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Geyser Standalone installation (Octail): Geyser-Standalone.jar from GeyserMC's download API (v2), checked\n# against the SHA-256 the API lists for the build. A build that doesn't exist fails the install instead of\n# silently installing another one.\n#\n# Server files: /mnt/server\nset -eu\n\nAPI=https://download.geysermc.org/v2/projects/geyser/versions\nJAR=\"${SERVER_JARFILE:-geyser.jar}\"\nGVERSION=\"${GEYSER_VERSION:-latest}\"\nBUILD=\"${GEYSER_BUILD:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\n[ -n \"${GVERSION}\" ] || GVERSION=latest\n[ -n \"${BUILD}\" ] || BUILD=latest\necho \"${GVERSION}\" | grep -Eq '^(latest|[0-9][0-9A-Za-z.-]*)$' ||\n\tfail \"the Geyser version (${GVERSION}) must be a version or latest\"\ncase \"${BUILD}\" in\nlatest) ;;\n*[!0-9]*) fail \"the Geyser build (${BUILD}) must be a number or latest\" ;;\nesac\n\nINFO=$(get \"${API}/${GVERSION}/builds/${BUILD}\") ||\n\tfail \"GeyserMC's download API has no Geyser ${GVERSION} build ${BUILD}\"\nNUMBER=$(echo \"${INFO}\" | jq -r '.build // empty')\nVERSION=$(echo \"${INFO}\" | jq -r '.version // empty')\nSHA256=$(echo \"${INFO}\" | jq -r '.downloads.standalone.sha256 // empty' | tr 'A-F' 'a-f')\nif [ -z \"${NUMBER}\" ] || [ -z \"${VERSION}\" ]; then\n\tfail \"GeyserMC's download API named no version or build number\"\nfi\necho \"${SHA256}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"GeyserMC's download API gave no SHA-256 for build ${NUMBER}\"\n\necho \"Installing Geyser Standalone ${VERSION} build ${NUMBER} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -o \"${JAR}.download\" \"${API}/${VERSION}/builds/${NUMBER}/downloads/standalone\" ||\n\tfail \"the download of Geyser build ${NUMBER} failed\"\nGOT=$(sha256sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA256}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-256 mismatch for Geyser build ${NUMBER} (expected ${SHA256}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Geyser Standalone ${VERSION} build ${NUMBER} installed (SHA-256 ${SHA256} checked).\"\necho \"Geyser writes config.yml on its first start. The Bedrock port, the Java server and its auth type come from the Startup tab.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Java Server Address",
+      "description": "The host name or IP address of the Minecraft: Java Edition server Bedrock players join through Geyser. For a server on this panel, use the address shown on its Network tab.",
+      "env_variable": "JAVA_ADDRESS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:253",
+        "regex:/^[A-Za-z0-9][A-Za-z0-9.:-]*$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Java Server Port",
+      "description": "The port of that Java Edition server.",
+      "env_variable": "JAVA_PORT",
+      "default_value": "25565",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,65535"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Auth Type",
+      "description": "How Bedrock players log in to the Java server: online (each needs a Java Edition account), offline (the Java server must have online-mode=false) or floodgate (the Floodgate plugin on the Java server lets them in without a Java account; copy its key.pem into this server's folder).",
+      "env_variable": "AUTH_TYPE",
+      "default_value": "online",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:online,offline,floodgate"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Geyser Version",
+      "description": "The Geyser version to install, such as 2.11.3, or latest.",
+      "env_variable": "GEYSER_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9][0-9A-Za-z.-]*)$/"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "Geyser Build",
+      "description": "The build of that version, or latest for its newest build.",
+      "env_variable": "GEYSER_BUILD",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 5
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the Geyser jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "geyser.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 6
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 1024
+      }
+    }
+  }
+}

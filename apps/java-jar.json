@@ -1,0 +1,165 @@
+{
+  "_comment": "Octail's own egg (plan §6.4): runs any executable JAR (java -jar) on Java 8 to 25, the heap (-Xmx) a share of the server's memory so the JVM's own overhead fits under the limit. The JAR is uploaded or downloaded at install from an https:// address, optionally checked against its SHA-256.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/java-jar.json"
+  },
+  "uuid": "7bf273e7-fab6-4037-9a68-cc1b96d6ca03",
+  "name": "Java App (JAR)",
+  "author": "octail@meowgafactory.com",
+  "description": "Any Java app packaged as an executable JAR: bots (JDA, Javacord), Spring Boot services, small tools. Upload the JAR or have the install download it; it runs with java -jar, its heap sized from the server's memory.",
+  "tags": [
+    "app",
+    "java",
+    "discord-bot"
+  ],
+  "features": [],
+  "docker_images": {
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -f \"${JAR_FILE}\" ]; then echo \"[Octail] ${JAR_FILE} wasn't found: upload the JAR, or set JAR Download URL and reinstall\"; exit 1; fi; octail_app() { java $([ \"{{SERVER_MEMORY}}\" -gt 0 ] 2>/dev/null && printf -- '-Xmx%sM' \"$(( {{SERVER_MEMORY}} * {{HEAP_PERCENT}} / 100 ))\") ${JAVA_ARGS} -jar \"${JAR_FILE}\" ${APP_ARGS}; }; if [ -z \"${READY_TEXT}\" ]; then printf '[Octail] App is %s\\n' running; octail_app; else set -o pipefail; octail_app 2>&1 | { while IFS= read -r l || [ -n \"$l\" ]; do printf '%s\\n' \"$l\"; case \"$l\" in *\"${READY_TEXT}\"*) printf '[Octail] App is %s\\n' running; break;; esac; done; exec cat; }; fi"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "[Octail] App is running"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Octail Java JAR install: downloads the JAR from JAR Download URL when one is set (its SHA-256 checked when JAR\n# SHA-256 is set); without one the server stays empty for an upload. Other files in the folder are kept.\n#\n# Server Files: /mnt/server\nset -euo pipefail\ncd /mnt/server\n\nif [ -z \"${JAR_URL:-}\" ]; then\n    echo \"No download address set: upload your JAR as ${JAR_FILE} with the file manager or SFTP.\"\n    exit 0\nfi\ncase \"${JAR_URL}\" in\n    https://*) ;;\n    *)\n        echo \"Installation failed: JAR Download URL must be an https:// address.\"\n        exit 1\n        ;;\nesac\n\nmkdir -p \"$(dirname \"${JAR_FILE}\")\"\necho \"Downloading ${JAR_URL}\"\nif ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o \"${JAR_FILE}.download\" \"${JAR_URL}\"; then\n    rm -f \"${JAR_FILE}.download\"\n    echo \"Installation failed: the download didn't work.\"\n    exit 1\nfi\nif [ -n \"${JAR_SHA256:-}\" ]; then\n    if ! echo \"${JAR_SHA256}  ${JAR_FILE}.download\" | sha256sum -c --quiet -; then\n        rm -f \"${JAR_FILE}.download\"\n        echo \"Installation failed: the download doesn't match JAR SHA-256.\"\n        exit 1\n    fi\nelse\n    echo \"No JAR SHA-256 set; the download isn't checked.\"\nfi\nmv -f \"${JAR_FILE}.download\" \"${JAR_FILE}\"\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: ${JAR_FILE}\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "JAR File",
+      "description": "The JAR to run, relative to the server folder.",
+      "env_variable": "JAR_FILE",
+      "default_value": "app.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:256",
+        "regex:/^[A-Za-z0-9_][A-Za-z0-9._\\/-]*\\.jar$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "JAR Download URL",
+      "description": "Optional: an https:// address the install downloads the JAR from (a GitHub release asset, your build server). Empty: upload the JAR yourself. Reinstall to download again.",
+      "env_variable": "JAR_URL",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^https:\\/\\/[^\\s\"'\\x60$\\\\]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "JAR SHA-256",
+      "description": "Optional: the SHA-256 checksum of the download; the install fails when it differs.",
+      "env_variable": "JAR_SHA256",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Fa-f0-9]{64}$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Heap Share",
+      "description": "The share of the server's memory given to the Java heap (-Xmx), in percent. The rest is left for the JVM itself; lower it if the server is killed for memory.",
+      "env_variable": "HEAP_PERCENT",
+      "default_value": "80",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:25,95"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Java Options",
+      "description": "Extra JVM flags before -jar, such as -Dfile.encoding=UTF-8 or -XX:+UseZGC.",
+      "env_variable": "JAVA_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^(-\\S+(\\s+-\\S+)*)?\\s*$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "App Arguments",
+      "description": "Extra arguments passed to the app, split at spaces.",
+      "env_variable": "APP_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Ready Text",
+      "description": "Console text that means the app is up, such as 'Logged in as'. The server shows Running once a line contains it (or once the app listens on the main port). Empty: Running as soon as the app starts.",
+      "env_variable": "READY_TEXT",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:128"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 900
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

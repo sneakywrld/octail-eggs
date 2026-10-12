@@ -1,0 +1,203 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), written from the game's official dedicated server guide (returntomoria.com/news-updates/dedicated-server); games-steamcmd's lotr_moria egg (AGPLv3) was only read for reference, nothing is copied from it. The install writes a first MoriaServerConfig.ini with the keys the guide documents (an existing one is kept) and the Startup tab's password, world name, world type, seed, difficulty and port are set in it (ini parser) before every start; the log (Moria/Saved/Logs/Moria.log) is followed on the console, the start is detected from the bound game port (x_octail.features.ready) or the invite code line, Ctrl+C (which the server answers by saving and quitting) is handed to it by a trap (the wine image runs the line in bash as PID 1) and waited for, vcrun2022 is installed into the Wine prefix once (WINETRICKS_RUN), and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/return-to-moria.json"
+  },
+  "exported_at": "2026-10-12T08:00:00+00:00",
+  "name": "The Lord of the Rings: Return to Moria",
+  "author": "eggs@octail.net",
+  "uuid": "88d0353d-5c6c-4193-b850-1f7f8ecded16",
+  "description": "Reclaim the Dwarven realm of Moria: mine, craft and build in procedurally generated worlds with up to eight players. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "return-to-moria",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "wine ./Moria/Binaries/Win64/MoriaServer-Win64-Shipping.exe & MORIA_PID=$!; trap \"kill -INT ${MORIA_PID} 2>/dev/null; wait ${MORIA_PID}\" INT TERM; tail -c0 -F /home/container/Moria/Saved/Logs/Moria.log --pid=${MORIA_PID} 2>/dev/null & wait ${MORIA_PID}"
+  },
+  "config": {
+    "files": {
+      "MoriaServerConfig.ini": {
+        "parser": "ini",
+        "find": {
+          "Main.OptionalPassword": "{{server.environment.SERVER_PASSWORD}}",
+          "World.Name": "{{server.environment.WORLD_NAME}}",
+          "World.Create.Type": "{{server.environment.WORLD_TYPE}}",
+          "World.Create.Seed": "{{server.environment.SEED}}",
+          "World.Create.Difficulty.Preset": "{{server.environment.DIFFICULTY}}",
+          "Host.ListenPort": "{{server.allocations.default.port}}",
+          "Host.AdvertisePort": "-1"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "regex:[Ii]nvite [Cc]ode"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/Moria/Binaries/Win64/MoriaServer-Win64-Shipping.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Return to Moria dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: the server reads MoriaServerConfig.ini next to MoriaServer.exe (without one, its first start only writes\n## one). A first one is written here with the keys the official guide documents; an existing one is kept. The\n## Startup tab's values are set in it (ini parser) before every start.\nmkdir -p /mnt/server/Moria/Saved/Logs\nCFG=/mnt/server/MoriaServerConfig.ini\nif [[ ! -f \"$CFG\" ]]; then\n    cat > \"$CFG\" <<'EOF'\n; Return to Moria dedicated server settings, written by the Octail install.\n; The Startup tab sets the password, world name, world type, seed, difficulty and port before every start.\n; Edit the rest only while the server is stopped.\n\n[Main]\n; Players must enter it to join. Empty = no password.\nOptionalPassword=\n\n[World]\n; The world to load; a world with this name is created from [World.Create] when there is none.\nName=Octail World\n\n[World.Create]\n; Only used when a new world is created: campaign or sandbox.\nType=campaign\n; random, or a number.\nSeed=random\n; story, solo, normal, hard or custom.\nDifficulty.Preset=normal\n; With Difficulty.Preset=custom: verylow, low, default, high or veryhigh.\nDifficulty.Custom.CombatDifficulty=default\nDifficulty.Custom.EnemyAggression=default\nDifficulty.Custom.SurvivalDifficulty=default\nDifficulty.Custom.MiningDrops=default\nDifficulty.Custom.WorldDrops=default\nDifficulty.Custom.HordeFrequency=default\nDifficulty.Custom.SiegeFrequency=default\nDifficulty.Custom.PatrolFrequency=default\n\n[Host]\n; Empty binds every address.\nListenAddress=\nListenPort=7777\n; auto detects the public address players connect to.\nAdvertiseAddress=auto\n; -1 = the ListenPort.\nAdvertisePort=-1\nInitialConnectionRetryTime=60\nAfterDisconnectionRetryTime=600\n\n[Console]\nEnabled=true\n\n[Performance]\n; 60 is plenty; 30 if the server uses too much CPU.\nServerFPS=60\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "World Name",
+      "description": "The world to load (Moria/Saved/SaveGamesDedicated). A new name creates a new world from the settings below; the old one stays.",
+      "env_variable": "WORLD_NAME",
+      "default_value": "Octail World",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9 _.-]+$/",
+        "max:48"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join (case-sensitive). Empty = no password.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"\\\\\\s]*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "World Type",
+      "description": "For a new world: campaign or sandbox.",
+      "env_variable": "WORLD_TYPE",
+      "default_value": "campaign",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:campaign,sandbox"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Difficulty",
+      "description": "For a new world: story, solo, normal, hard, or custom (the Difficulty.Custom values in MoriaServerConfig.ini).",
+      "env_variable": "DIFFICULTY",
+      "default_value": "normal",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:story,solo,normal,hard,custom"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Seed",
+      "description": "For a new world: random, or a number.",
+      "env_variable": "SEED",
+      "default_value": "random",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^(random|[0-9]{1,10})$/"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "3349480",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:3349480"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Winetricks",
+      "description": "Installed into the Wine prefix once, at the first start (the server needs the Visual C++ runtime).",
+      "env_variable": "WINETRICKS_RUN",
+      "default_value": "vcrun2022",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:vcrun2022"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Return to Moria",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 12288
+      }
+    }
+  }
+}

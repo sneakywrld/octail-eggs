@@ -1,0 +1,131 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Fabric and Purpur eggs (pelican-eggs' Quilt egg was only read for reference): the Quilt installer from Quilt's Maven repository with the SHA-256 Maven publishes checked (the hashes Quilt's meta service lists did not match the jars on 2026-10-12), the Mojang server jar with Mojang's SHA-1 checked, the newest stable loader for the Minecraft version or a pinned one; a version or loader that does not exist fails the install. the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 8 images (newest first), the install in octail-yolks installer_java_21, Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/quilt.json"
+  },
+  "uuid": "17481aae-1a53-410b-b9db-4afcd1ac74e3",
+  "name": "Quilt",
+  "author": "octail@meowgafactory.com",
+  "description": "Quilt is an open-source, community-driven mod loader for Minecraft Java, built on Fabric. Runs Quilt mods and most Fabric mods.",
+  "tags": [
+    "minecraft",
+    "quilt"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} nogui"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Quilt installation (Octail): the Quilt installer from Quilt's Maven repository, checked against the\n# SHA-256 file Maven publishes next to it (Quilt's meta service lists hashes too, but on 2026-10-12 they\n# didn't match the published jars, so they aren't used), the Mojang server jar checked against the SHA-1\n# Mojang lists for it, then the installer's server launcher (quilt-server-launch.jar and libraries/).\n# The installer fetches the loader's libraries from the Quilt and Fabric Maven repositories over HTTPS;\n# it doesn't check them, and neither does this script.\n# A Minecraft or loader version Quilt doesn't have fails the install instead of installing another one.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nMETA=https://meta.quiltmc.org/v3/versions\nMOJANG=https://piston-meta.mojang.com/mc/game/version_manifest_v2.json\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVANILLA=minecraft-server.jar\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nLOADER=\"${LOADER_VERSION:-latest}\"\nINSTALLER=\"${INSTALLER_VERSION:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\nfetch() { curl -fsSL --retry 3 --connect-timeout 20 -o \"$2\" \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\n[[ \"${JAR}\" =~ ^[A-Za-z0-9._-]+\\.jar$ ]] || fail \"the jar name (${JAR}) must be a plain .jar file name\"\n[ \"${JAR}\" != \"${VANILLA}\" ] || fail \"${VANILLA} is the Mojang server jar; pick another name for the Quilt launcher\"\n\n# Minecraft version: latest stable, the newest snapshot, or one Quilt lists.\nGAMES=$(get \"${META}/game\") || fail \"can't reach Quilt's meta service (${META})\"\ncase \"${VERSION}\" in\n\"\" | latest) VERSION=$(echo \"${GAMES}\" | jq -r 'map(select(.stable)) | .[0].version // empty') ;;\nsnapshot) VERSION=$(echo \"${GAMES}\" | jq -r '.[0].version // empty') ;;\nesac\n[ -n \"${VERSION}\" ] || fail \"Quilt's meta service named no Minecraft version\"\necho \"${GAMES}\" | jq -e --arg v \"${VERSION}\" 'any(.[]; .version == $v)' >/dev/null ||\n\tfail \"Quilt has no Minecraft ${VERSION}. The versions are listed at ${META}/game\"\n\n# Loader: the newest stable one (no -beta) that supports this Minecraft version, or the one given.\nFOR_GAME=$(get \"${META}/loader/${VERSION}\" | jq -c '[.[].loader.version]') ||\n\tfail \"can't list the Quilt loaders for ${VERSION}\"\nif [ -z \"${LOADER}\" ] || [ \"${LOADER}\" = \"latest\" ]; then\n\t# The full list is newest first; the list per Minecraft version isn't sorted.\n\tALL=$(get \"${META}/loader\" | jq -c '[.[].version | select(contains(\"-\") | not)]') ||\n\t\tfail \"can't list the Quilt loaders\"\n\tLOADER=$(printf '%s\\n%s\\n' \"${ALL}\" \"${FOR_GAME}\" |\n\t\tjq -rs '.[1] as $ok | [.[0][] | select(. as $v | $ok | index($v))] | .[0] // empty')\n\t[ -n \"${LOADER}\" ] || fail \"Quilt has no stable loader for Minecraft ${VERSION}. Set Loader Version to a beta.\"\nfi\necho \"${FOR_GAME}\" | jq -e --arg l \"${LOADER}\" 'index($l) != null' >/dev/null ||\n\tfail \"Quilt loader ${LOADER} doesn't support Minecraft ${VERSION}\"\n\n# Installer: the meta service lists them, Quilt's Maven repository has the jar and its SHA-256.\nINSTALLERS=$(get \"${META}/installer\") || fail \"can't list the Quilt installers\"\nif [ -z \"${INSTALLER}\" ] || [ \"${INSTALLER}\" = \"latest\" ]; then\n\tPICK=$(echo \"${INSTALLERS}\" | jq -c '.[0] // empty')\nelse\n\tPICK=$(echo \"${INSTALLERS}\" | jq -c --arg v \"${INSTALLER}\" 'map(select(.version == $v)) | .[0] // empty')\nfi\n[ -n \"${PICK}\" ] || fail \"Quilt has no installer ${INSTALLER}\"\nINSTALLER=$(echo \"${PICK}\" | jq -r '.version')\nURL=$(echo \"${PICK}\" | jq -r '.url // empty')\n[[ \"${URL}\" =~ ^https://maven\\.quiltmc\\.org/ ]] || fail \"Quilt's meta service named no Maven download for installer ${INSTALLER}\"\nSUM=$(get \"${URL}.sha256\" | awk '{print tolower($1)}') || fail \"Quilt's Maven repository has no SHA-256 for installer ${INSTALLER}\"\n[[ \"${SUM}\" =~ ^[0-9a-f]{64}$ ]] || fail \"Quilt's Maven repository has no SHA-256 for installer ${INSTALLER}\"\nrm -f quilt-installer.jar\nfetch \"${URL}\" quilt-installer.jar || fail \"the download of the Quilt installer ${INSTALLER} failed\"\nGOT=$(sha256sum quilt-installer.jar | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SUM}\" ]; then\n\trm -f quilt-installer.jar\n\tfail \"SHA-256 mismatch for the Quilt installer ${INSTALLER} (expected ${SUM}, got ${GOT})\"\nfi\n\n# The Mojang server jar, checked against the SHA-1 Mojang lists (for the version file and the jar).\nMANIFEST=$(get \"${MOJANG}\") || fail \"can't reach Mojang's version manifest\"\nENTRY=$(echo \"${MANIFEST}\" | jq -c --arg v \"${VERSION}\" '.versions | map(select(.id == $v)) | .[0] // empty')\n[ -n \"${ENTRY}\" ] || fail \"Mojang's version manifest has no Minecraft ${VERSION}\"\nfetch \"$(echo \"${ENTRY}\" | jq -r '.url')\" version.json.download || fail \"can't download Mojang's file for ${VERSION}\"\n[ \"$(sha1sum version.json.download | cut -d ' ' -f 1)\" = \"$(echo \"${ENTRY}\" | jq -r '.sha1')\" ] ||\n\tfail \"SHA-1 mismatch for Mojang's file for ${VERSION}\"\nSERVER_URL=$(jq -r '.downloads.server.url // empty' version.json.download)\nSERVER_SHA1=$(jq -r '.downloads.server.sha1 // empty' version.json.download)\nrm -f version.json.download\nif ! [[ \"${SERVER_URL}\" =~ ^https:// ]] || ! [[ \"${SERVER_SHA1}\" =~ ^[0-9a-f]{40}$ ]]; then\n\tfail \"Mojang lists no server download for ${VERSION}\"\nfi\nfetch \"${SERVER_URL}\" \"${VANILLA}.download\" || fail \"the download of the Minecraft ${VERSION} server failed\"\nGOT=$(sha1sum \"${VANILLA}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SERVER_SHA1}\" ]; then\n\trm -f \"${VANILLA}.download\"\n\tfail \"SHA-1 mismatch for the Minecraft ${VERSION} server (expected ${SERVER_SHA1}, got ${GOT})\"\nfi\nmv -f \"${VANILLA}.download\" \"${VANILLA}\"\n\n# The launcher and its libraries, written into the server folder.\necho \"Installing Quilt loader ${LOADER} for Minecraft ${VERSION} (installer ${INSTALLER})\"\nrm -f quilt-server-launch.jar\nSTATUS=0\njava -jar quilt-installer.jar install server \"${VERSION}\" \"${LOADER}\" --install-dir=/mnt/server || STATUS=$?\nrm -f quilt-installer.jar\n[ \"${STATUS}\" -eq 0 ] || fail \"the Quilt installer failed (see its output above)\"\n[ -s quilt-server-launch.jar ] || fail \"the Quilt installer wrote no quilt-server-launch.jar\"\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv quilt-server-launch.jar \"${JAR}\"\n# The launcher starts the Mojang jar named here.\necho \"serverJar=${VANILLA}\" >quilt-server-launcher.properties\n\necho \"Quilt loader ${LOADER} for Minecraft ${VERSION} installed as ${JAR} (installer SHA-256 and Mojang SHA-1 checked).\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_java_21",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.11, latest for the newest release Quilt supports, or snapshot for the newest snapshot. A version Quilt does not list fails the install.\n\nThe Startup image must fit it: Java 25 for the newest releases, Java 21 for 1.20.5 to 1.21.x, Java 17 for 1.17 to 1.20.4, Java 8 or 11 before that.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|snapshot|[0-9A-Za-z.-]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Loader Version",
+      "description": "The Quilt loader to install, such as 0.30.1, or latest for the newest stable loader that supports the Minecraft version. Betas only when named.",
+      "env_variable": "LOADER_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:40",
+        "regex:/^(latest|[0-9A-Za-z.+-]+)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file (the Quilt launcher). The Mojang server jar next to it is minecraft-server.jar.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Installer Version",
+      "description": "The Quilt installer to run, or latest.",
+      "env_variable": "INSTALLER_VERSION",
+      "default_value": "latest",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9A-Za-z.+-]+)$/"
+      ],
+      "sort": 4
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

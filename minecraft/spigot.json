@@ -1,0 +1,131 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Purpur egg (pelican-eggs' Spigot egg was only read for reference). Spigot has no downloads, so the install builds it with SpigotMC's BuildTools: BuildTools build 201 pinned with the SHA-256 Octail downloaded on 2026-10-12 (SpigotMC publishes no checksum for it; staff can set another build and hash, or latest without a hash check), the build file for the Minecraft version from hub.spigotmc.org/versions (sources pinned by commit, the oldest BuildTools and the Java range), a Temurin JDK with the Adoptium SHA-256 when the image's Java 21 is outside that range, and BuildTools' own checks of the Mojang jar and Maven. The built jar can't be compared with anything published; it must be a Spigot server. the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 8 images (newest first), Minecraft Java idle sleep, a longer install time limit and 3 GB of install memory, resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/spigot.json"
+  },
+  "uuid": "91b9153e-b144-46bf-b30b-511b1f89e810",
+  "name": "Spigot",
+  "author": "octail@meowgafactory.com",
+  "description": "Spigot is the original high-performance fork of CraftBukkit and runs Bukkit and Spigot plugins. It is built from source with SpigotMC's BuildTools at install, which takes several minutes.",
+  "tags": [
+    "minecraft",
+    "spigot"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} nogui"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Spigot installation (Octail): Spigot can't be downloaded, it is built from source with SpigotMC's\n# BuildTools (https://www.spigotmc.org/wiki/buildtools/), which is what this script runs.\n#\n# What is checked:\n# - BuildTools.jar comes from SpigotMC's Jenkins over HTTPS, the build must be marked SUCCESS and the\n#   file must be BuildTools. SpigotMC publishes no checksum or signature for it (the MD5 fingerprint\n#   Jenkins lists belongs to the Maven-deployed jar, which differs), so the egg pins a build and its\n#   SHA-256 as Octail downloaded it (staff-only variables). \"latest\" skips the SHA-256 check.\n# - The Minecraft version's build file (hub.spigotmc.org/versions/<version>.json) pins the Bukkit,\n#   CraftBukkit, Spigot and BuildData sources by git commit, names the oldest BuildTools build that can\n#   build it (refused here when the pinned build is older) and the Java versions it builds with.\n# - BuildTools itself checks the Mojang server jar and the Maven it downloads against the hashes in\n#   BuildData. The Maven dependencies of the build are fetched by Maven, which this script doesn't check.\n# - A JDK that fits the version is used: the image's Java 21, or Eclipse Temurin from the Adoptium API,\n#   checked against the SHA-256 the API lists.\n# - The built jar is not published anywhere, so there is nothing to compare it with: it must contain\n#   CraftBukkit's Main class.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nVERSIONS=https://hub.spigotmc.org/versions\nJOB=https://hub.spigotmc.org/jenkins/job/BuildTools\nADOPTIUM=https://api.adoptium.net/v3/assets/latest\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nBT_BUILD=\"${BUILDTOOLS_BUILD:-latest}\"\nBT_SHA256=\"$(echo \"${BUILDTOOLS_SHA256:-}\" | tr 'A-F' 'a-f')\"\nWORK=/mnt/server/.octail-buildtools\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\nfetch() { curl -fsSL --retry 3 --connect-timeout 20 -o \"$2\" \"$1\"; }\ncleanup() { rm -rf \"${WORK}\"; }\ntrap cleanup EXIT\n\nmkdir -p /mnt/server\ncd /mnt/server\n\n[ -n \"${VERSION}\" ] || VERSION=latest\n[[ \"${VERSION}\" =~ ^[0-9A-Za-z][0-9A-Za-z.-]*$ ]] || fail \"the Minecraft version (${VERSION}) isn't a version name\"\n[[ \"${JAR}\" =~ ^[A-Za-z0-9._-]+\\.jar$ ]] || fail \"the jar name (${JAR}) must be a plain .jar file name\"\n\n# The version's build file: which sources, which BuildTools, which Java.\nINFO=$(get \"${VERSIONS}/${VERSION}.json\") ||\n\tfail \"Spigot has no build for Minecraft ${VERSION}. The versions are listed at ${VERSIONS}/\"\nSPIGOT_BUILD=$(echo \"${INFO}\" | jq -r '.name // empty')\n[ -n \"${SPIGOT_BUILD}\" ] || fail \"Spigot's build file for ${VERSION} names no build\"\nfor repo in BuildData Bukkit CraftBukkit Spigot; do\n\techo \"${INFO}\" | jq -e --arg r \"${repo}\" '.refs[$r] | test(\"^[0-9a-f]{40}$\")' >/dev/null ||\n\t\tfail \"Spigot's build file for ${VERSION} doesn't pin ${repo} to a commit\"\ndone\nTOOLS_NEEDED=$(echo \"${INFO}\" | jq -r '.toolsVersion // 0')\n# Class file versions (52 = Java 8, 65 = Java 21, 69 = Java 25); none given means Java 7 to 8.\nJAVA_MIN=$(($(echo \"${INFO}\" | jq -r '.javaVersions[0] // 51') - 44))\nJAVA_MAX=$(($(echo \"${INFO}\" | jq -r '.javaVersions[1] // 52') - 44))\necho \"Minecraft ${VERSION}: Spigot build ${SPIGOT_BUILD}, Java ${JAVA_MIN} to ${JAVA_MAX}, BuildTools ${TOOLS_NEEDED} or newer\"\n\n# BuildTools: a pinned build (and SHA-256) or the last successful one.\nif [ -z \"${BT_BUILD}\" ] || [ \"${BT_BUILD}\" = \"latest\" ]; then\n\tBT_BUILD=lastSuccessfulBuild\n\tBT_SHA256=\"\"\nelif ! [[ \"${BT_BUILD}\" =~ ^[0-9]+$ ]]; then\n\tfail \"the BuildTools build (${BT_BUILD}) must be a number or latest\"\nfi\n[ -z \"${BT_SHA256}\" ] || [[ \"${BT_SHA256}\" =~ ^[0-9a-f]{64}$ ]] || fail \"the BuildTools SHA-256 must be 64 hex digits\"\nBT_INFO=$(get \"${JOB}/${BT_BUILD}/api/json?tree=number,result,artifacts%5BrelativePath%5D\") ||\n\tfail \"SpigotMC's Jenkins has no BuildTools build ${BT_BUILD}\"\nBT_NUMBER=$(echo \"${BT_INFO}\" | jq -r '.number // empty')\n[ -n \"${BT_NUMBER}\" ] || fail \"SpigotMC's Jenkins named no BuildTools build number\"\n[ \"$(echo \"${BT_INFO}\" | jq -r '.result // empty')\" = \"SUCCESS\" ] || fail \"BuildTools build ${BT_NUMBER} did not succeed\"\necho \"${BT_INFO}\" | jq -e '.artifacts | any(.relativePath == \"target/BuildTools.jar\")' >/dev/null ||\n\tfail \"BuildTools build ${BT_NUMBER} has no BuildTools.jar\"\nif [ \"${BT_NUMBER}\" -lt \"${TOOLS_NEEDED}\" ]; then\n\tfail \"Minecraft ${VERSION} needs BuildTools build ${TOOLS_NEEDED} or newer, the egg pins ${BT_NUMBER}. Staff: set BuildTools Build to a newer build (and its SHA-256) or to latest.\"\nfi\n\nrm -rf \"${WORK}\"\nmkdir -p \"${WORK}\"\necho \"Downloading BuildTools build ${BT_NUMBER}\"\nfetch \"${JOB}/${BT_NUMBER}/artifact/target/BuildTools.jar\" \"${WORK}/BuildTools.jar\" ||\n\tfail \"the download of BuildTools build ${BT_NUMBER} failed\"\nGOT=$(sha256sum \"${WORK}/BuildTools.jar\" | cut -d ' ' -f 1)\nif [ -n \"${BT_SHA256}\" ]; then\n\t[ \"${GOT}\" = \"${BT_SHA256}\" ] || fail \"SHA-256 mismatch for BuildTools build ${BT_NUMBER} (expected ${BT_SHA256}, got ${GOT})\"\n\techo \"BuildTools build ${BT_NUMBER}: SHA-256 ${GOT} checked\"\nelse\n\techo \"BuildTools build ${BT_NUMBER}: SHA-256 ${GOT} (not pinned, so not checked)\"\nfi\nunzip -l \"${WORK}/BuildTools.jar\" 2>/dev/null | grep -F 'org/spigotmc/builder/Bootstrap.class' >/dev/null ||\n\tfail \"the download of BuildTools build ${BT_NUMBER} isn't BuildTools\"\n\n# A JDK that fits: the image's own Java when it does, else Eclipse Temurin (newest LTS in the range).\nJAVA=java\nHAVE=$(java -XshowSettings:properties -version 2>&1 | awk -F' = ' '/java.specification.version/ {print $2}')\nHAVE=${HAVE#1.}\nif [ -z \"${HAVE}\" ] || [ \"${HAVE}\" -lt \"${JAVA_MIN}\" ] || [ \"${HAVE}\" -gt \"${JAVA_MAX}\" ]; then\n\tFEATURE=\"\"\n\tfor lts in 25 21 17 11 8; do\n\t\tif [ \"${lts}\" -ge \"${JAVA_MIN}\" ] && [ \"${lts}\" -le \"${JAVA_MAX}\" ]; then\n\t\t\tFEATURE=${lts}\n\t\t\tbreak\n\t\tfi\n\tdone\n\t[ -n \"${FEATURE}\" ] || FEATURE=${JAVA_MAX}\n\tcase \"$(uname -m)\" in\n\tx86_64) ARCH=x64 ;;\n\taarch64 | arm64) ARCH=aarch64 ;;\n\t*) fail \"no Temurin JDK for $(uname -m)\" ;;\n\tesac\n\techo \"Minecraft ${VERSION} builds with Java ${JAVA_MIN} to ${JAVA_MAX}; downloading Eclipse Temurin ${FEATURE}\"\n\tPKG=$(get \"${ADOPTIUM}/${FEATURE}/hotspot?architecture=${ARCH}&image_type=jdk&os=linux&vendor=eclipse\" |\n\t\tjq -c '.[0].binary.package // empty') || fail \"can't reach the Adoptium API\"\n\tLINK=$(echo \"${PKG}\" | jq -r '.link // empty')\n\tSUM=$(echo \"${PKG}\" | jq -r '.checksum // empty' | tr 'A-F' 'a-f')\n\t[[ \"${LINK}\" =~ ^https:// ]] || fail \"the Adoptium API named no JDK ${FEATURE} download\"\n\t[[ \"${SUM}\" =~ ^[0-9a-f]{64}$ ]] || fail \"the Adoptium API gave no SHA-256 for JDK ${FEATURE}\"\n\tfetch \"${LINK}\" \"${WORK}/jdk.tar.gz\" || fail \"the download of JDK ${FEATURE} failed\"\n\tGOT=$(sha256sum \"${WORK}/jdk.tar.gz\" | cut -d ' ' -f 1)\n\t[ \"${GOT}\" = \"${SUM}\" ] || fail \"SHA-256 mismatch for JDK ${FEATURE} (expected ${SUM}, got ${GOT})\"\n\tmkdir -p \"${WORK}/jdk\"\n\ttar -xzf \"${WORK}/jdk.tar.gz\" -C \"${WORK}/jdk\" --strip-components=1\n\trm -f \"${WORK}/jdk.tar.gz\"\n\tJAVA=\"${WORK}/jdk/bin/java\"\n\t[ -x \"${JAVA}\" ] || fail \"the JDK ${FEATURE} download has no bin/java\"\nfi\n\"${JAVA}\" -version 2>&1 | head -n 1\n\n# Build. BuildTools works in its own folder (sources, Maven, the vanilla jar), removed afterwards.\necho \"Building Spigot for Minecraft ${VERSION} with BuildTools build ${BT_NUMBER}. This takes several minutes.\"\nmkdir -p \"${WORK}/out\"\n(\n\tcd \"${WORK}\"\n\t\"${JAVA}\" -XX:MaxRAMPercentage=50.0 -jar BuildTools.jar --rev \"${VERSION}\" --compile spigot --nogui \\\n\t\t--output-dir \"${WORK}/out\" --final-name spigot.jar\n) || fail \"BuildTools could not build Spigot for Minecraft ${VERSION} (see its output above)\"\n[ -s \"${WORK}/out/spigot.jar\" ] || fail \"BuildTools finished without a Spigot jar\"\n# 1.18 and newer build a bundler jar (org/bukkit/craftbukkit/bootstrap/Main), older ones the server itself.\nunzip -l \"${WORK}/out/spigot.jar\" 2>/dev/null | grep -E 'org/bukkit/craftbukkit/(bootstrap/)?Main\\.class' >/dev/null ||\n\tfail \"the jar BuildTools built isn't a Spigot server\"\nmv -f \"${WORK}/out/spigot.jar\" \"${JAR}.download\"\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Spigot ${VERSION} (Spigot build ${SPIGOT_BUILD}) built with BuildTools build ${BT_NUMBER} and installed as ${JAR}.\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_java_21",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to build, such as 1.21.11, or latest for the newest one Spigot builds. A version Spigot has no build file for fails the install. Every install (and reinstall) builds Spigot from source, which takes several minutes.\n\nThe Startup image must fit it: Java 25 for the newest releases, Java 21 for 1.20.5 to 1.21.x, Java 17 for 1.17 to 1.20.4, Java 8 or 11 before that.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9A-Za-z][0-9A-Za-z.-]*)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "BuildTools Build",
+      "description": "The BuildTools build from hub.spigotmc.org/jenkins/job/BuildTools that builds Spigot, or latest for the last successful one. A Minecraft version that needs a newer BuildTools fails the install with the build it needs.",
+      "env_variable": "BUILDTOOLS_BUILD",
+      "default_value": "201",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "BuildTools SHA-256",
+      "description": "The SHA-256 the BuildTools download must have (SpigotMC publishes none, so this is the hash of a download you checked yourself). Empty: not checked. Ignored when the build is latest.",
+      "env_variable": "BUILDTOOLS_SHA256",
+      "default_value": "81ed06f5ce5fb705b558bf9b3cc2c5c53cdd9742406c5338c452faa13a1e1c24",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([0-9a-fA-F]{64})?$/"
+      ],
+      "sort": 4
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 3600,
+        "memory_mb": 3072
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

@@ -25,14 +25,16 @@ the pull request what you tested.
 - **Install scripts** download over `https://`, retry SteamCMD downloads (`for steamcmd_try in 1 2 3; do`), and exit 1
   when the server binary is missing afterwards, so a failed install isn't reported as a success.
 - **Variables** have a description, a sensible default and valid rules (`required|string|max:64`, `nullable|integer`,
-  ...). Secrets are named so the startup line masks them (`*_PASSWORD`, `*_TOKEN`, `*_KEY`, ...).
+  ...). Secrets are named so the startup line masks them (`*_PASSWORD`, `*_TOKEN`, `*_KEY`, ...); access tokens and
+  keys nobody needs to read back are also marked write-only (`x_octail.variables`: `{ "GIT_TOKEN": { "secret": true } }`).
 - **`x_octail`** (Octail's additions) stays well formed: category, extra ports (`port_vars`), RCON, players, sleep,
-  resource hints. Other panels ignore it.
+  resource hints, variable flags (`secret`, `multiline`). Other panels ignore it.
 - Credit the upstream egg in `_comment` when the egg is derived from one (see `NOTICE.md`).
 
 ## Checking an egg
 
-The validator has no dependencies (Node.js 20 or newer):
+The validator has no dependencies (Node.js 20 or newer). It runs the egg format rules of the Octail panel's importer
+(`tools/egg-format.mjs` is the panel's own file), so an egg it passes imports without warnings:
 
 ```bash
 node tools/validate.mjs                              # every egg in the repository

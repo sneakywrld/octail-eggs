@@ -1,0 +1,117 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Paper egg (minecraft-paper.yaml): the universal jar from Sponge's download API v2 (dl-api.spongepowered.org) with its SHA-1 checked, latest meaning the newest recommended build, a Minecraft version without a recommended build getting its newest test build with a note, a version that does not exist fails the install, the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 8 images (newest first, as Paper), Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/sponge.json"
+  },
+  "uuid": "94300576-637b-4e6c-bcc5-407de34422f1",
+  "name": "SpongeVanilla",
+  "author": "octail@meowgafactory.com",
+  "description": "SpongeVanilla runs Sponge plugins on the vanilla Minecraft server. Plugins go into mods/.",
+  "tags": [
+    "minecraft",
+    "sponge",
+    "spongevanilla"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# SpongeVanilla installation (Octail): the universal jar from Sponge's download API\n# (dl-api.spongepowered.org, v2), its SHA-1 checked. \"latest\" is the newest recommended build; a\n# Minecraft version picks that version's newest recommended build (or its newest test build when it\n# has no recommended one yet). A version or build that doesn't exist fails the install.\n#\n# Server files: /mnt/server\nset -eu\n\nAPI=https://dl-api.spongepowered.org/v2/groups/org.spongepowered/artifacts/spongevanilla\nJAR=\"${SERVER_JARFILE:-spongevanilla.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nARTIFACT=\"${SPONGE_VERSION:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\nfirst() { jq -r '.artifacts | keys_unsorted[0] // empty'; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nif [ -z \"${ARTIFACT}\" ] || [ \"${ARTIFACT}\" = \"latest\" ]; then\n\tif [ -z \"${VERSION}\" ] || [ \"${VERSION}\" = \"latest\" ]; then\n\t\tARTIFACT=$(get \"${API}/versions?recommended=true&limit=1\" | first) || fail \"can't reach Sponge's download API\"\n\t\t[ -n \"${ARTIFACT}\" ] || fail \"Sponge's download API lists no recommended SpongeVanilla build\"\n\telse\n\t\tcase \"${VERSION}\" in\n\t\t*[!0-9A-Za-z.-]*) fail \"the Minecraft version (${VERSION}) can only hold letters, digits, dots and dashes\" ;;\n\t\tesac\n\t\tARTIFACT=$(get \"${API}/versions?tags=minecraft:${VERSION}&recommended=true&limit=1\" | first) ||\n\t\t\tfail \"can't reach Sponge's download API\"\n\t\tif [ -z \"${ARTIFACT}\" ]; then\n\t\t\tARTIFACT=$(get \"${API}/versions?tags=minecraft:${VERSION}&limit=1\" | first) || ARTIFACT=\"\"\n\t\t\t[ -n \"${ARTIFACT}\" ] || fail \"SpongeVanilla has no build for Minecraft ${VERSION}. See https://spongepowered.org/downloads/spongevanilla\"\n\t\t\techo \"Note: Minecraft ${VERSION} has no recommended SpongeVanilla build yet; using the test build ${ARTIFACT}.\"\n\t\tfi\n\tfi\nfi\ncase \"${ARTIFACT}\" in\n*[!0-9A-Za-z.-]*) fail \"the SpongeVanilla version (${ARTIFACT}) can only hold letters, digits, dots and dashes\" ;;\nesac\n\nINFO=$(get \"${API}/versions/${ARTIFACT}\") || fail \"SpongeVanilla has no build ${ARTIFACT}\"\n# The universal jar runs the server (Sponge API 8 and newer); older builds ship one plain jar.\nASSET=$(echo \"${INFO}\" | jq -c '[.assets[] | select(.extension == \"jar\" and .classifier == \"universal\")] + [.assets[] | select(.extension == \"jar\" and .classifier == \"\")] | .[0] // empty')\n[ -n \"${ASSET}\" ] || fail \"SpongeVanilla ${ARTIFACT} has no server jar\"\nURL=$(echo \"${ASSET}\" | jq -r '.downloadUrl // empty')\nSHA1=$(echo \"${ASSET}\" | jq -r '.sha1 // empty' | tr 'A-F' 'a-f')\nMC=$(echo \"${INFO}\" | jq -r '.tags.minecraft // empty')\nRECOMMENDED=$(echo \"${INFO}\" | jq -r '.recommended // false')\ncase \"${URL}\" in\nhttps://repo.spongepowered.org/*) ;;\n*) fail \"Sponge's download API gave an unexpected download address for ${ARTIFACT}\" ;;\nesac\necho \"${SHA1}\" | grep -Eq '^[0-9a-f]{40}$' || fail \"Sponge's download API gave no SHA-1 for ${ARTIFACT}\"\nif [ \"${RECOMMENDED}\" != \"true\" ]; then\n\techo \"Note: SpongeVanilla ${ARTIFACT} is not a recommended build.\"\nfi\n\necho \"Installing SpongeVanilla ${ARTIFACT} (Minecraft ${MC}) as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -o \"${JAR}.download\" \"${URL}\" ||\n\tfail \"the download of SpongeVanilla ${ARTIFACT} failed\"\nGOT=$(sha1sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA1}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-1 mismatch for SpongeVanilla ${ARTIFACT} (expected ${SHA1}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"SpongeVanilla ${ARTIFACT} installed (SHA-1 checked). Sponge plugins go into mods/.\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version, such as 1.21.10, or latest for the newest recommended SpongeVanilla build. A version without a recommended build gets its newest test build; one without any build fails the install.\n\nThe Startup image must fit it: Java 21 for 1.20.5 to 1.21.x (Java 25 for 26.x), Java 17 for 1.17 to 1.20.4, Java 8 for 1.12.2 and 1.16.5.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9A-Za-z.-]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "spongevanilla.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "SpongeVanilla Version",
+      "description": "A full SpongeVanilla version such as 1.21.10-17.0.0 (Minecraft version, then Sponge API version), or latest to pick one from the Minecraft version.",
+      "env_variable": "SPONGE_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:40",
+        "regex:/^(latest|[0-9A-Za-z.-]+)$/"
+      ],
+      "sort": 3
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

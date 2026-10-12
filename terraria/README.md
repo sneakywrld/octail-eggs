@@ -2,12 +2,13 @@
 
 # Terraria
 
-Terraria, vanilla and tModLoader: 2 eggs.
+Terraria, vanilla and tModLoader: 3 eggs.
 Back to [all eggs](../README.md#terraria).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
 | tModloader | [tmodloader.json](tmodloader.json) | [`dotnet_8`](https://github.com/sneakywrld/octail-yolks#dotnet_8) | – | [—](../TESTED.md#terraria-tmodloader) | sleep (tcp) |
+| Terraria TShock | [tshock.json](tshock.json) | [`dotnet_9`](https://github.com/sneakywrld/octail-yolks#dotnet_9) [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | REST_PORT +1 | [—](../TESTED.md#terraria-tshock) | sleep (tcp) |
 | Terraria Vanilla | [vanilla.json](vanilla.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-10](../TESTED.md#terraria-vanilla) | sleep (tcp) |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.

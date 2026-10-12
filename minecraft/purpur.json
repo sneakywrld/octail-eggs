@@ -1,0 +1,116 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Paper egg (minecraft-paper.yaml): the jar from Purpur's API v2 with its MD5 checked, a version or build that does not exist fails the install instead of installing another one, the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 8 images (newest first, as Paper), Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/purpur.json"
+  },
+  "uuid": "a903a150-fe80-467f-80b9-e097cef568c1",
+  "name": "Purpur",
+  "author": "octail@meowgafactory.com",
+  "description": "Purpur is a drop-in replacement for Paper with more gameplay and performance options. Runs Paper, Spigot and Bukkit plugins.",
+  "tags": [
+    "minecraft",
+    "purpur"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Purpur installation (Octail): the jar from api.purpurmc.org (API v2), its MD5 checked.\n# Purpur publishes only an MD5 per build. A version or build that doesn't exist fails the install\n# instead of silently installing another one.\n#\n# Server files: /mnt/server\nset -eu\n\nAPI=https://api.purpurmc.org/v2/purpur\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nBUILD=\"${BUILD_NUMBER:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nPROJECT_JSON=$(get \"${API}\") || fail \"can't reach the Purpur API (${API})\"\nif [ -z \"${VERSION}\" ] || [ \"${VERSION}\" = \"latest\" ]; then\n\tVERSION=$(echo \"${PROJECT_JSON}\" | jq -r '.metadata.current // .versions[-1] // empty')\n\t[ -n \"${VERSION}\" ] || fail \"the Purpur API named no current version\"\nfi\necho \"${PROJECT_JSON}\" | jq -e --arg v \"${VERSION}\" '.versions | index($v) != null' >/dev/null ||\n\tfail \"Purpur has no Minecraft ${VERSION}. The versions are listed at https://purpurmc.org/download/purpur\"\n\nif [ -z \"${BUILD}\" ] || [ \"${BUILD}\" = \"latest\" ]; then\n\tBUILD=$(get \"${API}/${VERSION}\" | jq -r '.builds.latest // empty') || fail \"can't list the builds of ${VERSION}\"\n\t[ -n \"${BUILD}\" ] || fail \"Purpur has no builds for ${VERSION}\"\nfi\ncase \"${BUILD}\" in\n*[!0-9]*) fail \"the build number (${BUILD}) must be a number or latest\" ;;\nesac\n\nINFO=$(get \"${API}/${VERSION}/${BUILD}\") || fail \"Purpur has no build ${BUILD} for ${VERSION}\"\nRESULT=$(echo \"${INFO}\" | jq -r '.result // empty')\n[ \"${RESULT}\" = \"SUCCESS\" ] || fail \"Purpur build ${BUILD} for ${VERSION} failed to build (${RESULT}). Pick another build.\"\nMD5=$(echo \"${INFO}\" | jq -r '.md5 // empty' | tr 'A-F' 'a-f')\necho \"${MD5}\" | grep -Eq '^[0-9a-f]{32}$' || fail \"the Purpur API gave no MD5 for build ${BUILD}\"\n\necho \"Installing Purpur ${VERSION} build ${BUILD} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -o \"${JAR}.download\" \"${API}/${VERSION}/${BUILD}/download\" ||\n\tfail \"the download of Purpur ${VERSION} build ${BUILD} failed\"\nGOT=$(md5sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${MD5}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"MD5 mismatch for Purpur ${VERSION} build ${BUILD} (expected ${MD5}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Purpur ${VERSION} build ${BUILD} installed (MD5 ${MD5} checked).\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.11, or latest for the version Purpur marks as current. A version Purpur has no build for fails the install.\n\nThe Startup image must fit it: Java 25 for the newest releases, Java 21 for 1.20.5 to 1.21.x, Java 17 for 1.17 to 1.20.4, Java 8 or 11 before that.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9A-Za-z.-]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Build Number",
+      "description": "The Purpur build to install, or latest for the newest build of that Minecraft version.",
+      "env_variable": "BUILD_NUMBER",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 3
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

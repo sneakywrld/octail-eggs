@@ -1,0 +1,121 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd truck-simulator/american-truck-simulator/egg-american-truck-simulator-dedicated-server.json (pelican-eggs, MIT licence), built like euro-truck-simulator-2.json. Octail stops the server with Ctrl+C instead of a kill (^^C), adds an automatic query port instead of the fixed 27016, a lobby name without quotes (it is written into server_config.sii), both start lines the engine prints, the american-truck-simulator tags, the no_console_input flag, the Steam query (A2S) for player counts, install sandbox defaults and resource hints. **Install script fixed**: anonymous login only (the dedicated server needs no account), config files from raw.githubusercontent.com at the pinned games-steamcmd commit 8dd208975977aa24a6c53008a65a630c150806b8 instead of the old parkervcp/eggs master paths, failed downloads fail the install, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/american-truck-simulator.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "American Truck Simulator Dedicated Server",
+  "author": "chase@cstmgames.com",
+  "uuid": "a38a961b-6a02-41fd-ad6c-6ed7833d4e9d",
+  "description": "Experience legendary American trucks and deliver various cargoes across sunny California, sandy Nevada and the Grand Canyon State of Arizona. SCS Software's Linux dedicated server for Convoy multiplayer.",
+  "tags": [
+    "american-truck-simulator",
+    "ats",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space",
+    "no_console_input"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./bin/linux_x64/amtrucks_server",
+  "config": {
+    "files": "{\n    \"/.local/share/American Truck Simulator/server_config.sii\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \" connection_dedicated_port:\": \" connection_dedicated_port: {{server.build.default.port}}\",\n            \" query_dedicated_port:\": \" query_dedicated_port: {{env.QUERY_PORT}}\",\n            \" server_logon_token:\": \" server_logon_token: \\\"{{env.STEAM_TOKEN}}\\\"\",\n            \" lobby_name:\": \" lobby_name: \\\"{{env.LOBBY_NAME}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"[MP] State: running\",\n        \"[MP] Session running.\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# American Truck Simulator dedicated server (pelican-eggs, changed for Octail: anonymous SteamCMD retried up to 3\n# times, config files from the pinned games-steamcmd commit, failed downloads and a missing server fail the install)\nset -uo pipefail\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || exit 1\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login anonymous +app_update ${SRCDS_APPID} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/bin/linux_x64/amtrucks_server\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the American Truck Simulator dedicated server; try reinstalling.\"\n    exit 1\nfi\n\nmkdir -p /mnt/server/.local/share/\"American Truck Simulator\"/\ncd /mnt/server/.local/share/\"American Truck Simulator\"/\n\nif [ ! -f server_config.sii ]; then\n    echo \"a config file does not yet exist making one!\"\n    curl -fsSL -o server_config.sii https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/truck-simulator/server_config.sii || exit 1\nfi\n\nif [ ! -f server_packages.sii ]; then\n    echo \"a server_packages.sii file does not yet exist making one!\"\n    curl -fsSL -o server_packages.sii https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/truck-simulator/american-truck-simulator/ats-files/server_packages.sii || exit 1\nfi\n\nif [ ! -f server_packages.dat ]; then\n    echo \"a server_packages.dat file does not yet exist making one!\"\n    curl -fsSL -o server_packages.dat https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/8dd208975977aa24a6c53008a65a630c150806b8/truck-simulator/american-truck-simulator/ats-files/server_packages.dat || exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Auto update",
+      "description": "Update the server with SteamCMD before every start.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "boolean",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "2239530",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:2239530",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Steam query port, written to server_config.sii. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Steam Auth token",
+      "description": "Without a token the server gets a new search id at every start. Create one at https://steamcommunity.com/dev/managegameservers with app id 270880 (the game, not the server's 2239530).",
+      "env_variable": "STEAM_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|alpha_num|size:32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Lobby name",
+      "description": "The server name in the convoy browser (no double quotes or backslashes).",
+      "env_variable": "LOBBY_NAME",
+      "default_value": "American Truck Simulator server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|max:64|regex:/^[^\"\\\\]*$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Truck Simulator",
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 15360
+      }
+    },
+    "variables": {
+      "STEAM_TOKEN": {
+        "secret": true
+      }
+    }
+  }
+}

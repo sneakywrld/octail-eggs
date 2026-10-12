@@ -1,0 +1,118 @@
+{
+  "_comment": "Octail's own egg (no upstream file; Pelican's and Pterodactyl's TeamSpeak eggs were read as a reference only). The official Linux x86_64 server from teamspeak.com, its SHA-256 checked against teamspeak.com's version list (versions/server.json), failures exit non-zero. The TeamSpeak licence is never accepted for the operator: TS3SERVER_LICENSE (read by ts3server itself) is required, empty by default and only takes accept, and the startup refuses to run without it. While the panel setting server_tools.auto_accept_eula is on, the panel sets it to accept (features.eula_variable). ServerQuery (raw, TCP) and file transfer (TCP) get ports of their own (port_vars); SSH query is off. The serveradmin password is set at every start when given. ts3server reads no console input; it stops on Ctrl+C. The start is the voice port's listening line, or the UDP port once bound.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/voice/teamspeak.json"
+  },
+  "exported_at": "2026-10-12T00:00:00+00:00",
+  "name": "TeamSpeak 3 Server",
+  "author": "eggs@octail.net",
+  "uuid": "1a00fd9c-a95b-41b2-8ebd-c79371b50d0f",
+  "description": "TeamSpeak 3 voice server: low-latency voice chat with channels, permissions and file transfer. The operator must accept the TeamSpeak licence before the server starts.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ \"${TS3SERVER_LICENSE}\" = accept ] || { echo 'The TeamSpeak licence is not accepted: read LICENSE in the server folder, then set TeamSpeak License to accept on the Startup tab.'; exit 1; }; LD_LIBRARY_PATH=. exec ./ts3server default_voice_port={{SERVER_PORT}} voice_ip=0.0.0.0 query_port={{QUERY_PORT}} query_ip=0.0.0.0 query_protocols=raw filetransfer_port={{FILE_TRANSFER_PORT}} filetransfer_ip=0.0.0.0 $( [ -z \"${SERVERADMIN_PASSWORD}\" ] || printf 'serveradmin_password=%s' \"${SERVERADMIN_PASSWORD}\" )",
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": \"listening on 0.0.0.0:\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# TeamSpeak 3 server installation script (Octail): the official Linux build from teamspeak.com, its SHA-256 checked\n# against teamspeak.com's own version list, failures exit non-zero. The licence is NOT accepted here: the server\n# starts only once the operator sets TS3SERVER_LICENSE=accept on the Startup tab.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\nVERSIONS=https://www.teamspeak.com/versions/server.json\nVERSION=\"${TS3_VERSION:-latest}\"\n\nif [ \"$(uname -m)\" != \"x86_64\" ]; then\n    echo \"Installation failed: TeamSpeak 3 has no Linux server for $(uname -m), only for x86_64 (amd64).\"\n    exit 1\nfi\n\nif ! LIST=$(curl -fsSL \"$VERSIONS\"); then\n    echo \"Installation failed: the version list $VERSIONS couldn't be read.\"\n    exit 1\nfi\nLATEST=$(echo \"$LIST\" | jq -r '.linux.x86_64.version // empty')\nLATEST_SUM=$(echo \"$LIST\" | jq -r '.linux.x86_64.checksum // empty')\nLATEST_URL=$(echo \"$LIST\" | jq -r '.linux.x86_64.mirrors[\"teamspeak.com\"] // empty')\nif [ -z \"$LATEST\" ] || [ -z \"$LATEST_SUM\" ] || [ -z \"$LATEST_URL\" ]; then\n    echo \"Installation failed: $VERSIONS lists no Linux x86_64 server.\"\n    exit 1\nfi\n\n[ \"$VERSION\" = \"latest\" ] && VERSION=\"$LATEST\"\nif [ \"$VERSION\" = \"$LATEST\" ]; then\n    URL=\"$LATEST_URL\"\n    SUM=\"$LATEST_SUM\"\nelse\n    ## teamspeak.com publishes the checksum of the newest version only\n    URL=\"https://files.teamspeak-services.com/releases/server/${VERSION}/teamspeak3-server_linux_amd64-${VERSION}.tar.bz2\"\n    SUM=\"\"\nfi\ncase \"$URL\" in\n    https://*) ;;\n    *)\n        echo \"Installation failed: $URL isn't an HTTPS address.\"\n        exit 1\n        ;;\nesac\n\necho \"Installing the TeamSpeak 3 server ${VERSION} from ${URL}\"\ncd /mnt/server\nTMP=$(mktemp -d)\nif ! curl -fsSL -o \"$TMP/ts3.tar.bz2\" \"$URL\"; then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: TeamSpeak 3 server ${VERSION} couldn't be downloaded (check the version).\"\n    exit 1\nfi\nif [ -n \"$SUM\" ]; then\n    if ! echo \"${SUM}  $TMP/ts3.tar.bz2\" | sha256sum -c --quiet -; then\n        rm -rf \"$TMP\"\n        echo \"Installation failed: the download doesn't match the checksum teamspeak.com lists.\"\n        exit 1\n    fi\n    echo \"Checksum OK (SHA-256 from teamspeak.com).\"\nelse\n    echo \"teamspeak.com lists a checksum for ${LATEST} only; ${VERSION} is not checked.\"\nfi\n\n## the program files only: the database (ts3server.sqlitedb), uploaded files/ and logs/ stay on a reinstall\ntar -xjf \"$TMP/ts3.tar.bz2\" --strip-components=1 -C /mnt/server\nrm -rf \"$TMP\"\n\nif [ ! -x /mnt/server/ts3server ]; then\n    echo \"Installation failed: the TeamSpeak 3 server is missing after unpacking.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: TeamSpeak 3 server ${VERSION}.\"\necho \"Set TeamSpeak License to accept on the Startup tab once you have read and accepted the licence.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "TeamSpeak License",
+      "description": "The TeamSpeak server licence (the LICENSE file in the server folder, also on teamspeak.com). Type accept once you have read and accepted it; the server doesn't start until then.",
+      "env_variable": "TS3SERVER_LICENSE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:accept",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "TeamSpeak Version",
+      "description": "latest (the newest server teamspeak.com lists, checksum checked) or a version such as 3.13.7 (older versions aren't checksum checked). Reinstall to switch.",
+      "env_variable": "TS3_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^(latest|3\\.\\d+\\.\\d+(\\.\\d+)?)$/|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "ServerQuery Port",
+      "description": "The ServerQuery (raw, TCP) port, given when the server is created.",
+      "env_variable": "QUERY_PORT",
+      "default_value": "10011",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "File Transfer Port",
+      "description": "The file transfer port (TCP), given when the server is created.",
+      "env_variable": "FILE_TRANSFER_PORT",
+      "default_value": "30033",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Serveradmin Password",
+      "description": "Optional: the ServerQuery serveradmin password, set at every start (8-64 letters, digits and _ . @ # % + -). Empty = keep the one printed on the first start.",
+      "env_variable": "SERVERADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_.@#%+-]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "teamspeak",
+    "voice"
+  ],
+  "x_octail": {
+    "category": "Voice",
+    "features": {
+      "eula_variable": {
+        "env": "TS3SERVER_LICENSE",
+        "accept": "accept"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1",
+        "FILE_TRANSFER_PORT": "primary+2"
+      },
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 256,
+        "disk_mb": 512
+      }
+    }
+  }
+}

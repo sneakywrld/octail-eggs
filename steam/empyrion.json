@@ -1,0 +1,268 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd empyrion/egg-pterodactyl-empyrion--galactic-survival.json (pelican-eggs, MIT licence) at 8dd208975977aa24a6c53008a65a630c150806b8. Octail installs the server into the server folder itself instead of an empyrion/ subfolder (so the image's SteamCMD update works: upstream had to keep AUTO_UPDATE off), runs it on its own octail-dedicated.yaml (made once from the shipped dedicated.yaml, which updates overwrite) passed with -dedicated, writes the port, name, password, max players, description, game name, mode, seed, scenario and EAC setting there (yaml parser) before every start, turns telnet off (upstream bridged the console through an unprotected telnet port that other containers on the node network could reach), logs to the console (-logFile -) and detects the start from 'Server started listening on port' or the bound game port (x_octail.features.ready), reserves the three ports the server opens after the game port (Steam query +1, +2, +3, fixed_ports), adds the empyrion tag, the no_console_input flag, install sandbox defaults and resource hints, a branch variable (experimental), stops with Ctrl+C handed to the server by a trap (the wine image runs the line in bash as PID 1, which ignores it otherwise; upstream stopped through telnet) and waits for it, drops the winetricks verbs (dotnet48 is not needed by the Unity server and takes long to install), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/empyrion.json"
+  },
+  "exported_at": "2026-10-12T08:00:00+00:00",
+  "name": "Empyrion - Galactic Survival",
+  "author": "eggs@goover.dev",
+  "uuid": "5f0c2a8e-6d1b-4c47-9a3e-1e8b7d2f4c61",
+  "description": "Empyrion - Galactic Survival is a 3D open world space survival game: fly across space, land on planets, build, explore and fight. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "empyrion",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine",
+    "Wine Staging": "ghcr.io/sneakywrld/octail-yolks:wine_staging"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export SteamAppId=383120; wine ./DedicatedServer/EmpyrionDedicated.exe -batchmode -nographics -dedicated octail-dedicated.yaml -logFile - & EMP_PID=$!; trap \"kill -INT ${EMP_PID} 2>/dev/null; wait ${EMP_PID}\" INT TERM; wait ${EMP_PID}"
+  },
+  "config": {
+    "files": {
+      "octail-dedicated.yaml": {
+        "parser": "yaml",
+        "find": {
+          "ServerConfig.Srv_Port": "{{server.allocations.default.port}}",
+          "ServerConfig.Srv_Name": "{{server.environment.SERVER_NAME}}",
+          "ServerConfig.Srv_Password": "{{server.environment.SERVER_PASSWORD}}",
+          "ServerConfig.Srv_MaxPlayers": "{{server.environment.MAX_PLAYERS}}",
+          "ServerConfig.Srv_Description": "{{server.environment.SERVER_DESC}}",
+          "ServerConfig.EACActive": "{{server.environment.EAC_ACTIVE}}",
+          "ServerConfig.Tel_Enabled": "false",
+          "GameConfig.GameName": "{{server.environment.GAME_NAME}}",
+          "GameConfig.Mode": "{{server.environment.GAME_MODE}}",
+          "GameConfig.Seed": "{{server.environment.SEED}}",
+          "GameConfig.CustomScenario": "{{server.environment.SCENARIO}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Server started listening on port"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/DedicatedServer/EmpyrionDedicated.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Empyrion dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: the server runs on its own config, octail-dedicated.yaml: the game's dedicated.yaml comes with every\n## update and would undo the settings. Made once from the shipped one (or a minimal one); Octail sets the\n## Startup tab's values in it before every start.\ncd /mnt/server\nif [[ ! -f octail-dedicated.yaml ]]; then\n    if [[ -f dedicated.yaml ]]; then\n        cp dedicated.yaml octail-dedicated.yaml\n    else\n        printf 'ServerConfig:\\n    Srv_Port: 30000\\n    Srv_Name: Octail Empyrion Server\\n    Srv_Password:\\n    Srv_MaxPlayers: 8\\n    Srv_Public: true\\n    Tel_Enabled: false\\n    EACActive: true\\n    SaveDirectory: Saves\\nGameConfig:\\n    GameName: DediGame\\n    Mode: Survival\\n    Seed: 1011345\\n    CustomScenario: Default Multiplayer\\n' > octail-dedicated.yaml\n    fi\nfi\nmkdir -p /mnt/server/Saves /mnt/server/Logs\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server browser. Written to octail-dedicated.yaml.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Empyrion Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "How many players may be on the server at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,64"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Server Description",
+      "description": "Shown in the server browser, up to 127 characters; [b]bold[/b] and [url=...]links[/url] work.",
+      "env_variable": "SERVER_DESC",
+      "default_value": "An Empyrion server on Octail",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:127"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Game Name",
+      "description": "The save game (Saves/Games/<name>). A new name starts a new game; the old one stays.",
+      "env_variable": "GAME_NAME",
+      "default_value": "DediGame",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "alpha_dash",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Game Mode",
+      "description": "Survival or Creative, for a new game.",
+      "env_variable": "GAME_MODE",
+      "default_value": "Survival",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:Survival,Creative"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Seed",
+      "description": "World generation seed (1 to 7 digits), for a new game.",
+      "env_variable": "SEED",
+      "default_value": "1011345",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,9999999"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Scenario",
+      "description": "The scenario a new game starts from: a folder in Content/Scenarios (Default Multiplayer, Default Random, ...) or one you uploaded.",
+      "env_variable": "SCENARIO",
+      "default_value": "Default Multiplayer",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9 _.'()-]+$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Easy Anti-Cheat",
+      "description": "Players must enable EAC in their options to join a server with it on.",
+      "env_variable": "EAC_ACTIVE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "530870",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:530870"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    },
+    {
+      "sort": 13,
+      "name": "Branch",
+      "description": "Optional: a Steam branch such as experimental. Empty = the public release. Reinstall or restart (with Auto Update on) after a change.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "max:32"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Empyrion",
+    "features": {
+      "no_console_input": true,
+      "fixed_ports": {
+        "Steam query": "primary+1",
+        "game traffic (+2)": "primary+2",
+        "game traffic (+3)": "primary+3"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 40960
+      }
+    }
+  }
+}
