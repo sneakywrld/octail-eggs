@@ -1,0 +1,234 @@
+{
+  "_comment": "Octail's own egg (LinuxGSM's ut2k4server settings and OldUnreal's Linux installer, github.com/OldUnreal/FullGameInstallers, were read as a reference). The game data comes the way OldUnreal's installer gets it: the UT2004 DVD image OldUnreal hosts with Epic Games' permission, its InstallShield cabinets unpacked with Debian's unshield, then OldUnreal's patch 3374 for Linux from GitHub; both are checked against pinned SHA-256s (the image's from OldUnreal's installer, the patch's from GitHub's release digest). Epic Games' Terms of Service apply to the game, so the install downloads nothing until the owner sets Accept Epic Games Terms to TRUE (eula_variable: with the host's server_tools.auto_accept_eula on, the panel accepts). System/UT2004.ini is made once from the patch's Default.ini; the ini parser sets the port, name, message, passwords, the master server uplink and WebAdmin before every start, and turns off the GameSpy uplink (its own port) and LAN broadcast. The map, game type, slots and mutators are on the start line. The Unreal query port (main + 1) is reserved with fixed_ports, WebAdmin is off by default on its own automatic port. The server reads no console input; start line \"Game engine initialized\" or the game port (UDP) bound; stop with Ctrl+C.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/unreal-tournament-2004.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Unreal Tournament 2004",
+  "author": "eggs@octail.net",
+  "uuid": "bd36ffb5-33b8-4a07-afe2-35e636addef1",
+  "description": "Unreal Tournament 2004 with OldUnreal's community patch 3374: deathmatch, capture the flag, bombing run, onslaught, assault and invasion on the Unreal Engine 2 arena shooter.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x System/UCC ] || { echo \"Unreal Tournament 2004 is not installed: set Accept Epic Games Terms to TRUE on the Startup tab and reinstall the server.\"; exit 1; }; cd System && exec ./ucc-bin server \"{{MAP}}?game={{GAME_TYPE}}?MaxPlayers={{MAX_PLAYERS}}${MUTATORS:+?Mutator=${MUTATORS}}\" ini=UT2004.ini log=server.log -nohomedir",
+  "config": {
+    "files": "{\n    \"System/UT2004.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"URL.Port\": \"{{server.allocations.default.port}}\",\n            \"Engine.GameReplicationInfo.ServerName\": \"{{server.environment.SERVER_NAME}}\",\n            \"Engine.GameReplicationInfo.MessageOfTheDay\": \"{{server.environment.MOTD}}\",\n            \"Engine.AccessControl.AdminPassword\": \"{{server.environment.ADMIN_PASSWORD}}\",\n            \"Engine.AccessControl.GamePassword\": \"{{server.environment.SERVER_PASSWORD}}\",\n            \"IpDrv.MasterServerUplink.DoUplink\": \"{{server.environment.PUBLIC_LIST}}\",\n            \"IpDrv.MasterServerUplink.UplinkToGamespy\": \"False\",\n            \"IpDrv.MasterServerUplink.DoLANBroadcast\": \"False\",\n            \"UWeb.WebServer.bEnabled\": \"{{server.environment.WEB_ADMIN}}\",\n            \"UWeb.WebServer.ListenPort\": \"{{server.environment.WEB_ADMIN_PORT}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"Game engine initialized\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Unreal Tournament 2004 installation script (Octail), the way OldUnreal's own Linux installer\n# (github.com/OldUnreal/FullGameInstallers) does it: the game data from the UT2004 DVD image OldUnreal hosts with Epic\n# Games' permission (its InstallShield cabinets unpacked with unshield), then OldUnreal's patch 3374 for Linux on top.\n# Both are checked against a pinned SHA-256: the DVD image's is the one in OldUnreal's installer, the patch's the one\n# GitHub lists for the release asset. Epic Games' Terms of Service apply to the game: nothing is downloaded until the\n# server's owner accepts them on the Startup tab. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## the DVD image: size and SHA-256 from OldUnreal's install-ut2004.sh (the archive.org copy it lists as a backup is\n## gone); the patch: OldUnreal's 3374 preview 23 (2026-07-23), the build OldUnreal's installer installs, with the\n## SHA-256 GitHub lists for it. A new patch needs both updated here.\nISO=UT2004.iso\nISO_SHA256=43e9182ae20bcbc0f6f4588fee6c1b336c261f1465403118a1973b09b1a22541\nPATCH_VERSION=3374-preview-23\nPATCH=OldUnreal-UT2004Patch3374-Linux-094b94dc.tar.bz2\nPATCH_SHA256=179ea43c8831bff147005850cd373c0ec2b70dcf6f841c2109c1525ef11ad4d3\nTOS_URL=https://legal.epicgames.com/en-US/epicgames/tos\n\nif [ \"${ACCEPT_EPIC_TOS:-FALSE}\" != TRUE ]; then\n    echo \"Unreal Tournament 2004 isn't installed yet: the Epic Games Terms of Service apply to the game\"\n    echo \"(${TOS_URL}). Read them, set Accept Epic Games Terms to TRUE on the Startup tab and reinstall.\"\n    exit 1\nfi\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs OldUnreal's Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\napt-get update -qq\napt-get install -y -qq curl ca-certificates p7zip-full bzip2 unshield > /dev/null\n\n## about 3 GB to download and 6 GB unpacked: staged on the server's own disk (the installer's /tmp may be small),\n## each step's input removed as soon as it is unpacked\ncd /mnt/server\nSTAGE=/mnt/server/.octail-install\nrm -rf \"$STAGE\"\nmkdir -p \"$STAGE\"\nOK=\nfor URL in https://files.oldunreal.net/UT2004.ISO https://files2.oldunreal.net/UT2004.ISO https://files3.oldunreal.net/UT2004.ISO; do\n    echo \"Downloading ${URL}\"\n    if curl -fSL --connect-timeout 30 --max-time 7200 --retry 3 -o \"$STAGE/$ISO\" \"$URL\" &&\n        echo \"${ISO_SHA256}  $STAGE/$ISO\" | sha256sum -c --quiet -; then\n        OK=1\n        break\n    fi\n    echo \"That download failed or doesn't match its SHA-256; trying the next mirror.\"\ndone\nif [ -z \"$OK\" ]; then\n    rm -rf \"$STAGE\"\n    echo \"Installation failed: no mirror gave a ${ISO} matching its SHA-256.\"\n    exit 1\nfi\nif ! curl -fSL --connect-timeout 30 --max-time 1800 --retry 3 -o \"$STAGE/$PATCH\" \\\n    \"https://github.com/OldUnreal/UT2004Patches/releases/download/${PATCH_VERSION}/${PATCH}\" ||\n    ! echo \"${PATCH_SHA256}  $STAGE/$PATCH\" | sha256sum -c --quiet -; then\n    rm -rf \"$STAGE\"\n    echo \"Installation failed: ${PATCH} couldn't be downloaded or doesn't match its SHA-256.\"\n    exit 1\nfi\n\n## the DVD's InstallShield cabinets (Disk1-5), unpacked by file group\n7z x -y -bd -o\"$STAGE/dvd\" \"$STAGE/$ISO\" > /dev/null\nrm -f \"$STAGE/$ISO\"\nmkdir -p \"$STAGE/cabs\"\nwhile IFS= read -r -d '' CAB; do\n    NAME=$(basename \"$CAB\" | tr '[:upper:]' '[:lower:]')\n    ln -sfn \"$CAB\" \"$STAGE/cabs/$NAME\"\ndone < <(find \"$STAGE/dvd\" -type f \\( -iname '*.cab' -o -iname '*.hdr' \\) -print0)\nif [ ! -e \"$STAGE/cabs/data1.cab\" ] || [ ! -e \"$STAGE/cabs/data1.hdr\" ]; then\n    rm -rf \"$STAGE\"\n    echo \"Installation failed: the InstallShield cabinets are missing from ${ISO}.\"\n    exit 1\nfi\nif ! unshield -d \"$STAGE/data\" x \"$STAGE/cabs/data1.cab\" > /dev/null; then\n    rm -rf \"$STAGE\"\n    echo \"Installation failed: unshield couldn't unpack the game data.\"\n    exit 1\nfi\nrm -rf \"$STAGE/dvd\" \"$STAGE/cabs\"\n\n## the file groups into their folders, as OldUnreal's installer maps them (no Windows programs)\nD=\"$STAGE/data\"\nrm -f \"$D\"/All_UT2004.EXE/*.exe \"$D\"/English_Sounds_Speech_System_Help/System/*.{bat,dll,exe}\nfor PAIR in All_Animations:Animations All_Benchmark:Benchmark All_ForceFeedback:ForceFeedback All_Help:Help \\\n    All_KarmaData:KarmaData All_Maps:Maps All_Music:Music All_StaticMeshes:StaticMeshes All_Textures:Textures \\\n    All_Web:Web All_UT2004.EXE:System English_Sounds_Speech_System_Help:. US_License.int:System; do\n    SRC=\"$D/${PAIR%%:*}\"\n    DST=\"${PAIR#*:}\"\n    [ -d \"$SRC\" ] || continue\n    mkdir -p \"$DST\"\n    cp -rlf \"$SRC/.\" \"$DST/\"\ndone\nrm -rf \"$D\"\nif [ ! -f Maps/DM-Rankin.ut2 ] || [ ! -d Textures ]; then\n    rm -rf \"$STAGE\"\n    echo \"Installation failed: the game data is missing after unpacking ${ISO}.\"\n    exit 1\nfi\n\n## the patch on top: Linux binaries and libraries in System/, updated packages, translations, web admin\n## (packages the old release spells differently are removed first, as OldUnreal's installer does)\nfor OLD in Bonuspack.u Gui2K4.u Gameplay.u Ipdrv.u Skaarjpack.u StreamLineFX.u UT2K4Assault.u UT2K4AssaultFull.u \\\n    XVoting.u xWebAdmin.u; do\n    rm -f \"System/$OLD\"\ndone\ntar -xjf \"$STAGE/$PATCH\" -C /mnt/server\nrm -rf \"$STAGE\"\nif [ ! -x System/UCC ] || [ ! -e System/ucc-bin ]; then\n    echo \"Installation failed: System/ucc-bin is missing after unpacking ${PATCH}.\"\n    exit 1\nfi\n\n## the settings file, only when there is none (a reinstall keeps it): made from the patch's Default.ini, as the\n## server would make it at its first start\nif [ ! -f System/UT2004.ini ]; then\n    cp System/Default.ini System/UT2004.ini\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Unreal Tournament 2004 with OldUnreal's patch ${PATCH_VERSION}.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no \" or \\).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Unreal Tournament 2004 Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The map the server starts on, such as DM-Rankin, CTF-FaceClassic, BR-Colossus, ONS-Torlan or AS-RobotFactory (it must suit the game type). Maps you upload go into Maps/.",
+      "env_variable": "MAP",
+      "default_value": "DM-Rankin",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_-]{1,60}(\\.ut2)?$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Type",
+      "description": "XGame.xDeathMatch, XGame.xTeamGame (team deathmatch), XGame.xCTFGame (capture the flag), XGame.xBombingRun, XGame.xDoubleDom, Onslaught.ONSOnslaughtGame, UT2k4Assault.ASGameInfo, XGame.xLastManStandingGame, SkaarjPack.Invasion, BonusPack.xMutantGame, or a mod's game class.",
+      "env_variable": "GAME_TYPE",
+      "default_value": "XGame.xDeathMatch",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_]{1,64}\\.[A-Za-z0-9_]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Mutators",
+      "description": "Optional: mutator classes separated by commas, such as XGame.MutInstaGib,UnrealGame.MutBigHead.",
+      "env_variable": "MUTATORS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^([A-Za-z0-9_]{1,64}\\.[A-Za-z0-9_]{1,64}(,[A-Za-z0-9_]{1,64}\\.[A-Za-z0-9_]{1,64})*)?$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Players must enter it to join; empty for an open server. Letters, digits and _.@%+!- only.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@%+!-]{0,40}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin Password",
+      "description": "For adminlogin <password> in the game console and the WebAdmin page (user admin). 8 to 40 letters, digits or _.@%+!-. Hidden once saved.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_.@%+!-]{8,40}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown to players when they join (no \" or \\).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:100",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "True lists the server on the community master servers (333networks, OpenSpy, ...); False keeps it off the list (players join by address).",
+      "env_variable": "PUBLIC_LIST",
+      "default_value": "True",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:True,False",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "WebAdmin",
+      "description": "True turns on the WebAdmin page on the WebAdmin Port (user admin, the Admin Password).",
+      "env_variable": "WEB_ADMIN",
+      "default_value": "False",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:True,False",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "WebAdmin Port",
+      "description": "The WebAdmin port (TCP). Set by Octail when the server is created (two after the game port).",
+      "env_variable": "WEB_ADMIN_PORT",
+      "default_value": "7779",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Accept Epic Games Terms",
+      "description": "The Epic Games Terms of Service (https://legal.epicgames.com/en-US/epicgames/tos) apply to the game. TRUE accepts them for this server, and the install then downloads the game data; with FALSE the install stops and downloads nothing. Reinstall after changing it.",
+      "env_variable": "ACCEPT_EPIC_TOS",
+      "default_value": "FALSE",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:TRUE,FALSE",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "unreal-tournament-2004",
+    "unreal-tournament",
+    "unreal-engine-2",
+    "oldunreal"
+  ],
+  "x_octail": {
+    "category": "Unreal Tournament",
+    "features": {
+      "eula_variable": {
+        "env": "ACCEPT_EPIC_TOS",
+        "accept": "TRUE"
+      },
+      "no_console_input": true,
+      "port_vars": {
+        "WEB_ADMIN_PORT": "primary+2"
+      },
+      "fixed_ports": {
+        "Unreal query": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 10800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 16384
+      }
+    },
+    "variables": {
+      "ADMIN_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

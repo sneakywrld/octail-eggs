@@ -113,7 +113,7 @@
       "name": "Server Name",
       "description": "",
       "env_variable": "SERVER_NAME",
-      "default_value": "A Pterodactyl hosted Palworld Server",
+      "default_value": "An Octail Palworld server",
       "user_viewable": true,
       "user_editable": true,
       "rules": [

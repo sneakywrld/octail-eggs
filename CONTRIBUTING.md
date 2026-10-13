@@ -26,7 +26,8 @@ the pull request what you tested.
   when the server binary is missing afterwards, so a failed install isn't reported as a success.
 - **Variables** have a description, a sensible default and valid rules (`required|string|max:64`, `nullable|integer`,
   ...). Secrets are named so the startup line masks them (`*_PASSWORD`, `*_TOKEN`, `*_KEY`, ...); access tokens and
-  keys nobody needs to read back are also marked write-only (`x_octail.variables`: `{ "GIT_TOKEN": { "secret": true } }`).
+  keys nobody needs to read back are also marked write-only (`x_octail.variables`: `{ "GIT_TOKEN": { "secret": true } }`). A port variable
+  (`port_vars`) is never secret: the panel ignores the flag on one.
 - **`x_octail`** (Octail's additions) stays well formed: category, extra ports (`port_vars`), RCON, players, sleep,
   resource hints, variable flags (`secret`, `multiline`). Other panels ignore it.
 - Credit the upstream egg in `_comment` when the egg is derived from one (see `NOTICE.md`).

@@ -1,0 +1,222 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd wurm_unlimited/egg-wurm-unlimited.json (pelican-eggs, MIT licence), with the start parameters and world folders of LinuxGSM's wurmserver (MIT licence) and Wurmpedia's server administration page. Octail keeps the Linux server (WurmServerLauncher, headless with start=) and its command-line settings and the shutdown console command, and adds: the worlds run from their own Creative and Adventure folders, copied once from dist/ (upstream ran dist/Adventure itself, which an update could overwrite), the world is picked from those two, the admin and server passwords are passed only when set and have no default, the steamclient.so in nativelibs is refreshed at every start (updates replace SteamCMD's), the query port as an automatic port (port_vars; upstream had no default), the beta branch as a choice (upstream: an editable SRCDS_BETAID), the wurm-unlimited tag, the Steam query (A2S) for player counts, install sandbox defaults and resource hints, port readiness (TCP, x_octail.features.ready) besides the start line, curl with timeouts and retries, the anonymous login only, and the install fails when SteamCMD didn't download the server or its world templates. The log-cleaning edit of LaunchConfig.ini is left out (its file isn't documented). SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/wurm-unlimited.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Wurm Unlimited",
+  "author": "eggs@octail.net",
+  "uuid": "42d6f6a3-5f0c-40cf-a404-26c909ae81cc",
+  "description": "A sandbox MMO you host yourself: shape the land, build villages and ships, farm, craft and fight in Wurm Online's world. The Linux dedicated server.",
+  "tags": [
+    "wurm-unlimited",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "cp -f steamcmd/linux64/steamclient.so nativelibs/steamclient.so 2>/dev/null; ./WurmServerLauncher start={{WORLD}} ip=0.0.0.0 externalport={{SERVER_PORT}} queryport={{QUERY_PORT}} servername=\"{{SERVER_NAME}}\" maxplayers={{MAX_PLAYERS}} pvp={{PVP}} epicsettings={{EPIC}} $( [ -z \"${ADMIN_PASSWORD}\" ] || printf 'adminpwd=%s' \"${ADMIN_PASSWORD}\" ) $( [ -z \"${SERVER_PASSWORD}\" ] || printf 'serverpassword=%s' \"${SERVER_PASSWORD}\" )"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Wurm Server launcher finished at"
+      ]
+    },
+    "logs": {},
+    "stop": "shutdown"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Linux build of the server.\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/WurmServerLauncher\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Wurm Unlimited dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/WurmServerLauncher\n\n## The launcher looks for a local steamclient.so in nativelibs (the start line refreshes it after updates).\nmkdir -p /mnt/server/nativelibs\ncp -v linux64/steamclient.so /mnt/server/nativelibs/steamclient.so\n\n## Octail: the worlds run from their own folders (Creative, Adventure), copied once from the shipped templates in\n## dist/; an update or reinstall never touches them.\nfor world in Creative Adventure; do\n    if [[ ! -d \"/mnt/server/${world}\" ]] && [[ -d \"/mnt/server/dist/${world}\" ]]; then\n        cp -r \"/mnt/server/dist/${world}\" \"/mnt/server/${world}\"\n        echo \"Copied the ${world} world from dist/${world}.\"\n    fi\ndone\nif [[ ! -d /mnt/server/Creative ]] && [[ ! -d /mnt/server/Adventure ]]; then\n    echo -e \"\\nNo world templates (dist/Creative, dist/Adventure) came with the server; try reinstalling.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server list (no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Wurm Unlimited Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\\"\\\\\\r\\n]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to connect. Empty = no password (letters, digits, - and _).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Admin Password",
+      "description": "Optional: unlocks the in-game admin commands that change the gameplay settings (skill gain, field growth, ...). Empty = none (letters, digits, - and _).",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "between:6,32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "World",
+      "description": "The world to run: Creative or Adventure (each in its own folder, both kept).",
+      "env_variable": "WORLD",
+      "default_value": "Creative",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:Creative,Adventure"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Max Players",
+      "description": "How many players may be online at once (the in-game player limit commands then have no effect).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "25",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,500"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "PvP",
+      "description": "Player against player combat, building destruction and theft (true or false).",
+      "env_variable": "PVP",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Epic Settings",
+      "description": "Follow the rules of Wurm Online's Epic servers, such as their skill curve (true or false).",
+      "env_variable": "EPIC",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27016",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Branch",
+      "description": "Empty = the public version (what players' games run); beta = the beta branch (players must switch to it too).",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "in:beta"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "402370",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:402370"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Wurm Unlimited",
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 4096
+      }
+    }
+  }
+}

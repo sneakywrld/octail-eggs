@@ -102,8 +102,8 @@
       "field_type": "text"
     },
     {
-      "name": "AUTO_UPDATE",
-      "description": "Disabling or enabling automated updates on boot.",
+      "name": "Auto Update",
+      "description": "Update the server from Steam at every start.",
       "env_variable": "AUTO_UPDATE",
       "default_value": "1",
       "user_viewable": true,

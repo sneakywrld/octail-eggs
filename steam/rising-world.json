@@ -1,0 +1,240 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd rising_world/unity/egg-rising-world-unity.json (pelican-eggs, MIT licence), for the current Rising World (the Unity version, the public branch of app 339010; the Java version is the old 'java' branch and not shipped). Octail keeps the Linux server (RisingWorldServer.x64, the executable Steam's launch config names) and the server.properties edits by line (file parser), and adds: the port, max players, seed and Server_ClearConsole=False there too (the server would clear the console window at start), every key Octail sets gets a line when the file has none, the existing server.properties is kept on reinstall, the RCON password is required to be 6 to 64 letters, digits, - and _ (the file says 6 at least) and has no default (upstream: somepassword), RCON gets an automatic port at the game port - 2 (its default 4253 next to 4255), the web/query port the server always opens at the game port - 1 (TCP; the server list and /info use it) is reserved with fixed_ports, the start also counts once the game port is bound (x_octail.features.ready), the rising-world tag, install sandbox defaults and resource hints, the anonymous login only, curl with timeouts and retries, and the install fails when SteamCMD didn't download the server. Rising World's RCON is the game's own tool (RCON_APIOnly, certificates); Octail doesn't connect to it (its protocol couldn't be verified), so console commands go to the server's own input (Server_Input). SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/rising-world.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Rising World",
+  "author": "eggs@octail.net",
+  "uuid": "d25f7a66-f78c-4fb9-b970-d65af44071b3",
+  "description": "Rising World is a voxel-based open-world sandbox: dig, build, farm and survive in a procedurally generated world, alone or with others. The current (Unity) version's Linux dedicated server.",
+  "tags": [
+    "rising-world",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./RisingWorldServer.x64 +Server_Port={{SERVER_PORT}}"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "file",
+        "find": {
+          "Server_Name=": "Server_Name={{server.environment.SERVER_NAME}}",
+          "Server_Password=": "Server_Password={{server.environment.SERVER_PASSWORD}}",
+          "Server_Port=": "Server_Port={{server.allocations.default.port}}",
+          "Server_ClearConsole=": "Server_ClearConsole=False",
+          "Settings_MaxPlayers=": "Settings_MaxPlayers={{server.environment.MAX_PLAYERS}}",
+          "World_Name=": "World_Name={{server.environment.WORLD_NAME}}",
+          "World_GameMode=": "World_GameMode={{server.environment.GAME_MODE}}",
+          "World_Seed=": "World_Seed={{server.environment.SEED}}",
+          "RCON_Enabled=": "RCON_Enabled={{server.environment.RCON_ENABLED}}",
+          "RCON_Port=": "RCON_Port={{server.environment.RCON_PORT}}",
+          "RCON_Password=": "RCON_Password={{server.environment.RCON_PASSWORD}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Dedicated server is ready!"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Linux build of the server.\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/RisingWorldServer.x64\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Rising World dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/RisingWorldServer.x64\n\n## Octail: server.properties is made once from the shipped server.example.properties (an existing one is kept);\n## every key Octail sets before each start (\"Key=value\", the file parser matches \"Key=\") gets a line of its own\n## when the file has none.\nCFG=/mnt/server/server.properties\nif [[ ! -f \"$CFG\" ]]; then\n    if [[ -f /mnt/server/server.example.properties ]]; then\n        cp /mnt/server/server.example.properties \"$CFG\"\n    else\n        printf '%s\\n' \"# Rising World dedicated server settings, written by the Octail install.\" > \"$CFG\"\n    fi\nfi\nsed -i 's/\\r$//' \"$CFG\"\nfor key in Server_Name Server_Password Server_Port Server_ClearConsole Settings_MaxPlayers World_Name World_GameMode World_Seed RCON_Enabled RCON_Port RCON_Password; do\n    grep -q \"^${key}=\" \"$CFG\" || echo \"${key}=\" >> \"$CFG\"\ndone\n## the shipped screen/start scripts are not used in a container\nrm -f /mnt/server/linux_screen.sh /mnt/server/linux_startscript.sh\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server list.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Rising World Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\\"\\\\\\r\\n]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (no spaces).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "The most players online at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,64"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "World Name",
+      "description": "The world to load; a new name creates a new world (the old one stays).",
+      "env_variable": "WORLD_NAME",
+      "default_value": "Octail World",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9 _-]+$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Game Mode",
+      "description": "Survival or Creative, for a new world.",
+      "env_variable": "GAME_MODE",
+      "default_value": "Survival",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:Survival,Creative"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Seed",
+      "description": "Optional: the seed of a new world (a number). Empty = random.",
+      "env_variable": "SEED",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^-?[0-9]{1,10}$/"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "RCON",
+      "description": "True: Rising World's own RCON tool listens on the RCON port (set a password first). Octail's console doesn't use it.",
+      "env_variable": "RCON_ENABLED",
+      "default_value": "False",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:True,False"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "RCON Password",
+      "description": "The RCON password: 6 to 64 letters, digits, - and _.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "between:6,64"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "RCON Port",
+      "description": "RCON (TCP). Set by Octail when the server is created (two below the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "4253",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "339010",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:339010"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Rising World",
+    "features": {
+      "port_vars": {
+        "RCON_PORT": "primary-2"
+      },
+      "fixed_ports": {
+        "web and query (TCP)": "primary-1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "any"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

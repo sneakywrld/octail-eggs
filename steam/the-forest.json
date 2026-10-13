@@ -298,6 +298,11 @@
         "memory_mb": 4096,
         "disk_mb": 8192
       }
+    },
+    "variables": {
+      "STEAM_ACCOUNT_TOKEN": {
+        "secret": true
+      }
     }
   }
 }

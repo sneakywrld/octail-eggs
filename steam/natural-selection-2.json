@@ -1,0 +1,213 @@
+{
+  "_comment": "Octail's own egg (LinuxGSM's ns2server settings were read as a reference only; pelican-eggs has no NS2 egg). App 4940 from anonymous SteamCMD, the 64-bit Linux build x64/server_linux. The install adds the libraries the server loads that the runtime image lacks into .octail-libs/ (libspeex1 from Debian 12 with apt, libtbb2 from Debian 11's archive with its SHA-256 pinned), which the start line puts on LD_LIBRARY_PATH. The start line passes name, port, map, slots, spectator slots, config, log and mod folders in the server folder (octail-config/, logs/), and the password, Workshop mods and the web admin (off by default, its own automatic port) only when set. The Steam query port (main + 1) is reserved with fixed_ports and gives the player list (A2S). The server prints no reliable start line: it counts as started once the game port (UDP) is bound, checked from 30 s on. Console input works; stop with q (as LinuxGSM does). SteamCMD is retried up to 3 times (its first run on a fresh install often fails with \"Missing configuration\"), downloads time out and retry, and the install fails when the server binary or a library is missing.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/natural-selection-2.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Natural Selection 2",
+  "author": "eggs@octail.net",
+  "uuid": "b314cd69-1a8f-4e20-927f-0a0ac58e10ea",
+  "description": "Natural Selection 2 is a team shooter with real-time strategy by Unknown Worlds: Frontiersmen marines led by a commander fight the Kharaa aliens, who evolve and build their hive, on maps both teams fight over.",
+  "tags": [
+    "natural-selection-2",
+    "ns2",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "octail_root=\"$(pwd)\"; export LD_LIBRARY_PATH=\"${octail_root}/.octail-libs:${octail_root}/x64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}\"; mkdir -p octail-config/Workshop logs; octail_args=(); [ -z \"${SERVER_PASSWORD}\" ] || octail_args+=(-password \"${SERVER_PASSWORD}\"); [ -z \"${MODS}\" ] || octail_args+=(-mods \"${MODS}\"); if [ \"${WEB_ADMIN}\" = 1 ]; then octail_args+=(-webadmin -webdomain 0.0.0.0 -webuser admin -webpassword \"${WEB_ADMIN_PASSWORD}\" -webport \"${WEB_ADMIN_PORT}\"); fi; cd x64 && exec ./server_linux -name \"{{SERVER_NAME}}\" -port {{SERVER_PORT}} -map \"{{MAP}}\" -limit {{MAX_PLAYERS}} -speclimit {{MAX_SPECTATORS}} -config_path \"${octail_root}/octail-config\" -logdir \"${octail_root}/logs\" -modstorage \"${octail_root}/octail-config/Workshop\" \"${octail_args[@]}\"",
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": []\n}",
+    "logs": "{}",
+    "stop": "q"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Natural Selection 2 dedicated server (Octail's own install script; LinuxGSM's ns2server settings were read as a\n# reference only). App 4940, the 64-bit Linux build (x64/server_linux), anonymous SteamCMD. The server loads\n# libspeex.so.1 and libtbb.so.2, which the runtime image lacks: libspeex1 comes from Debian 12 with apt (checked\n# against Debian's signed archive), libtbb2 (gone since Debian 12) from Debian 11's archive with its SHA-256 pinned.\n# Both are unpacked into .octail-libs/, which the start line puts on LD_LIBRARY_PATH. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -uo pipefail\n\n## anonymous login: the NS2 server needs no Steam account\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd /mnt/server/steamapps # steamapps: SteamCMD's disk write error when it is missing\nif ! curl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz \\\n    https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz; then\n    echo \"Installation failed: SteamCMD couldn't be downloaded.\"\n    exit 1\nfi\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise, even running as root; the files are given to the server's user after the install.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nBETA=()\n[ -z \"${SRCDS_BETAID:-}\" ] || BETA=(-beta \"${SRCDS_BETAID}\")\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} +app_update \"${SRCDS_APPID}\" \"${BETA[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/x64/server_linux\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Natural Selection 2 dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/x64/server_linux\n\n## Octail: the libraries the server needs besides the image's\nTMP=$(mktemp -d)\nchmod 755 \"$TMP\"\nexport DEBIAN_FRONTEND=noninteractive\nif ! apt-get update -qq || ! (cd \"$TMP\" && apt-get download -qq libspeex1); then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: libspeex1 couldn't be downloaded from Debian.\"\n    exit 1\nfi\nTBB_DEB=libtbb2_2020.3-1_amd64.deb\nTBB_SHA256=87ac7778820cbd7a2c7485f7fccd2ac4437b39cbb390e49b3aeec38a826f5af9\nif ! curl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o \"$TMP/$TBB_DEB\" \\\n    \"https://deb.debian.org/debian/pool/main/t/tbb/$TBB_DEB\"; then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: $TBB_DEB couldn't be downloaded from Debian.\"\n    exit 1\nfi\nif ! echo \"$TBB_SHA256  $TMP/$TBB_DEB\" | sha256sum -c --quiet -; then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: $TBB_DEB doesn't match its SHA-256.\"\n    exit 1\nfi\nrm -rf \"$TMP/root\" /mnt/server/.octail-libs\nmkdir -p \"$TMP/root\" /mnt/server/.octail-libs\nfor DEB in \"$TMP\"/*.deb; do\n    dpkg-deb -x \"$DEB\" \"$TMP/root\"\ndone\ncp -a \"$TMP\"/root/usr/lib/x86_64-linux-gnu/. /mnt/server/.octail-libs/\nrm -rf \"$TMP\"\nfor LIB in libspeex.so.1 libtbb.so.2; do\n    if [ ! -e \"/mnt/server/.octail-libs/$LIB\" ]; then\n        echo \"Installation failed: $LIB is missing after unpacking the packages.\"\n        exit 1\n    fi\ndone\n\n## a hint for staff: libraries the server still can't find here (the runtime image has more than this installer)\nMISSING=$(cd /mnt/server/x64 && LD_LIBRARY_PATH=\"/mnt/server/.octail-libs:/mnt/server/x64\" ldd ./server_linux 2>/dev/null | awk '/not found/ { print $1 }' | tr '\\n' ' ')\n[ -z \"$MISSING\" ] || echo \"Note: not found in the installer image (the game image may have them): $MISSING\"\n\n## Octail: the server's own folders (config, logs, Workshop mods); a reinstall keeps them\nmkdir -p /mnt/server/octail-config/Workshop /mnt/server/logs\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no \" or \\).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Natural Selection 2 server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The map the server starts on (ns2_summit, ns2_tram, ns2_veil, ns2_descent, ...). Later maps come from the map cycle in octail-config/MapCycle.json.",
+      "env_variable": "MAP",
+      "default_value": "ns2_summit",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (spectators not counted).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "20",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Spectators",
+      "description": "Spectator slots.",
+      "env_variable": "MAX_SPECTATORS",
+      "default_value": "4",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:0,20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Players must enter it to join; empty for an open server. Letters, digits and _.@%+!- only.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@%+!-]{0,40}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Workshop Mods",
+      "description": "Steam Workshop mod ids (hexadecimal, as in the mod's NS2 id), separated by spaces. The server downloads them itself at start into octail-config/Workshop.",
+      "env_variable": "MODS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:1024",
+        "regex:/^([0-9a-fA-F]{1,16}( [0-9a-fA-F]{1,16})*)?$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Web Admin",
+      "description": "1 turns on the web admin page on the Web Admin Port (user admin, the password below).",
+      "env_variable": "WEB_ADMIN",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Web Admin Password",
+      "description": "The web admin password (user admin), 8 to 40 letters, digits or _.@%+!-. Needed when Web Admin is 1.",
+      "env_variable": "WEB_ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([A-Za-z0-9_.@%+!-]{8,40})?$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Web Admin Port",
+      "description": "The web admin port (TCP). Set by Octail when the server is created (two after the game port).",
+      "env_variable": "WEB_ADMIN_PORT",
+      "default_value": "8080",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "The Steam app id of the dedicated server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "4940",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:4940",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1), or start the installed files (0). Players can only join a server of their own game version.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Natural Selection",
+    "features": {
+      "fixed_ports": {
+        "Steam query": "primary+1"
+      },
+      "port_vars": {
+        "WEB_ADMIN_PORT": "primary+2"
+      },
+      "player_query": {
+        "type": "a2s",
+        "port_offset": 1
+      },
+      "players": {
+        "list": "a2s"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 30
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 3072,
+        "disk_mb": 12288
+      }
+    }
+  }
+}

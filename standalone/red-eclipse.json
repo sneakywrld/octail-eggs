@@ -1,0 +1,129 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official Red Eclipse 2.0.0 Linux release from GitHub, checks it against a SHA-256 recorded in the script (the project publishes none), unpacks only the 64-bit dedicated server, the Steam API library it links, config/, the maps and the example servinit.cfg (a reinstall keeps servinit.cfg and added files), writes a minimal servinit.cfg once (with the built-in HTTP server off) and edits it with the file parser before every start (description, slots, message of the day, join password, admin password), passes the port and the public listing on the command line, reserves the server-list query port (the main port + 1), runs on octail-yolks' Debian image and adds the Ctrl+C stop (SIGTERM waits for the server to empty), the log-only console (the server reads no input), the UDP port start check, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/red-eclipse.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Red Eclipse 2",
+  "author": "eggs@octail.net",
+  "uuid": "93501824-fb07-412d-804b-7ffd11de1013",
+  "description": "Red Eclipse 2 is a free, open-source arena shooter on the Tesseract (Cube 2) engine: parkour movement, impulse dashes and wall runs, with deathmatch, capture the flag, defend and control, bomber ball and speedrun modes.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./bin/amd64/redeclipse_server_linux ] || { echo \"Red Eclipse is not installed: reinstall the server.\"; exit 1; }; export LD_LIBRARY_PATH=\"$(pwd)/bin/amd64\"; exec ./bin/amd64/redeclipse_server_linux -h. -g -sp{{SERVER_PORT}} -ss$((1 + {{PUBLIC_LIST}}))",
+  "config": {
+    "files": "{\n    \"servinit.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"sv_serverdesc \": \"sv_serverdesc \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"sv_serverclients \": \"sv_serverclients {{server.environment.MAX_PLAYERS}}\",\n            \"sv_servermotd \": \"sv_servermotd \\\"{{server.environment.MOTD}}\\\"\",\n            \"serverpass \": \"serverpass \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"adminpass \": \"adminpass \\\"{{server.environment.ADMIN_PASSWORD}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Dedicated server started, waiting for clients\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Red Eclipse 2 installation script (Octail): the official 2.0.0 Linux release from GitHub, checked against the\n# SHA-256 recorded here, with only what the dedicated server needs unpacked: the 64-bit server, the Steam API\n# library it links, config/, the maps and the example servinit.cfg (the client and its 2 GB of data are left\n# out). Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## Red Eclipse 2.0.0 \"Jupiter Edition\", the current release (2019). redeclipse.net and GitHub publish no checksum\n## for it, so Octail recorded the archive's SHA-256 (2026-10-13). A new release needs it updated here.\nVERSION=2.0.0\nFILE=redeclipse_2.0.0_nix.tar.bz2\nSHA256=b15c14214e4b86c232828b39d3531fa9217b41bc695892f10166aef746387190\n\napt-get update -qq\napt-get install -y -qq curl bzip2 tar ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs Red Eclipse's Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\ncd /mnt/server\n## about 950 MB: downloaded into the server folder (the installer's /tmp may be small), removed afterwards\nDL=/mnt/server/.redeclipse-download.tar.bz2\nURL=\"https://github.com/redeclipse/base/releases/download/v${VERSION}/${FILE}\"\necho \"Downloading ${URL}\"\nif ! curl -fSL --connect-timeout 30 --max-time 3600 --retry 3 -o \"$DL\" \"$URL\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\nif ! echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match Red Eclipse ${VERSION}'s checksum.\"\n    exit 1\nfi\n\n## the server's own files only: servinit.cfg, logs, demos and anything else you added stay\nrm -rf /mnt/server/.redeclipse-unpack\nmkdir -p /mnt/server/.redeclipse-unpack\nR=\"redeclipse-${VERSION}\"\ntar -xjf \"$DL\" -C /mnt/server/.redeclipse-unpack \"$R/bin/amd64/redeclipse_server_linux\" \\\n    \"$R/bin/amd64/libsteam_api.so\" \"$R/config\" \"$R/data/maps\" \"$R/doc/examples/servinit.cfg\" \"$R/version.txt\"\nrm -f \"$DL\"\nU=\"/mnt/server/.redeclipse-unpack/$R\"\nif [ ! -f \"$U/bin/amd64/redeclipse_server_linux\" ] || [ ! -d \"$U/config\" ]; then\n    rm -rf /mnt/server/.redeclipse-unpack\n    echo \"Installation failed: the dedicated server is missing from ${FILE}.\"\n    exit 1\nfi\nrm -rf bin config\nmkdir -p data/maps\nmv \"$U/bin\" \"$U/config\" .\ncp -f \"$U\"/data/maps/* data/maps/\nmv -f \"$U/doc/examples/servinit.cfg\" servinit.example.cfg\nmv -f \"$U/version.txt\" .\nchmod +x bin/amd64/redeclipse_server_linux\nrm -rf /mnt/server/.redeclipse-unpack\n\n## a minimal servinit.cfg, only when there is none; Octail sets the lines below before every start, and\n## servinit.example.cfg is the release's example with every setting explained\nif [ ! -f servinit.cfg ]; then\n    cat > servinit.cfg <<'EOF'\n// Red Eclipse server settings. Octail sets the lines below before every start (Startup tab); add your own\n// settings under them. Every setting explained: servinit.example.cfg next to this file.\nsv_serverdesc \"Red Eclipse Server\"\nsv_serverclients 16\nsv_servermotd \"\"\nserverpass \"\"\nadminpass \"\"\n// the built-in HTTP server (a fixed port) stays off\nhttpserver 0\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Red Eclipse ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The description in the server browser (up to 64 characters, no double quotes, backslashes or carets).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Red Eclipse Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (2-32).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 lists the server on the Red Eclipse master server (players need the main port and the one after it); 0 keeps it private (players join by address).",
+      "env_variable": "PUBLIC_LIST",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown when players connect (no double quotes, backslashes or carets).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\^\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join. No double quotes, backslashes or carets.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin Password",
+      "description": "Optional: in the game, /setpriv with this password gives you administrator rights (8-64 characters, no spaces, quotes, backslashes, semicolons or carets). Hidden once saved. Empty = no admin password.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\;^]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "red-eclipse",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "Red Eclipse",
+    "features": {
+      "no_console_input": true,
+      "fixed_ports": {
+        "server list query": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 3600
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 2048
+      }
+    },
+    "variables": {
+      "ADMIN_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

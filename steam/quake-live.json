@@ -1,0 +1,215 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' quake_live egg and LinuxGSM's qlserver settings were read as a reference only). App 349090 from anonymous SteamCMD, the Linux build started with its own run_server_x64.sh (which sets the library path). The install writes baseq3/server_octail.cfg once (a reinstall or game update keeps it), and the file parser sets the name, slots, join password, tags, the start map and factory (serverstartup) and the ZeroMQ remote console before every start; the port and fs_homepath (the server folder) are on the command line. ZeroMQ RCON is off by default, on its own automatic TCP port (main + 1), and the start refuses to turn it on without a password; Octail doesn't speak ZeroMQ, so the console box (standard input) and quit are used. The Steam query (A2S) answers on the game port and gives the player list. Start lines from the game or the game port (UDP) bound. SteamCMD is retried up to 3 times (its first run on a fresh install often fails with \"Missing configuration\"), its download times out and retries, and the install fails when the server is missing.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/quake-live.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Quake Live",
+  "author": "eggs@octail.net",
+  "uuid": "87924fc5-7990-4c4c-9714-4b0ed768334d",
+  "description": "Quake Live is id Software's free-to-play-turned-paid successor of Quake III Arena: duel, free for all, clan arena, capture the flag, freeze tag and more, with Steam Workshop maps.",
+  "features": null,
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./qzeroded.x64 ] || { echo \"Quake Live is not installed: reinstall the server.\"; exit 1; }; if [ \"${RCON_ENABLED}\" = 1 ] && [ -z \"${RCON_PASSWORD}\" ]; then echo \"Set an RCON Password on the Startup tab, or set RCON to 0.\"; exit 1; fi; exec ./run_server_x64.sh +set net_port {{SERVER_PORT}} +set fs_homepath \"$(pwd)\" +exec server_octail.cfg",
+  "config": {
+    "files": "{\n    \"baseq3/server_octail.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"set sv_hostname \": \"set sv_hostname \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"set sv_maxClients \": \"set sv_maxClients {{server.environment.MAX_PLAYERS}}\",\n            \"set g_password \": \"set g_password \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"set sv_tags \": \"set sv_tags \\\"{{server.environment.TAGS}}\\\"\",\n            \"set serverstartup \": \"set serverstartup \\\"map {{server.environment.MAP}} {{server.environment.FACTORY}}\\\"\",\n            \"set zmq_rcon_enable \": \"set zmq_rcon_enable {{server.environment.RCON_ENABLED}}\",\n            \"set zmq_rcon_port \": \"set zmq_rcon_port {{server.environment.RCON_PORT}}\",\n            \"set zmq_rcon_password \": \"set zmq_rcon_password \\\"{{server.environment.RCON_PASSWORD}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"zmq stats and rcon passwords updated\",\n        \"------- Game Initialization -------\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Quake Live dedicated server (Octail's own install script; pelican-eggs' quake_live egg and LinuxGSM's qlserver were\n# read as a reference only). App 349090, the Linux build, anonymous SteamCMD. The install writes a minimal\n# baseq3/server_octail.cfg once (Octail sets its lines before every start) and keeps the access, map pool and Workshop\n# lists you edit. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -uo pipefail\n\n## anonymous login: the Quake Live server needs no Steam account\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd /mnt/server/steamapps # steamapps: SteamCMD's disk write error when it is missing\nif ! curl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz \\\n    https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz; then\n    echo \"Installation failed: SteamCMD couldn't be downloaded.\"\n    exit 1\nfi\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise, even running as root; the files are given to the server's user after the install.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nBETA=()\n[ -z \"${SRCDS_BETAID:-}\" ] || BETA=(-beta \"${SRCDS_BETAID}\")\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} +app_update \"${SRCDS_APPID}\" \"${BETA[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries (the server's Steam API loads steamclient.so from ~/.steam/sdk64)\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/qzeroded.x64\" ]] || [[ ! -f \"/mnt/server/run_server_x64.sh\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Quake Live dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/qzeroded.x64 /mnt/server/run_server_x64.sh\n\n## Octail: the server runs baseq3/server_octail.cfg, written once (a reinstall or game update keeps it). Octail sets\n## the lines below before every start; the port is on the command line, so it isn't in this file.\ncd /mnt/server || exit 1\nmkdir -p baseq3\nif [ ! -f baseq3/server_octail.cfg ]; then\n    cat > baseq3/server_octail.cfg <<'EOF'\n// Quake Live server settings. Octail sets the lines below before every start (Startup tab); add your own\n// settings under them. Gameplay settings belong in a factory (baseq3/scripts/*.factories), not here.\nset sv_hostname \"Quake Live Server\"\nset sv_maxClients 16\nset g_password \"\"\nset sv_tags \"\"\nset serverstartup \"map campgrounds ffa\"\nset zmq_rcon_enable 0\nset zmq_rcon_port 28960\nset zmq_rcon_password \"\"\nset sv_mapPoolFile \"mappool.txt\"\nset sv_serverType 2\nset net_strict 1\nset g_allowVote 1\nset g_inactivity 0\nEOF\nfi\n## the lists you edit: admins and bans (access.txt), Workshop items the server downloads at start (workshop.txt)\n[ -f baseq3/access.txt ] || printf '%s\\n' '# SteamID64|admin, mod or ban, one per line, such as 76561198000000000|admin' > baseq3/access.txt\n[ -f baseq3/workshop.txt ] || printf '%s\\n' '# Steam Workshop item ids the server downloads at start, one per line' > baseq3/workshop.txt\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no \" or \\; ^1-^7 colour codes work).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Quake Live Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (spectators included).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Start Map",
+      "description": "The map loaded at start, such as campgrounds, bloodrun, toxicity, aerowalk or a Workshop map name.",
+      "env_variable": "MAP",
+      "default_value": "campgrounds",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[a-z0-9_]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Factory",
+      "description": "The game type (factory) of the start map: ffa, duel, tdm, ca (clan arena), ctf, ft (freeze tag), race, ad (attack and defend), dom (domination), 1f (one flag), har (harvester) or rr (red rover), or a custom factory from baseq3/scripts/.",
+      "env_variable": "FACTORY",
+      "default_value": "ffa",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[a-z0-9_]{1,32}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. No \" or \\.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:64",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Tags",
+      "description": "Optional: tags shown in the server browser, separated by commas, such as \"classic, eu\". No \" or \\.",
+      "env_variable": "TAGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:64",
+        "regex:/^[^\"\\\\\\r\\n]*$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON",
+      "description": "1 turns on the ZeroMQ remote console on the RCON Port (needs an RCON Password); 0 keeps it off.",
+      "env_variable": "RCON_ENABLED",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "The ZeroMQ remote console password (8-64 characters, no spaces, quotes, backslashes, semicolons or carets). Hidden once saved.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\\s\"\\'\\\\;^]{8,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Port",
+      "description": "The ZeroMQ remote console port (TCP). Set by Octail when the server is created (one after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "28960",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "The Steam app id of the dedicated server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "349090",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:349090",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1), or start the installed files (0). Players can only join a server of their own game version.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "quake-live",
+    "idtech3",
+    "steamcmd"
+  ],
+  "x_octail": {
+    "category": "Quake",
+    "features": {
+      "broadcast_command": "say {message}",
+      "port_vars": {
+        "RCON_PORT": "primary+1"
+      },
+      "player_query": "a2s",
+      "players": {
+        "list": "a2s"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 6144
+      }
+    },
+    "variables": {
+      "RCON_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

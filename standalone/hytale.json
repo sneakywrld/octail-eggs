@@ -1,0 +1,134 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail: Hytale's official dedicated server (Hypixel Studios, early access since 2026-01-13; Server Manual and Server Provider Authentication Guide on support.hytale.com). The game files come with a Hytale licence (EULA §3.3: no redistribution), so the install only places the bootstrap server, HytaleServer.jar from Hytale's Maven repository (maven.hytale.com, release or pre-release patchline, latest or a version), checked against the SHA-1 published next to it. The first start runs it with --bootstrap: the owner signs in with /auth login device (their own Hytale account; 500 servers per licence) and /update download fetches Assets.zip, start.sh and Server/ with the login carried over, then the startup loop starts the real server from Server/ (Hytale's launcher layout, so /update works). Each start applies a staged update like Hytale's start.sh, and exit code 8 (update ready) starts it again. Java 25 (Hytale needs it), QUIC over UDP on the main port (--bind), the AOT cache when it's there, optional built-in backups. Nothing is accepted for the owner: signing in is their own step under Hytale's EULA and Server Operator Policies. The login files (auth.enc, auth.key) are hidden from the file manager.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/hytale.json"
+  },
+  "uuid": "66770a06-96eb-45bd-9d0a-fc734013fe3d",
+  "name": "Hytale",
+  "author": "octail@meowgafactory.com",
+  "description": "Hytale is a block-based sandbox RPG from Hypixel Studios: explore, build and fight in an adventure world, with mods and minigames. Runs Hypixel's official dedicated server; the owner signs it in with their own Hytale account on the first start.",
+  "tags": [
+    "hytale",
+    "java"
+  ],
+  "features": [],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25"
+  },
+  "file_denylist": [
+    "auth.enc",
+    "auth.key",
+    "Server/auth.enc",
+    "Server/auth.key"
+  ],
+  "startup_commands": {
+    "Default": "while :; do if [ -f Server/HytaleServer.jar ] && [ -f Assets.zip ]; then if [ -f updater/staging/Server/HytaleServer.jar ]; then echo '[Octail] Applying the staged Hytale update'; cp -f updater/staging/Server/HytaleServer.jar Server/; if [ -f updater/staging/Server/HytaleServer.aot ]; then cp -f updater/staging/Server/HytaleServer.aot Server/; fi; if [ -d updater/staging/Server/Licenses ]; then rm -rf Server/Licenses; cp -r updater/staging/Server/Licenses Server/; fi; if [ -f updater/staging/Assets.zip ]; then cp -f updater/staging/Assets.zip ./; fi; if [ -f updater/staging/start.sh ]; then cp -f updater/staging/start.sh ./; fi; rm -rf updater/staging; fi; cd Server; aot=; if [ -f HytaleServer.aot ]; then aot=-XX:AOTCache=HytaleServer.aot; fi; backup=; if [ \"{{BACKUP_FREQUENCY}}\" -gt 0 ] 2>/dev/null; then backup=\"--backup --backup-dir backups --backup-frequency {{BACKUP_FREQUENCY}} --backup-max-count {{BACKUP_MAX_COUNT}}\"; fi; java -Xms128M -XX:MaxRAMPercentage=85.0 $aot -jar HytaleServer.jar --assets ../Assets.zip --bind 0.0.0.0:{{SERVER_PORT}} $backup {{EXTRA_ARGS}}; code=$?; cd ..; if [ $code -eq 8 ]; then echo '[Octail] Restarting Hytale to apply the update'; continue; fi; exit $code; elif [ -f HytaleServer.jar ]; then echo '[Octail] First start: type /auth login device, sign in with a Hytale account that owns the game, then type /update download. The server downloads its files (about 3.5 GB) and starts by itself.'; java -Xms128M -XX:MaxRAMPercentage=85.0 -jar HytaleServer.jar --bootstrap; code=$?; if [ -f Server/HytaleServer.jar ] && [ -f Assets.zip ]; then continue; fi; exit $code; else echo 'Hytale is not installed (no HytaleServer.jar): reinstall the server (Settings, Reinstall).'; exit 1; fi; done"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": "Hytale Server Booted!"
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Hytale installation (Octail's own install script). Hypixel Studios publishes no anonymous download of the game\n# files: Assets.zip and the server payload come with a Hytale licence. So the install only places the bootstrap\n# server, HytaleServer.jar from Hytale's own Maven repository (maven.hytale.com, latest or a version of the release or\n# pre-release patchline), checked against the SHA-1 the repository publishes next to it. On the first start the\n# owner signs in with their Hytale account in the console (/auth login device) and the server downloads the rest\n# itself (/update download): Assets.zip, start.sh and the Server/ folder, with the login carried over.\n# A server that is already set up (Server/HytaleServer.jar and Assets.zip) is left alone on reinstall: it updates\n# itself (/update), and worlds, mods, config.json and the login stay.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 --retry-delay 5 \"$@\"; }\n\nPATCHLINE=\"${HYTALE_PATCHLINE:-release}\"\nVERSION=\"${HYTALE_VERSION:-latest}\"\ncase \"${PATCHLINE}\" in\n\trelease | pre-release) ;;\n\t*) fail \"the patchline (${PATCHLINE}) must be release or pre-release\" ;;\nesac\necho \"${VERSION}\" | grep -Eq '^(latest|[0-9A-Za-z][0-9A-Za-z._-]{0,63})$' ||\n\tfail \"the server version (${VERSION}) must be latest or a version such as 0.7.0\"\n\nmkdir -p /mnt/server\ncd /mnt/server\nif [ -f Server/HytaleServer.jar ] && [ -f Assets.zip ]; then\n\techo \"Hytale is already set up (Server/HytaleServer.jar and Assets.zip): nothing to download.\"\n\techo \"It updates itself: /update check and /update download in the console, then restart.\"\n\techo \"Worlds, mods, Server/config.json and the login are untouched.\"\n\texit 0\nfi\n\nREPO=\"https://maven.hytale.com/${PATCHLINE}/com/hypixel/hytale/Server\"\nif [ \"${VERSION}\" = latest ]; then\n\tMETA=$(get \"${REPO}/maven-metadata.xml\") || fail \"Hytale's Maven repository didn't list the ${PATCHLINE} versions\"\n\tVERSION=$(printf '%s\\n' \"${META}\" | sed -n 's:.*<release>\\([^<]*\\)</release>.*:\\1:p' | head -n 1)\n\techo \"${VERSION}\" | grep -Eq '^[0-9A-Za-z][0-9A-Za-z._-]{0,63}$' ||\n\t\tfail \"Hytale's Maven repository names no ${PATCHLINE} release\"\nfi\nSHA1=$(get \"${REPO}/${VERSION}/Server-${VERSION}.jar.sha1\" | awk '{print tolower($1); exit}') ||\n\tfail \"Hytale server ${VERSION} isn't on the ${PATCHLINE} patchline (the repository keeps the last five versions)\"\necho \"${SHA1}\" | grep -Eq '^[0-9a-f]{40}$' || fail \"Hytale's Maven repository lists no SHA-1 for server ${VERSION}\"\n\n# Downloads are staged on the server disk: the install container's /tmp is a small tmpfs.\nmkdir -p /mnt/server/.octail-install\ntrap 'rm -rf /mnt/server/.octail-install' EXIT\necho \"Downloading the Hytale server ${VERSION} (${PATCHLINE}) from ${REPO}\"\ncurl -fsSL --connect-timeout 30 --max-time 1800 --retry 3 --retry-delay 5 --retry-all-errors \\\n\t-o .octail-install/HytaleServer.jar \"${REPO}/${VERSION}/Server-${VERSION}.jar\" ||\n\tfail \"the download of the Hytale server ${VERSION} failed\"\nif ! echo \"${SHA1}  .octail-install/HytaleServer.jar\" | sha1sum -c --quiet -; then\n\tfail \"HytaleServer.jar ${VERSION} doesn't match its SHA-1 (${SHA1})\"\nfi\nmv -f .octail-install/HytaleServer.jar HytaleServer.jar\nif [ ! -f HytaleServer.jar ]; then\n\tfail \"HytaleServer.jar is missing\"\nfi\n\necho \"-----------------------------------------\"\necho \"Hytale server ${VERSION} installed (SHA-1 ${SHA1} checked).\"\necho \"Next: start the server, type /auth login device in the console, open the link it prints and sign in with a\"\necho \"Hytale account that owns the game, then type /update download. The server downloads its files (about 3.5 GB)\"\necho \"and starts by itself.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Patchline",
+      "description": "release, or pre-release for Hytale's test builds. Applied when the server is set up (a new server, or a reinstall before the first sign-in); afterwards switch with /update patchline in the console.",
+      "env_variable": "HYTALE_PATCHLINE",
+      "default_value": "release",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:release,pre-release"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server version",
+      "description": "latest, or one of the last five versions on the patchline, such as 0.7.0. Only picks the bootstrap server; the first /update download fetches the newest files anyway.",
+      "env_variable": "HYTALE_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64",
+        "regex:/^(latest|[0-9A-Za-z][0-9A-Za-z._-]{0,63})$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Backup interval",
+      "description": "Minutes between Hytale's own world backups (into Server/backups), 0 for none. Octail's backups work either way.",
+      "env_variable": "BACKUP_FREQUENCY",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:0,1440"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Backups kept",
+      "description": "How many of Hytale's own backups to keep when the backup interval is on.",
+      "env_variable": "BACKUP_MAX_COUNT",
+      "default_value": "5",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,100"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "Extra server options",
+      "description": "More options for HytaleServer.jar, such as --disable-sentry (no crash reports to Hypixel), or --ignore-broken-mods.",
+      "env_variable": "EXTRA_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:255"
+      ],
+      "sort": 5
+    }
+  ],
+  "x_octail": {
+    "category": "Hytale",
+    "features": {
+      "broadcast_command": "say {message}",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 12288
+      }
+    }
+  }
+}

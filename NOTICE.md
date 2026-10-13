@@ -32,11 +32,13 @@ Derived eggs:
 - `minecraft/bedrock.json`: https://raw.githubusercontent.com/pelican-eggs/minecraft/refs/heads/main/bedrock/bedrock/egg-vanilla-bedrock.json
 - `minecraft/fabric.json`: minecraft java/fabric/egg-fabric.yaml (pelican-eggs, MIT licence)
 - `minecraft/forge.json`: minecraft java/forge/egg-forge-minecraft.yaml (pelican-eggs, MIT licence)
+- `minecraft/mohist.json`
 - `minecraft/neoforge.json`: minecraft java/neoforge/egg-neo-forge.json (pelican-eggs, MIT licence)
 - `minecraft/paper.json`: https://raw.githubusercontent.com/pelican-eggs/minecraft/refs/heads/main/java/paper/egg-paper.yaml
 - `minecraft/quilt.json`
 - `minecraft/spigot.json`
 - `minecraft/velocity.json`: minecraft proxy/java/velocity/egg-velocity.json (pelican-eggs, MIT licence)
+- `source/black-mesa.json`
 - `source/counter-strike-2.json`: https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/counter_strike/counter_strike_2/egg-counter--strike2.yaml
 - `source/counter-strike-source.json`: games-steamcmd counter_strike/counter_strike_source/egg-counter--strike--source.yaml (pelican-eggs, MIT licence)
 - `source/day-of-defeat-source.json`: Octail's source-engine.json (games-steamcmd custom-source-engine/egg-custom-source-engine-game.yaml, MIT licence)
@@ -44,10 +46,14 @@ Derived eggs:
 - `source/fistful-of-frags.json`: games-steamcmd fof/egg-fof.json (pelican-eggs, MIT licence)
 - `source/garrysmod.json`: games-steamcmd gmod/egg-garrys-mod (pelican-eggs, MIT licence)
 - `source/generic.json`: games-steamcmd custom-source-engine/egg-custom-source-engine-game.yaml (pelican-eggs, MIT licence)
+- `source/half-life-2-deathmatch.json`
 - `source/insurgency.json`: games-steamcmd insurgency/egg-insurgency.yaml (pelican-eggs, MIT licence)
 - `source/left-4-dead-2.json`: games-steamcmd left4dead_2/egg-left4-dead2.json (pelican-eggs, MIT licence)
+- `source/left-4-dead.json`
 - `source/no-more-room-in-hell.json`: games-steamcmd nmrih/egg-nmrih.json (pelican-eggs, MIT licence)
+- `source/team-fortress-2-classified.json`
 - `source/team-fortress-2.json`: https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/team_fortress_2/egg-team-fortress2.yaml
+- `source/zombie-panic-source.json`
 - `goldsrc/counter-strike-16.json`: games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence)
 - `goldsrc/counter-strike-condition-zero.json`: games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence)
 - `goldsrc/day-of-defeat.json`: games-steamcmd hlds_server/vanilla/egg-custom-h-l-d-s-engine-game.json (pelican-eggs, MIT licence)
@@ -81,22 +87,31 @@ Derived eggs:
 - `steam/empyrion.json`: games-steamcmd empyrion/egg-pterodactyl-empyrion--galactic-survival.json (pelican-eggs, MIT licence)
 - `steam/enshrouded.json`: games-steamcmd enshrouded/egg-enshrouded.json (pelican-eggs, MIT licence)
 - `steam/euro-truck-simulator-2.json`: games-steamcmd truck-simulator/euro-truck-simulator2/egg-euro-truck-simulator2-dedicated-server.json (pelican-eggs, MIT licence)
+- `steam/ground-branch.json`: games-steamcmd ground_branch/egg-ground-branch.json (pelican-eggs, MIT licence)
 - `steam/holdfast.json`: games-steamcmd holdfast/egg-holdfast-na-w.json (pelican-eggs, MIT licence)
 - `steam/hurtworld.json`: games-steamcmd hurtworld/egg-hurtworld.json (pelican-eggs, MIT licence)
 - `steam/icarus.json`: games-steamcmd icarus/egg-icarus.yaml (pelican-eggs, MIT licence)
 - `steam/insurgency-sandstorm.json`: games-steamcmd insurgency_sandstorm/egg-insurgency--sandstorm.json (pelican-eggs, MIT licence)
 - `steam/killing-floor-2.json`: games-steamcmd killing_floor_2/egg-killing-floor2.json (pelican-eggs, MIT licence)
+- `steam/killing-floor.json`
 - `steam/mordhau.json`: games-steamcmd mordhau/egg-mordhau.json (pelican-eggs, MIT licence)
+- `steam/myth-of-empires.json`: games-steamcmd myth_of_empires/egg-myth-of-empires.json (pelican-eggs, MIT licence)
+- `steam/natural-selection-2.json`
 - `steam/necesse.json`: games-steamcmd necesse/egg-necesse.json (pelican-eggs, MIT licence)
 - `steam/night-of-the-dead.json`: games-steamcmd night_of_the_dead/egg-pterodactyl-night-of-the-dead.json (pelican-eggs, MIT licence)
 - `steam/palworld.json`: games-steamcmd palworld/egg-palworld.yaml (pelican-eggs, MIT licence)
 - `steam/pavlov-vr.json`: games-steamcmd pavlov_vr/egg-pavlov-v-r.json (pelican-eggs, MIT licence)
+- `steam/pixark.json`: games-steamcmd pixark/egg-pix-a-r-k.json (pelican-eggs, MIT licence)
 - `steam/project-zomboid.json`: games-steamcmd project_zomboid/egg-project-zomboid.json (pelican-eggs, MIT licence)
+- `steam/quake-live.json`
+- `steam/rising-world.json`: games-steamcmd rising_world/unity/egg-rising-world-unity.json (pelican-eggs, MIT licence)
+- `steam/risk-of-rain-2.json`: games-steamcmd risk_of_rain_2/egg-risk-of-rain2.json (pelican-eggs, MIT licence)
 - `steam/satisfactory.json`: games-steamcmd satisfactory/egg-satisfactory.json (pelican-eggs, MIT licence)
 - `steam/scp-secret-laboratory.json`: games-steamcmd scpsl/dedicated/egg-s-c-p--s-l.json (pelican-eggs, MIT licence)
 - `steam/sons-of-the-forest.json`: games-steamcmd sonsoftheforest/egg-sons-of-the-forest.json (pelican-eggs, MIT licence)
 - `steam/soulmask.json`: games-steamcmd soulmask/egg-soulmask.json (pelican-eggs, MIT licence)
 - `steam/space-engineers.json`: games-steamcmd space_engineers/default/egg-space-engineers.json (pelican-eggs, MIT licence)
+- `steam/squad-44.json`
 - `steam/squad.json`: games-steamcmd squad/egg-squad.json (pelican-eggs, MIT licence)
 - `steam/starbound.json`
 - `steam/stationeers.json`: games-steamcmd stationeers/stationeers_vanilla/egg-stationeers.json (pelican-eggs, MIT licence)
@@ -106,11 +121,14 @@ Derived eggs:
 - `steam/the-isle.json`: games-steamcmd the_isle/evrima/egg-the-isle.json (pelican-eggs, MIT licence)
 - `steam/unturned.json`: games-steamcmd unturned/egg-unturned.json (pelican-eggs, MIT licence)
 - `steam/v-rising.json`: https://raw.githubusercontent.com/pelican-eggs/games-steamcmd/refs/heads/main/v_rising/v_rising_bepinex/egg-v-rising-bep-in-ex.json
+- `steam/wurm-unlimited.json`: games-steamcmd wurm_unlimited/egg-wurm-unlimited.json (pelican-eggs, MIT licence)
 - `steamcmd/generic.json`
 - `standalone/ddnet.json`: games-standalone ddracenetwork/egg-d-d-race-network.json (pelican-eggs, MIT licence)
 - `standalone/factorio.json`: https://raw.githubusercontent.com/pelican-eggs/games-standalone/refs/heads/main/factorio/factorio/egg-factorio.yaml
 - `standalone/luanti.json`
 - `standalone/mindustry.json`: games-standalone mindustry/egg-mindustry.json (pelican-eggs, MIT licence)
+- `standalone/openarena.json`
 - `standalone/openttd.json`: games-standalone openttd/egg-open-t-t-d-server.json (pelican-eggs, MIT licence)
+- `standalone/urban-terror.json`
 - `standalone/vintage-story.json`: https://raw.githubusercontent.com/pelican-eggs/games-standalone/refs/heads/main/vintage_story/egg-vintage-story.json
 - `standalone/xonotic.json`: games-standalone xonotic/egg-xonotic.json (pelican-eggs, MIT licence)

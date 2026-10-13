@@ -1,0 +1,206 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd ground_branch/egg-ground-branch.json (pelican-eggs, MIT licence) by Red-Thirten. Octail keeps the Windows server under Wine (there is no Linux build; Wine Staging first, as upstream, plain Wine as the second image), the start line with MultiHome, Port, QueryPort and -log and the log follow, and the Server.ini written once before the first start, and adds: the server password and message of the day there too (with the name and player limit), every key Octail sets gets a line when the file has none, the query port as an automatic port (port_vars; upstream had no default), Ctrl+C handed to the server by a trap and waited for, the ground-branch tag, the no_console_input flag, the Steam query (A2S) for player counts, install sandbox defaults and resource hints, port readiness (x_octail.features.ready) besides the start line, the anonymous login only, curl with timeouts and retries, the Windows Steam client libraries (app 1007), and the install fails when SteamCMD didn't download the server. The Workshop mod path edit (DefaultModding.ini) is left out: Octail has no Ground Branch mod tool. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/ground-branch.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Ground Branch",
+  "author": "eggs@octail.net",
+  "uuid": "401b1128-04e8-450c-9ce9-7f2fc0887ffe",
+  "description": "A tactical first-person shooter from one of the makers of the original Rainbow Six and Ghost Recon: co-op against AI or player against player. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "ground-branch",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine Staging": "ghcr.io/sneakywrld/octail-yolks:wine_staging",
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "wine ./GroundBranch/Binaries/Win64/GroundBranchServer-Win64-Shipping.exe MultiHome=0.0.0.0 Port={{SERVER_PORT}} QueryPort={{QUERY_PORT}} -log & GB_PID=$!; trap \"kill -INT ${GB_PID} 2>/dev/null; wait ${GB_PID}\" INT TERM; tail -c0 -F /home/container/GroundBranch/Saved/Logs/GroundBranch.log --pid=${GB_PID} 2>/dev/null & wait ${GB_PID}"
+  },
+  "config": {
+    "files": {
+      "GroundBranch/ServerConfig/Server.ini": {
+        "parser": "file",
+        "find": {
+          "ServerName=": "ServerName={{server.environment.SERVER_NAME}}",
+          "ServerMOTD=": "ServerMOTD=\"{{server.environment.SERVER_MOTD}}\"",
+          "ServerPassword=": "ServerPassword={{server.environment.SERVER_PASSWORD}}",
+          "MaxPlayers=": "MaxPlayers={{server.environment.MAX_PLAYERS}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Bringing up level for play took"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd (app 1007: the Windows Steam client libraries the server loads under Wine)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update 1007 +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/GroundBranch/Binaries/Win64/GroundBranchServer-Win64-Shipping.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Ground Branch dedicated server; try reinstalling.\"\n    exit 1\nfi\nmkdir -p /mnt/server/GroundBranch/Saved/Logs\n\n## Octail: the server makes its ServerConfig files at the first start; Server.ini is written here first (an\n## existing one is kept) so the Startup tab's settings apply from the first start. Every key Octail sets before\n## each start (\"Key=value\", the file parser matches \"Key=\") gets a line of its own when the file has none.\nCFG_DIR=/mnt/server/GroundBranch/ServerConfig\nCFG=\"${CFG_DIR}/Server.ini\"\nmkdir -p \"${CFG_DIR}\"\nif [[ ! -f \"$CFG\" ]]; then\n    cat > \"$CFG\" <<'EOF'\n[/Script/RBZooKeeper.ZKServer]\n; Ground Branch dedicated server settings, written by the Octail install.\n; The Startup tab sets the name, message of the day, password and player limit before every start.\n; Name of the server (64 characters max)\nServerName=Octail Ground Branch Server\n\n; The message of the day (512 characters max)\nServerMOTD=\"Welcome!\"\n\n; Set to a jpg image to act as a server banner in-game where possible (788 x 386).\nServerWebBanner=\"\"\n\n; Password required to join the server. Empty = none.\nServerPassword=\n\n; Password required to join the server as a permanent spectator.\n;SpectatorOnlyPassword=\n\n; Maximum number of players allowed on this server.\nMaxPlayers=16\nMaxSpectators=0\n\n; Match types: Continuous, BestOf, FirstTo, Play, PlayUntilWin, TimeLimit.\n; Round limits = number of rounds, except Time Limit match type (minutes).\nPVEMatchType=Continuous\nPVERoundLimit=2\nPVPMatchType=Continuous\nPVPRoundLimit=3\nPVPFFAMatchType=Continuous\nPVPFFARoundLimit=1\nGameRules=((\"AllowCheats\", False),(\"AllowDeadChat\", True),(\"AllowUnrestrictedRadio\", False),(\"AllowUnrestrictedVoice\", False),(\"SpectateEnemies\", True),(\"SpectateForceFirstPerson\", False),(\"SpectateFreeCam\", True),(\"UseTeamRestrictions\", False))\nEOF\nfi\nsed -i 's/\\r$//' \"$CFG\"\nfor key in ServerName ServerMOTD ServerPassword MaxPlayers; do\n    grep -q \"^${key}=\" \"$CFG\" || echo \"${key}=\" >> \"$CFG\"\ndone\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server list (64 characters at most, no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Ground Branch Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\\"\\\\\\r\\n]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Message of the Day",
+      "description": "Optional: shown with the in-game 'admin motd' command; <br> starts a new line (no double quotes or backslashes).",
+      "env_variable": "SERVER_MOTD",
+      "default_value": "Welcome!",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\\\"\\\\\\r\\n]*$/",
+        "max:256"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (letters, digits, - and _).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Max Players",
+      "description": "How many players may join at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,64"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Query Port",
+      "description": "Steam query port (UDP): the server list, and the port players connect to from it. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27015",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Validate Files",
+      "description": "Check every server file at the next update (1 = on, 0 = off); slow, only to repair a broken install.",
+      "env_variable": "VALIDATE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "476400",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:476400"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Ground Branch",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

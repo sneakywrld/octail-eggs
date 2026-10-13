@@ -7,13 +7,13 @@ Back to [all eggs](../README.md#goldsrc).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Counter-Strike 1.6 | [counter-strike-16.json](counter-strike-16.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-counter-strike-16) | Players tab, sleep (udp), start detected by port |
-| Counter-Strike: Condition Zero | [counter-strike-condition-zero.json](counter-strike-condition-zero.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-counter-strike-condition-zero) | Players tab, sleep (udp), start detected by port |
-| Day of Defeat | [day-of-defeat.json](day-of-defeat.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-day-of-defeat) | Players tab, sleep (udp), start detected by port |
-| Deathmatch Classic | [deathmatch-classic.json](deathmatch-classic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-deathmatch-classic) | Players tab, sleep (udp), start detected by port |
-| Half-Life Deathmatch | [half-life-deathmatch.json](half-life-deathmatch.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-half-life-deathmatch) | Players tab, sleep (udp), start detected by port |
-| Sven Co-op | [sven-co-op.json](sven-co-op.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-sven-co-op) | Players tab, sleep (udp), start detected by port |
-| Team Fortress Classic | [team-fortress-classic.json](team-fortress-classic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#goldsrc-team-fortress-classic) | Players tab, sleep (udp), start detected by port |
+| Counter-Strike 1.6 | [counter-strike-16.json](counter-strike-16.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-counter-strike-16) | Players tab, sleep (udp), start detected by port |
+| Counter-Strike: Condition Zero | [counter-strike-condition-zero.json](counter-strike-condition-zero.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-counter-strike-condition-zero) | Players tab, sleep (udp), start detected by port |
+| Day of Defeat | [day-of-defeat.json](day-of-defeat.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-day-of-defeat) | Players tab, sleep (udp), start detected by port |
+| Deathmatch Classic | [deathmatch-classic.json](deathmatch-classic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-deathmatch-classic) | Players tab, sleep (udp), start detected by port |
+| Half-Life Deathmatch | [half-life-deathmatch.json](half-life-deathmatch.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-half-life-deathmatch) | Players tab, sleep (udp), start detected by port |
+| Sven Co-op | [sven-co-op.json](sven-co-op.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-sven-co-op) | Players tab, sleep (udp), start detected by port |
+| Team Fortress Classic | [team-fortress-classic.json](team-fortress-classic.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-12](../TESTED.md#goldsrc-team-fortress-classic) | Players tab, sleep (udp), start detected by port |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

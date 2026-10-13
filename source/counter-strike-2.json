@@ -149,7 +149,7 @@
       "name": "Server Name",
       "description": "Sets the server name listed in the steam server browser.",
       "env_variable": "SERVER_NAME",
-      "default_value": "A Pterodactyl hosted CS2 Server",
+      "default_value": "An Octail CS2 server",
       "user_viewable": true,
       "user_editable": true,
       "rules": [

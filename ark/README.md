@@ -8,7 +8,7 @@ Back to [all eggs](../README.md#ark).
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
 | ARK: Survival Ascended | [survival-ascended.json](survival-ascended.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | [✓ 2026-10-10](../TESTED.md#ark-survival-ascended) | Proton |
-| Ark: Survival Evolved | [survival-evolved.json](survival-evolved.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RAW_PORT +1, QUERY_PORT +2 | [—](../TESTED.md#ark-survival-evolved) | player count, Steam Workshop |
+| Ark: Survival Evolved | [survival-evolved.json](survival-evolved.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RAW_PORT +1, QUERY_PORT +2, RCON_PORT +3 | [—](../TESTED.md#ark-survival-evolved) | player count, Steam Workshop |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

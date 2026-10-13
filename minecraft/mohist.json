@@ -1,0 +1,116 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Purpur egg (pelican-eggs' MohistMC egg was only read for reference): Mohist's launcher jar from MohistMC's API with the SHA-256 the API lists checked, latest is the Minecraft version MohistMC builds most recently, a version or build that does not exist fails the install. A hybrid (Forge mods and Bukkit plugins): the Minecraft tools without the version changer or modpacks. The eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 21 to 8 images (Mohist's newest line, 1.20.1, runs on Java 17 and 21), Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/mohist.json"
+  },
+  "uuid": "6f0d2c1e-4b7a-4c39-9a51-2e8d5f3b7c64",
+  "name": "Mohist",
+  "author": "octail@meowgafactory.com",
+  "description": "Mohist is a hybrid Minecraft Java server: Forge with Bukkit on top, so it runs Forge mods and Bukkit/Spigot plugins on one server.",
+  "tags": [
+    "minecraft",
+    "mohist",
+    "hybrid"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} nogui"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Mohist installation (Octail): the server jar from MohistMC's API (api.mohistmc.com), its SHA-256 checked\n# against the file_sha256 the API lists for the build. A version or build that doesn't exist fails the install\n# instead of silently installing another one.\n#\n# Mohist is Forge with Bukkit (CraftBukkit/Spigot) on top: it runs Forge mods (mods/) and Bukkit plugins\n# (plugins/). The jar is Mohist's launcher: on the first start it downloads Forge's libraries and the Minecraft\n# server from MohistMC's mirrors, so the first start takes a few minutes.\n#\n# Server files: /mnt/server\nset -eu\n\nAPI=https://api.mohistmc.com/project/mohist\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nBUILD=\"${BUILD_NUMBER:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 120 \"$1\"; }\n\ncase \"${BUILD}\" in\nlatest) ;;\n'' | *[!0-9]*) fail \"the build number (${BUILD}) must be a number or latest\" ;;\nesac\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nLIST=$(get \"${API}/versions\") || fail \"can't reach MohistMC's API (${API}/versions)\"\nVERSIONS=$(echo \"${LIST}\" | jq -r '.[].name // empty')\n[ -n \"${VERSIONS}\" ] || fail \"MohistMC's API listed no Minecraft versions\"\n\nif [ -z \"${VERSION}\" ] || [ \"${VERSION}\" = \"latest\" ]; then\n\t# latest: the Minecraft version MohistMC built most recently (its maintained line, 1.20.1 in 2026),\n\t# not the highest number (1.20.2 and 1.21.x have old or no builds).\n\tDATES=\"\"\n\tfor v in ${VERSIONS}; do\n\t\tB=$(get \"${API}/${v}/builds\") || fail \"can't list the builds of ${v}\"\n\t\tDATE=$(echo \"${B}\" | jq -r 'map(.build_date // empty) | max // empty')\n\t\t[ -z \"${DATE}\" ] || DATES=\"${DATES}${DATE} ${v}\n\"\n\tdone\n\tVERSION=$(printf '%s' \"${DATES}\" | sort -r | head -n 1 | cut -d ' ' -f 2)\n\t[ -n \"${VERSION}\" ] || fail \"MohistMC has no builds for any Minecraft version\"\n\techo \"Latest: Mohist builds ${VERSION} most recently.\"\nfi\nFOUND=0\nfor v in ${VERSIONS}; do\n\tif [ \"${v}\" = \"${VERSION}\" ]; then FOUND=1; fi\ndone\n[ \"${FOUND}\" = 1 ] || fail \"Mohist has no Minecraft ${VERSION}. The versions are: $(echo ${VERSIONS})\"\n\nBUILDS=$(get \"${API}/${VERSION}/builds\") || fail \"can't list the builds of Mohist ${VERSION}\"\nif [ \"${BUILD}\" = \"latest\" ]; then\n\tBUILD=$(echo \"${BUILDS}\" | jq -r 'max_by(.id) | .id // empty')\n\t[ -n \"${BUILD}\" ] || fail \"Mohist has no builds for ${VERSION} (yet). Pick another Minecraft version.\"\nfi\nINFO=$(echo \"${BUILDS}\" | jq -c --argjson b \"${BUILD}\" '.[] | select(.id == $b)')\n[ -n \"${INFO}\" ] || fail \"Mohist has no build ${BUILD} for ${VERSION}\"\nSHA=$(echo \"${INFO}\" | jq -r '.file_sha256 // empty' | tr 'A-F' 'a-f')\necho \"${SHA}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"MohistMC's API gave no SHA-256 for build ${BUILD}\"\nFORGE=$(echo \"${INFO}\" | jq -r '.loader.forge_version // \"?\"')\n\necho \"Installing Mohist ${VERSION} build ${BUILD} (Forge ${FORGE}) as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 900 -o \"${JAR}.download\" \\\n\t\"${API}/${VERSION}/builds/${BUILD}/download\" || fail \"the download of Mohist ${VERSION} build ${BUILD} failed\"\nGOT=$(sha256sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-256 mismatch for Mohist ${VERSION} build ${BUILD} (expected ${SHA}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\nmkdir -p mods plugins\n\necho \"Mohist ${VERSION} build ${BUILD} installed (SHA-256 ${SHA} checked). Forge mods go in mods/, Bukkit plugins in plugins/.\"\necho \"The first start downloads Forge's libraries and the Minecraft server, which takes a few minutes.\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.20.1, or latest for the version MohistMC builds most recently (1.20.1 in 2026). A version Mohist has no build for fails the install.\n\nThe Startup image must fit it: Java 17 or 21 for 1.20.x, Java 17 for 1.18 and 1.19, Java 8 or 11 for 1.16.5, Java 8 for 1.12.2 and 1.7.10.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9]+\\.[0-9]+(\\.[0-9]+)?)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Build Number",
+      "description": "The Mohist build to install, or latest for the newest build of that Minecraft version.",
+      "env_variable": "BUILD_NUMBER",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file (Mohist's launcher).",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 3
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 15360
+      }
+    }
+  }
+}

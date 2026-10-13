@@ -40,7 +40,7 @@
       "name": "[SERVER] Server Name",
       "description": "The name in the server list (no double quotes or backslashes).",
       "env_variable": "SRV_NAME",
-      "default_value": "Pterodactyl hosted Server",
+      "default_value": "An Octail server",
       "user_viewable": true,
       "user_editable": true,
       "rules": [

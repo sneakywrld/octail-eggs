@@ -11,7 +11,9 @@
  * checks it is the same file (`cp shared/src/egg-format.js scripts/eggs/repo-files/tools/egg-format.mjs` after a change).
  *
  * Tentacle reads a few features itself (rcon, player_query, players, tty_size); their constants are repeated here and
- * the same test compares them with Tentacle's source.
+ * the same test compares them with Tentacle's source. A value the rules accept is one the panel and Tentacle use as
+ * written; a value they warn about is off (or falls back to its default), never guessed at: the feature readers below
+ * (rconFeature, sleepSetting, steamLogin, eulaVariable, …) are what the panel uses, and the test holds Tentacle to them.
  */
 
 /** The `meta.version` values Octail reads. */
@@ -38,6 +40,8 @@ export const ENV_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
 const str = (v) => (typeof v === 'string' ? v : '');
+/** A flag the importer reads as on (`true`, 1, "yes", "on", …). */
+const isOn = (v) => v === true || ['1', 'true', 'yes', 'on'].includes(String(v ?? '').toLowerCase());
 const isInt = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
 // What the importer reads as a flag (anything else counts as false).
 const isBoolish = (v) =>
@@ -374,8 +378,8 @@ export const RCON_TYPES = Object.freeze(['source', 'webrcon', 'satisfactory', 'm
 /** Tentacle's player queries (tentacle/src/query/status.js). */
 export const PLAYER_QUERY_TYPES = Object.freeze(['a2s', 'rcon_status']);
 /** The Players tab: presets, list sources and actions (tentacle/src/players/index.js). */
-export const PLAYERS_PRESETS = Object.freeze(['source', 'rust']);
-export const PLAYERS_LISTS = Object.freeze(['a2s', 'rcon_status', 'webrcon']);
+export const PLAYERS_PRESETS = Object.freeze(['source', 'rust', 'pocketmine']);
+export const PLAYERS_LISTS = Object.freeze(['a2s', 'rcon_status', 'webrcon', 'minecraft_query']);
 export const PLAYERS_ACTIONS = Object.freeze(['kick', 'ban', 'unban', 'message', 'broadcast']);
 const PLAYERS_PLACEHOLDERS = ['name', 'steamid', 'userid', 'reason', 'message'];
 /** Idle sleep modes (shared/src/sleep.js). */
@@ -394,6 +398,60 @@ export const BOOLEAN_FEATURES = Object.freeze([
 ]);
 
 /**
+ * The egg's `rcon` feature as `{ type, port_var, password_var }` (the variables null when not given), or null when RCON
+ * is off. `true` and an object without a `type` are `minecraft`: Minecraft's RCON is the Source protocol, and the
+ * `minecraft` type only adds the server.properties fallback for a missing port or password, so a Source game without
+ * a type still connects. Anything else (a string, an unknown type) is off rather than guessed: talking the wrong
+ * protocol to a WebRCON or Satisfactory server only fails. Tentacle's rconSettings() reads the feature the same way.
+ */
+export function rconFeature(features) {
+  const raw = features?.rcon;
+  if (raw === true) return { type: 'minecraft', port_var: null, password_var: null };
+  if (!isObj(raw)) return null;
+  const type = raw.type ?? 'minecraft';
+  if (!RCON_TYPES.includes(type)) return null;
+  const name = (v) => (typeof v === 'string' && v ? v : null);
+  return { type, port_var: name(raw.port_var), password_var: name(raw.password_var) };
+}
+
+/**
+ * The variables the RCON connection reads: its port and password (`RCON_PORT` / `RCON_PASS` by default). The panel
+ * keeps the password variable filled with a generated password (Satisfactory's token is kept elsewhere instead).
+ */
+export function rconVariables(features) {
+  const rcon = rconFeature(features);
+  if (!rcon) return { port: null, password: null };
+  if (rcon.type === 'satisfactory') return { port: rcon.port_var, password: null };
+  return { port: rcon.port_var ?? 'RCON_PORT', password: rcon.password_var ?? 'RCON_PASS' };
+}
+
+/**
+ * The egg's idle sleep setting: a mode of SLEEP_MODES, `auto` (`true`, or `{}` without a mode: the mode is guessed from
+ * the egg) or null (servers of the egg can't sleep). An unknown mode name is null, not a guess: a guessed TCP listener
+ * for a UDP game would never wake, and `"no"` or `"false"` must not turn sleep on.
+ */
+export function sleepSetting(features) {
+  const raw = features?.sleep;
+  if (raw === true) return 'auto';
+  if (typeof raw === 'string') return SLEEP_MODES.includes(raw) ? raw : null;
+  if (!isObj(raw)) return null;
+  if (raw.mode === undefined || raw.mode === null) return 'auto';
+  return SLEEP_MODES.includes(raw.mode) ? raw.mode : null;
+}
+
+/**
+ * The egg's `steam_login` flag as `{ required }`, or null when its servers don't use Steam logins: `true`, or an
+ * object whose `required` is true, false or left out. Any other value (`"yes"`, `"false"`, `{ "required": "yes" }`) is
+ * off, so a string can never turn on a feature that takes over the Steam variables.
+ */
+export function steamLogin(features) {
+  const raw = features?.steam_login;
+  if (raw === true) return { required: false };
+  if (!isObj(raw) || (raw.required !== undefined && typeof raw.required !== 'boolean')) return null;
+  return { required: raw.required === true };
+}
+
+/**
  * The egg's licence variable (`features.eula_variable: { env, accept }`): the variable that accepts the game's EULA or
  * licence and the value that accepts it. The panel sets it only while the `server_tools.auto_accept_eula` setting is on.
  * Null when the egg has none or it is malformed.
@@ -403,7 +461,23 @@ export function eulaVariable(features) {
   if (!isObj(f) || typeof f.env !== 'string' || typeof f.accept !== 'string') return null;
   if (!/^[A-Za-z_][A-Za-z0-9_]{0,190}$/.test(f.env) || !f.accept || f.accept.length > 64 || /[\r\n\0]/.test(f.accept))
     return null;
+  if (licenceClash(features, f.env)) return null;
   return { env: f.env, accept: f.accept };
+}
+
+/**
+ * The panel overwrites the licence variable's value while it accepts licences: never a port variable, the RCON port,
+ * the managed RCON password (also `RCON_PORT`/`RCON_PASS`, the defaults of `rcon: true`) or the Steam login, which
+ * would all become the accept value (a crafted egg could pin a known RCON password).
+ */
+function licenceClash(features, env) {
+  const rcon = rconVariables(features);
+  return (
+    (isObj(features?.port_vars) && Object.hasOwn(features.port_vars, env)) ||
+    env === rcon.port ||
+    env === rcon.password ||
+    ['STEAM_USER', 'STEAM_PASS', 'STEAM_AUTH'].includes(env)
+  );
 }
 
 /** Problems with a Players tab action template (a command or a list of up to 4); null/false turns the action off. */
@@ -442,10 +516,13 @@ export function featureProblems(f, envNames = new Set()) {
   }
   // Tentacle ignores a port readiness it can't use and waits for the done text alone.
   for (const w of readyPortSpec(f, envNames).invalid) p.push(`${w}; the start is detected from the console text only`);
-  if (f.rcon !== undefined && f.rcon !== false && f.rcon !== true) {
-    if (!isObj(f.rcon) || !RCON_TYPES.includes(f.rcon.type))
-      p.push(`features.rcon needs a type (${RCON_TYPES.join(', ')})`);
-    else
+  // An object without a type is `minecraft`, like `true` (see rconFeature).
+  if (f.rcon !== undefined && f.rcon !== false) {
+    if (!rconFeature(f))
+      p.push(
+        `features.rcon must be true or { type, port_var, password_var } (types ${RCON_TYPES.join(', ')}); RCON is off`,
+      );
+    else if (isObj(f.rcon))
       for (const k of ['port_var', 'password_var'])
         if (f.rcon[k] !== undefined && !hasVar(f.rcon[k]))
           p.push(`rcon.${k}: ${f.rcon[k]} is not a variable of the egg`);
@@ -477,10 +554,8 @@ export function featureProblems(f, envNames = new Set()) {
       }
     }
   }
-  if (f.sleep !== undefined && f.sleep !== false && f.sleep !== true) {
-    const mode = typeof f.sleep === 'string' ? f.sleep : isObj(f.sleep) ? f.sleep.mode : null;
-    if (!SLEEP_MODES.includes(mode)) p.push(`features.sleep mode must be one of ${SLEEP_MODES.join(', ')}`);
-  }
+  if (f.sleep !== undefined && f.sleep !== false && !sleepSetting(f))
+    p.push(`features.sleep must be true, a mode (${SLEEP_MODES.join(', ')}) or { mode }; servers can't sleep`);
   if (f.resources !== undefined) {
     if (!isObj(f.resources)) p.push('features.resources must be an object');
     else
@@ -494,12 +569,8 @@ export function featureProblems(f, envNames = new Set()) {
     p.push(
       `features.steam_workshop must be a known game (${Object.keys(WORKSHOP_GAMES).join(', ')}) or a usable { app_id, method, … }`,
     );
-  if (
-    f.steam_login !== undefined &&
-    typeof f.steam_login !== 'boolean' &&
-    !(isObj(f.steam_login) && (f.steam_login.required === undefined || typeof f.steam_login.required === 'boolean'))
-  )
-    p.push('features.steam_login must be true or { "required": true | false }');
+  if (f.steam_login !== undefined && f.steam_login !== false && !steamLogin(f))
+    p.push('features.steam_login must be true or { "required": true | false }; Steam logins are off');
   if (f.tty_size !== undefined) {
     if (!isObj(f.tty_size)) p.push('features.tty_size must be { rows, cols }');
     else
@@ -519,10 +590,32 @@ export function featureProblems(f, envNames = new Set()) {
     p.push('features.broadcast_command must be a command or false');
   if (f.eula_variable !== undefined) {
     const ev = eulaVariable(f);
-    if (!ev) p.push('features.eula_variable must be { env, accept } (a variable name and the value that accepts)');
+    const env = isObj(f.eula_variable) ? f.eula_variable.env : null;
+    if (!ev && typeof env === 'string' && licenceClash(f, env))
+      p.push(`eula_variable.env: ${env} is a port, RCON password or Steam login variable, not a licence switch`);
+    else if (!ev) p.push('features.eula_variable must be { env, accept } (a variable name and the value that accepts)');
     else if (!envNames.has(ev.env)) p.push(`eula_variable.env: ${ev.env} is not a variable of the egg`);
   }
   return p;
+}
+
+/**
+ * The variables (imported env names) an egg marks secret although they are `port_vars`: a port is no secret, and the
+ * panel writes those values itself (creation, transfers, rehomes), so they're always stored in clear. The importer
+ * drops the flag on them.
+ */
+export function secretPortVariables(raw, features = eggFeatures(raw)) {
+  if (!isObj(features?.port_vars)) return [];
+  const xVariables = isObj(raw?.x_octail?.variables) ? raw.x_octail.variables : {};
+  const out = [];
+  for (const v of Array.isArray(raw?.variables) ? raw.variables : []) {
+    const env = str(v?.env_variable).trim();
+    const name = importedEnvName(env);
+    if (!Object.hasOwn(features.port_vars, name)) continue;
+    const flags = Object.hasOwn(xVariables, env) && isObj(xVariables[env]) ? xVariables[env] : {};
+    if (isOn(v.secret) || isOn(flags.secret)) out.push(name);
+  }
+  return out;
 }
 
 /** The keys `x_octail` may have. */
@@ -554,7 +647,7 @@ function xOctailProblems(x, variableNames = new Set()) {
         }
         for (const [k, v] of Object.entries(flags)) {
           if (!VARIABLE_FLAGS.includes(k)) p.push(`x_octail.variables.${name} has an unknown key "${k}"`);
-          else if (typeof v !== 'boolean') p.push(`x_octail.variables.${name}.${k} must be true or false`);
+          else if (!isBoolish(v)) p.push(`x_octail.variables.${name}.${k} must be true or false`);
         }
       }
   }
@@ -662,6 +755,9 @@ export function eggFormatProblems(raw) {
 
   // Octail's additions.
   warnings.push(...xOctailProblems(raw.x_octail, documentNames));
-  warnings.push(...featureProblems(eggFeatures(raw), envNames));
+  const features = eggFeatures(raw);
+  warnings.push(...featureProblems(features, envNames));
+  for (const name of secretPortVariables(raw, features))
+    warnings.push(`variable ${name} is a port variable (port_vars), which can't be secret; the secret flag is ignored`);
   return { errors, warnings };
 }

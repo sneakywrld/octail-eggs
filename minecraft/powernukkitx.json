@@ -1,0 +1,123 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail: PowerNukkitX, Bedrock server software in Java (the Nukkit family). The install takes powernukkitx.jar from PowerNukkitX's GitHub releases (latest or a version; pre-releases refused), checked against the SHA-256 digest GitHub lists; the jar carries its libraries. Java 21 (class files of Java 21) and 25 images. Settings live in pnx.yml (written on the first start): the panel sets settings.port, settings.ip and network-settings.enableQuery at every start, and --port covers the first one. --skip-setup skips the setup wizard; PowerNukkitX's licence (LGPL-3.0) is never accepted by the egg: the console asks (y/n) on the first start, or the PowerNukkitX License variable passes --accept-license (features.eula_variable, set only with the host's auto_accept_eula). Tagged minecraft, bedrock and powernukkitx with the minecraft_bedrock flag: Bedrock ping, none of Bedrock Dedicated Server's tools, the Players tab with the pocketmine preset (GameSpy4 query, console commands). Known upstream bug (2026-10-13): every release from 2.0.0 to 3.0.5 starts its registries in parallel and can build the creative inventory before the potion registry, which crashes the start with a NullPointerException in ItemPotion.buildName (issue PowerNukkitX#3070, seen with 3.0.5 on node1). The fix (PR #3093, creative waits for the potion, entity and item runtime id registries) is merged on the beta branch only, not in any release, and the older releases speak older Bedrock protocols, so there is no known-good version to pin: PNX_VERSION stays latest so the first release with the fix is picked up on reinstall.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/powernukkitx.json"
+  },
+  "uuid": "e18be203-a1eb-4e5f-81a9-0f66eee5729f",
+  "name": "PowerNukkitX",
+  "author": "octail@meowgafactory.com",
+  "description": "PowerNukkitX is a server for Minecraft: Bedrock Edition written in Java, from the Nukkit family, with vanilla-like world generation, mob AI and commands, custom blocks and items, and Nukkit plugins.",
+  "tags": [
+    "minecraft",
+    "bedrock",
+    "powernukkitx",
+    "nukkit"
+  ],
+  "features": [
+    "java_version",
+    "minecraft_bedrock"
+  ],
+  "docker_images": {
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -f {{SERVER_JARFILE}} ]; then echo 'The PowerNukkitX jar is missing: reinstall the server (Settings, Reinstall).'; exit 1; fi; exec java -Xms128M -XX:MaxRAMPercentage=95.0 -Dfile.encoding=UTF-8 -Djansi.passthrough=true -Dterminal.ansi=true --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED -jar {{SERVER_JARFILE}} --skip-setup --language eng --port {{SERVER_PORT}} $( [ \"${PNX_LICENSE}\" = accept ] && printf '%s' --accept-license )"
+  },
+  "config": {
+    "files": {
+      "pnx.yml": {
+        "parser": "yaml",
+        "find": {
+          "settings.port": "{{server.allocations.default.port}}",
+          "settings.ip": "0.0.0.0",
+          "network-settings.enableQuery": "true"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# PowerNukkitX installation (Octail): powernukkitx.jar from PowerNukkitX's GitHub releases (latest or a version;\n# the nightly and snapshot pre-releases are not offered), checked against the SHA-256 digest GitHub lists for the\n# asset. The release jar carries its libraries, so nothing else is downloaded. Worlds, plugins, pnx.yml and the\n# player lists stay on reinstall.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --connect-timeout 30 --max-time 60 --retry 3 \"$1\"; }\n\nVERSION=\"${PNX_VERSION:-latest}\"\nJAR=\"${SERVER_JARFILE:-powernukkitx.jar}\"\necho \"${VERSION}\" | grep -Eq '^(latest|[0-9]+\\.[0-9]+\\.[0-9]+)$' ||\n\tfail \"the PowerNukkitX version (${VERSION}) must be a version such as 3.0.5 or latest\"\necho \"${JAR}\" | grep -Eq '^[A-Za-z0-9._-]+\\.jar$' || fail \"the jar file name (${JAR}) must be a plain name ending in .jar\"\n\nRELEASES=https://api.github.com/repos/PowerNukkitX/PowerNukkitX/releases\nif [ \"${VERSION}\" = latest ]; then\n\tRELEASE=$(get \"${RELEASES}/latest\") || fail \"GitHub didn't list the latest PowerNukkitX release\"\nelse\n\tRELEASE=$(get \"${RELEASES}/tags/${VERSION}\") || fail \"PowerNukkitX ${VERSION} isn't a release on GitHub\"\nfi\nTAG=$(echo \"${RELEASE}\" | jq -r '.tag_name // empty')\n[ -n \"${TAG}\" ] || fail \"GitHub's answer names no release\"\nif [ \"$(echo \"${RELEASE}\" | jq -r '.prerelease')\" = true ]; then\n\tfail \"${TAG} is a pre-release; pick a release version\"\nfi\nURL=$(echo \"${RELEASE}\" | jq -r '[.assets[] | select(.name == \"powernukkitx.jar\")][0].browser_download_url // empty')\nSUM=$(echo \"${RELEASE}\" | jq -r '[.assets[] | select(.name == \"powernukkitx.jar\")][0].digest // empty' |\n\tsed 's/^sha256://' | tr 'A-F' 'a-f')\n[ -n \"${URL}\" ] || fail \"release ${TAG} has no powernukkitx.jar\"\necho \"${SUM}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"GitHub lists no SHA-256 for powernukkitx.jar of ${TAG}\"\n\nmkdir -p /mnt/server\ncd /mnt/server\necho \"Installing PowerNukkitX ${TAG} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --connect-timeout 30 --max-time 1800 --retry 3 -o \"${JAR}.download\" \"${URL}\" ||\n\tfail \"the download of PowerNukkitX ${TAG} failed\"\nif ! echo \"${SUM}  ${JAR}.download\" | sha256sum -c --quiet -; then\n\trm -f \"${JAR}.download\"\n\tfail \"powernukkitx.jar of ${TAG} doesn't match its SHA-256 (${SUM})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\nmkdir -p plugins worlds\n\nif [ ! -f \"${JAR}\" ]; then\n\tfail \"${JAR} is missing\"\nfi\necho \"PowerNukkitX ${TAG} installed (SHA-256 ${SUM} checked). Put plugins (.jar) into plugins/.\"\necho \"PowerNukkitX writes pnx.yml on its first start, once its licence (LGPL-3.0) is accepted: answer y in the\"\necho \"console, or set PowerNukkitX License to accept on the Startup tab.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "PowerNukkitX Version",
+      "description": "The PowerNukkitX release to install, such as 3.0.5, or latest for the newest release. Applied on the next reinstall.",
+      "env_variable": "PNX_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+\\.[0-9]+\\.[0-9]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "PowerNukkitX License",
+      "description": "PowerNukkitX's licence, the GNU LGPL v3.0 (gnu.org/licenses/lgpl-3.0.html). Leave it empty and the console asks on the first start (answer y); type accept to accept it here instead.",
+      "env_variable": "PNX_LICENSE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "in:accept"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the PowerNukkitX jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "powernukkitx.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 3
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "eula_variable": {
+        "env": "PNX_LICENSE",
+        "accept": "accept"
+      },
+      "players": {
+        "preset": "pocketmine"
+      },
+      "broadcast_command": "say {message}",
+      "sleep": "minecraft_bedrock",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

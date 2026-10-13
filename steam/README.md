@@ -2,7 +2,7 @@
 
 # Steam games
 
-Other games installed with SteamCMD: 45 eggs.
+Other games installed with SteamCMD: 55 eggs.
 Back to [all eggs](../README.md#steam-games).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
@@ -16,9 +16,9 @@ Back to [all eggs](../README.md#steam-games).
 | Assetto Corsa | [assetto-corsa.json](assetto-corsa.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | HTTP_PORT +1 | [—](../TESTED.md#steam-assetto-corsa) | no console input, start detected by port |
 | Astroneer | [astroneer.json](astroneer.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | [✗ 2026-10-10](../TESTED.md#steam-astroneer) | Proton, no console input, start detected by port |
 | Avorion | [avorion.json](avorion.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, STEAM_QUERY_PORT +2, STEAM_MASTER_PORT +3 | [—](../TESTED.md#steam-avorion) | player count |
-| Barotrauma | [barotrauma.json](barotrauma.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#steam-barotrauma) | sleep (udp) |
+| Barotrauma | [barotrauma.json](barotrauma.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [✓ 2026-10-12](../TESTED.md#steam-barotrauma) | sleep (udp) |
 | Conan Exiles Enhanced | [conan-exiles.json](conan-exiles.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RAW_PORT +1, QUERY_PORT +2, RCON_PORT +3 | [—](../TESTED.md#steam-conan-exiles) | RCON (source), player count, no console input |
-| Core Keeper | [core-keeper.json](core-keeper.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#steam-core-keeper) | no console input |
+| Core Keeper | [core-keeper.json](core-keeper.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [✓ 2026-10-12](../TESTED.md#steam-core-keeper) | no console input |
 | Craftopia | [craftopia.json](craftopia.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [✗ 2026-10-10](../TESTED.md#steam-craftopia) | start detected by port |
 | DayZ | [dayz.json](dayz.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, RCON_PORT +3, Steam +2, BattlEye +4 | [—](../TESTED.md#steam-dayz) | Players tab, Steam Workshop, no console input |
 | Don't Starve Together | [dont-starve-together.json](dont-starve-together.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | CAVES_PORT +1 | [—](../TESTED.md#steam-dont-starve-together) | – |
@@ -26,23 +26,32 @@ Back to [all eggs](../README.md#steam-games).
 | Empyrion - Galactic Survival | [empyrion.json](empyrion.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | Steam query +1, game traffic (+2) +2, game traffic (+3) +3 | [—](../TESTED.md#steam-empyrion) | Wine, no console input, start detected by port |
 | Enshrouded | [enshrouded.json](enshrouded.json) | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | QUERY_PORT +1 | [✓ 2026-10-10](../TESTED.md#steam-enshrouded) | player count, Proton, no console input |
 | Euro Truck Simulator 2 Dedicated Server | [euro-truck-simulator-2.json](euro-truck-simulator-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#steam-euro-truck-simulator-2) | player count, no console input |
+| Ground Branch | [ground-branch.json](ground-branch.json) | [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [✓ 2026-10-13](../TESTED.md#steam-ground-branch) | player count, Wine, no console input, start detected by port |
 | Holdfast: Nations At War | [holdfast.json](holdfast.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, COMM_PORT +2 | [—](../TESTED.md#steam-holdfast) | player count, no console input, start detected by port |
 | Hurtworld | [hurtworld.json](hurtworld.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#steam-hurtworld) | player count |
 | Icarus | [icarus.json](icarus.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [✓ 2026-10-10](../TESTED.md#steam-icarus) | player count, Wine, no console input |
 | Insurgency: Sandstorm | [insurgency-sandstorm.json](insurgency-sandstorm.json) | [`steamcmd_ubuntu`](https://github.com/sneakywrld/octail-yolks#steamcmd_ubuntu) | QUERY_PORT +1, RCON_PORT +2 | [—](../TESTED.md#steam-insurgency-sandstorm) | RCON (source), Players tab |
 | Killing Floor 2 | [killing-floor-2.json](killing-floor-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, WEB_ADMIN_PORT +2 | [—](../TESTED.md#steam-killing-floor-2) | player count, no console input |
+| Killing Floor | [killing-floor.json](killing-floor.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | WEB_ADMIN_PORT +2, Unreal query +1, Steam query +21145 (optional) | [—](../TESTED.md#steam-killing-floor) | no console input, start detected by port |
 | Mordhau | [mordhau.json](mordhau.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1, BEACON_PORT +2, RCON_PORT +3 | [—](../TESTED.md#steam-mordhau) | RCON (source), Players tab |
+| Myth of Empires | [myth-of-empires.json](myth-of-empires.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [—](../TESTED.md#steam-myth-of-empires) | player count, Wine, no console input, start detected by port |
+| Natural Selection 2 | [natural-selection-2.json](natural-selection-2.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | WEB_ADMIN_PORT +2, Steam query +1 | [✓ 2026-10-13](../TESTED.md#steam-natural-selection-2) | Players tab, start detected by port |
 | Necesse | [necesse.json](necesse.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [—](../TESTED.md#steam-necesse) | sleep (udp) |
 | Night of the Dead | [night-of-the-dead.json](night-of-the-dead.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [—](../TESTED.md#steam-night-of-the-dead) | player count, Wine, no console input, start detected by port |
 | Palworld | [palworld.json](palworld.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [—](../TESTED.md#steam-palworld) | sleep (udp) |
 | Pavlov VR | [pavlov-vr.json](pavlov-vr.json) | [`steamcmd_ubuntu`](https://github.com/sneakywrld/octail-yolks#steamcmd_ubuntu) | RCON_PORT +1, status helper +400 | [—](../TESTED.md#steam-pavlov-vr) | no console input |
+| PixARK | [pixark.json](pixark.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +2, RCON_PORT +3, CUBE_PORT +4, second UDP socket +1 (optional) | [—](../TESTED.md#steam-pixark) | RCON (source), player count, Wine, no console input, start detected by port |
 | Project Zomboid | [project-zomboid.json](project-zomboid.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | STEAM_PORT +1 | [—](../TESTED.md#steam-project-zomboid) | player count, sleep (udp) |
+| Quake Live | [quake-live.json](quake-live.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT +1 | [✓ 2026-10-13](../TESTED.md#steam-quake-live) | Players tab, start detected by port |
 | The Lord of the Rings: Return to Moria | [return-to-moria.json](return-to-moria.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | – | [—](../TESTED.md#steam-return-to-moria) | Wine, no console input, start detected by port |
+| Rising World | [rising-world.json](rising-world.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT -2, web and query (TCP) -1 | [✓ 2026-10-13](../TESTED.md#steam-rising-world) | start detected by port |
+| Risk of Rain 2 | [risk-of-rain-2.json](risk-of-rain-2.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1 | [✗ 2026-10-13](../TESTED.md#steam-risk-of-rain-2) | player count, Wine, Thunderstore mods, start detected by port |
 | Satisfactory | [satisfactory.json](satisfactory.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RELIABLE_PORT +1 | [—](../TESTED.md#steam-satisfactory) | RCON (satisfactory), sleep (udp) |
 | SCP: Secret Laboratory | [scp-secret-laboratory.json](scp-secret-laboratory.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [—](../TESTED.md#steam-scp-secret-laboratory) | start detected by port |
 | Sons Of The Forest | [sons-of-the-forest.json](sons-of-the-forest.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | QUERY_PORT +1, BLOBSYNC_PORT +2 | [✓ 2026-10-10](../TESTED.md#steam-sons-of-the-forest) | player count, Wine, no console input |
 | Soulmask | [soulmask.json](soulmask.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#steam-soulmask) | player count, no console input |
 | Space Engineers | [space-engineers.json](space-engineers.json) | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | STEAM_PORT +1, REMOTEAPI_PORT +2 | [✓ 2026-10-10](../TESTED.md#steam-space-engineers) | Wine, no console input |
+| Squad 44 | [squad-44.json](squad-44.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | GAME_PORT_2 +1, QUERY_PORT +2, QUERY_PORT_2 +3, RCON_PORT +4 | [—](../TESTED.md#steam-squad-44) | RCON (source), Players tab, start detected by port |
 | Squad | [squad.json](squad.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | GAME_PORT_2 +1, QUERY_PORT +2, QUERY_PORT_2 +3, BEACON_PORT +4, RCON_PORT +5 | [✓ 2026-10-10](../TESTED.md#steam-squad) | RCON (source), Players tab |
 | Starbound | [starbound.json](starbound.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT +1 | [—](../TESTED.md#steam-starbound) | RCON (source), Players tab, start detected by port |
 | Stationeers | [stationeers.json](stationeers.json) | [`steamcmd_ubuntu`](https://github.com/sneakywrld/octail-yolks#steamcmd_ubuntu) | UPDATE_PORT +1 | [✓ 2026-10-12](../TESTED.md#steam-stationeers) | player count |
@@ -52,6 +61,7 @@ Back to [all eggs](../README.md#steam-games).
 | The Isle (Evrima) | [the-isle.json](the-isle.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | RCON_PORT +1, QUEUE_PORT +2 | [—](../TESTED.md#steam-the-isle) | no console input, start detected by port |
 | Unturned | [unturned.json](unturned.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#steam-unturned) | player count, sleep (udp) |
 | V Rising BepInEx | [v-rising.json](v-rising.json) | [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | QUERY_PORT +1, RCON_PORT +2 | [✓ 2026-10-10](../TESTED.md#steam-v-rising) | RCON (source), player count, Wine, Thunderstore mods, no console input |
+| Wurm Unlimited | [wurm-unlimited.json](wurm-unlimited.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [✓ 2026-10-13](../TESTED.md#steam-wurm-unlimited) | player count, start detected by port |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

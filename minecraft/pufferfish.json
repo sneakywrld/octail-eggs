@@ -1,0 +1,128 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Paper egg (minecraft-paper.yaml): the jar from Pufferfish's Jenkins (ci.pufferfish.host, one job per Minecraft line) checked against a SHA-256 Octail recorded (Pufferfish publishes none) or one staff set in PUFFERFISH_SHA256, a version or build that does not exist fails the install, the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 17 images (Pufferfish's lines go back to 1.17), Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/pufferfish.json"
+  },
+  "uuid": "a7c3e9b1-6d24-4f0a-8e5b-91d2c4f6a083",
+  "name": "Pufferfish",
+  "author": "octail@meowgafactory.com",
+  "description": "Pufferfish is a performance fork of Paper for large servers. Runs Paper, Spigot and Bukkit plugins.",
+  "tags": [
+    "minecraft",
+    "pufferfish"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Pufferfish installation (Octail): the jar from Pufferfish's Jenkins (ci.pufferfish.host), one job per\n# Minecraft line (Pufferfish-1.21 builds the newest 1.21.x; Pufferfish supports only that line). \"latest\"\n# is the newest successful build of the 1.21 job; a version picks the newest successful build whose jar\n# names it.\n# Pufferfish publishes no checksum or signature, and its Jenkins records no fingerprints for the jars, so\n# this script carries the SHA-256 of the builds Octail recorded (2026-10-13). Any other build needs its\n# SHA-256 in the staff variable PUFFERFISH_SHA256, or the install fails. A version or build that doesn't\n# exist fails the install.\n#\n# Server files: /mnt/server\nset -eu\n\nCI=https://ci.pufferfish.host/job\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nBUILD=\"${BUILD_NUMBER:-latest}\"\nSTAFF_SHA256=$(echo \"${PUFFERFISH_SHA256:-}\" | tr 'A-F' 'a-f')\n\n# <job> <build> <sha256>: builds Octail downloaded and checked (a paperclip jar naming its version).\nPINNED='Pufferfish-1.21 39 2e5d8a27f62086948590dd8d7e36761f0c80a0dfb85820e34714d795ca3f99aa\nPufferfish-1.21 33 4dd5cc297217cc91aa85ee52a240f6df5a7b78eebc1f91d64652cabea3141f47'\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\n# The Minecraft version a jar's name gives away: pufferfish-paperclip-1.21.10-R0.1-SNAPSHOT-mojmap.jar.\njar_version() { echo \"$1\" | sed -nE 's/^.*[Pp]ufferfish-(paperclip-)?([0-9]+\\.[0-9]+(\\.[0-9]+)?)-R0\\.1.*\\.jar$/\\2/p'; }\n\nif [ -n \"${STAFF_SHA256}\" ] && ! echo \"${STAFF_SHA256}\" | grep -Eq '^[0-9a-f]{64}$'; then\n\tfail \"PUFFERFISH_SHA256 must be 64 hex characters (a SHA-256) or empty\"\nfi\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nif [ -z \"${VERSION}\" ] || [ \"${VERSION}\" = \"latest\" ]; then\n\tVERSION=latest\n\tLINE=1.21\nelse\n\techo \"${VERSION}\" | grep -Eq '^1\\.[0-9]+(\\.[0-9]+)?$' || fail \"the Minecraft version (${VERSION}) must be like 1.21.10, or latest\"\n\tLINE=$(echo \"${VERSION}\" | cut -d . -f 1-2)\nfi\nJOB=\"${CI}/Pufferfish-${LINE}\"\nif [ \"${LINE}\" != \"1.21\" ]; then\n\techo \"Note: Pufferfish no longer supports ${LINE}; reported bugs are not fixed.\"\nfi\n\nif [ -z \"${BUILD}\" ] || [ \"${BUILD}\" = \"latest\" ]; then\n\tBUILDS=$(get \"${JOB}/api/json?tree=builds%5Bnumber,result,artifacts%5BrelativePath%5D%5D\") ||\n\t\tfail \"can't reach Pufferfish's Jenkins, or it has no Minecraft ${LINE} job (${JOB})\"\n\tBUILD=\"\"\n\tfor row in $(echo \"${BUILDS}\" | jq -r '.builds // [] | sort_by(.number) | reverse | .[] |\n\t\tselect(.result == \"SUCCESS\") | \"\\(.number)|\\([.artifacts[]?.relativePath | select(endswith(\".jar\"))] | first // \"\")\"'); do\n\t\tpath=\"${row#*|}\"\n\t\t[ -n \"${path}\" ] || continue\n\t\tif [ \"${VERSION}\" = \"latest\" ] || [ \"$(jar_version \"${path##*/}\")\" = \"${VERSION}\" ]; then\n\t\t\tBUILD=\"${row%%|*}\"\n\t\t\tbreak\n\t\tfi\n\tdone\n\t[ -n \"${BUILD}\" ] || fail \"Pufferfish has no successful build for Minecraft ${VERSION}. Its builds are listed at https://pufferfish.host/downloads\"\nfi\ncase \"${BUILD}\" in\n*[!0-9]*) fail \"the build number (${BUILD}) must be a number or latest\" ;;\nesac\n\nINFO=$(get \"${JOB}/${BUILD}/api/json?tree=number,result,artifacts%5BrelativePath%5D\") ||\n\tfail \"Pufferfish's Jenkins has no build ${BUILD} for Minecraft ${LINE}\"\nRESULT=$(echo \"${INFO}\" | jq -r '.result // empty')\n[ \"${RESULT}\" = \"SUCCESS\" ] || fail \"Pufferfish build ${BUILD} did not succeed (${RESULT}). Pick another build.\"\nARTIFACT=$(echo \"${INFO}\" | jq -r '[.artifacts[]?.relativePath | select(endswith(\".jar\"))] | first // empty')\necho \"${ARTIFACT}\" | grep -Eq '^[A-Za-z0-9._/-]+\\.jar$' || fail \"Pufferfish build ${BUILD} has no server jar\"\nGOT_VERSION=$(jar_version \"${ARTIFACT##*/}\")\n[ -n \"${GOT_VERSION}\" ] || fail \"Pufferfish build ${BUILD}'s jar (${ARTIFACT##*/}) doesn't name its Minecraft version\"\nif [ \"${VERSION}\" != \"latest\" ] && [ \"${GOT_VERSION}\" != \"${VERSION}\" ]; then\n\tfail \"Pufferfish build ${BUILD} is Minecraft ${GOT_VERSION}, not ${VERSION}\"\nfi\n\nSHA256=$(echo \"${PINNED}\" | awk -v j=\"Pufferfish-${LINE}\" -v b=\"${BUILD}\" '$1 == j && $2 == b { print $3 }')\nif [ -n \"${STAFF_SHA256}\" ]; then\n\tSHA256=\"${STAFF_SHA256}\"\nfi\n[ -n \"${SHA256}\" ] ||\n\tfail \"Pufferfish publishes no checksum, and Octail has none recorded for build ${BUILD} (Minecraft ${GOT_VERSION}). Staff can check that jar and set its SHA-256 in the egg's PUFFERFISH_SHA256 variable, or pick a recorded build (1.21 job: 39 for 1.21.10, 33 for 1.21.8).\"\n\necho \"Installing Pufferfish ${GOT_VERSION} build ${BUILD} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -o \"${JAR}.download\" \"${JOB}/${BUILD}/artifact/${ARTIFACT}\" ||\n\tfail \"the download of Pufferfish build ${BUILD} failed\"\nGOT=$(sha256sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA256}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-256 mismatch for Pufferfish build ${BUILD} (expected ${SHA256}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Pufferfish ${GOT_VERSION} build ${BUILD} installed (SHA-256 checked).\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.10, or latest for the newest build Pufferfish made (it supports one 1.21.x release at a time). Pufferfish builds one release per line (1.21.10, 1.20.4, 1.19.4, 1.18.2, 1.17.1); the older lines are unsupported.\n\nThe Startup image must fit it: Java 21 or 25 for 1.21.x, Java 17 for 1.17 to 1.20.4.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|1\\.[0-9]+(\\.[0-9]+)?)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Build Number",
+      "description": "The Pufferfish Jenkins build to install, or latest for the newest successful build of that Minecraft version. Builds without a recorded SHA-256 need staff to set one (PUFFERFISH_SHA256).",
+      "env_variable": "BUILD_NUMBER",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Pufferfish SHA-256",
+      "description": "Pufferfish publishes no checksums. The install script carries the SHA-256 of the builds Octail checked (1.21 job: 39 for 1.21.10, 33 for 1.21.8); for any other build, download the jar from https://pufferfish.host/downloads, check it, and put its SHA-256 here. Empty: only the recorded builds install.",
+      "env_variable": "PUFFERFISH_SHA256",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([0-9a-fA-F]{64})?$/"
+      ],
+      "sort": 4
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

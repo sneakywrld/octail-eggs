@@ -265,6 +265,11 @@
         "memory_mb": 8192,
         "disk_mb": 8192
       }
+    },
+    "variables": {
+      "AUTH_TOKEN": {
+        "secret": true
+      }
     }
   }
 }

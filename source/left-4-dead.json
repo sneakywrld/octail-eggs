@@ -1,0 +1,160 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Octail's own, following no-more-room-in-hell.json and the pelican-eggs steamcmd base script (games-steamcmd, MIT licence), on Octail's source image (32-bit libraries). App 222840 (anonymous SteamCMD, Linux build) with the game folder (left4dead) fixed. Octail adds the left-4-dead tags, Source RCON on the game port with a generated password hidden from customers, the Players tab (source preset) and the Steam query (A2S) for player counts, a max players setting (-maxplayers), start detection by the Steam ID line or the Steam connection line with the UDP game port as a fallback (ready after 60 s), generic UDP idle sleep (off until staff enable it per server), the say broadcast, the update before start (AUTO_UPDATE, on by default), an optional beta branch, a starter server.cfg, install sandbox defaults and resource hints, and makes the install fail when SteamCMD didn't download the server. Unlike Left 4 Dead 2, the Linux depot downloads on its own, so there is no Windows-then-Linux step. L4D has no Game Server Login Token. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\"; the SteamCMD download times out and retries instead of hanging the install.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/source/left-4-dead.json"
+  },
+  "uuid": "0b6d3a52-5c1e-4f7e-9a8d-2e4b7c1f9d31",
+  "name": "Left 4 Dead",
+  "author": "octail@meowgafactory.com",
+  "description": "Left 4 Dead is the original co-operative zombie shooter on the Source engine: four survivors fight through the infected horde in co-op, versus and survival modes.",
+  "tags": [
+    "left-4-dead",
+    "l4d",
+    "source",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Source": "ghcr.io/sneakywrld/octail-yolks:source"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./srcds_run -game left4dead -console -port {{SERVER_PORT}} +ip 0.0.0.0 +map {{SRCDS_MAP}} -maxplayers {{MAX_PLAYERS}} +rcon_password \"{{RCON_PASSWORD}}\" -strictportbind -norestart"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "gameserver Steam ID",
+        "Connection to Steam servers successful"
+      ]
+    },
+    "logs": {},
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Left 4 Dead Dedicated Server (app 222840) Installation Script\n#\n# Server Files: /mnt/server\n# Based on the pelican-eggs steamcmd base script (games-steamcmd, MIT licence).\n#\n# Variables\n# SRCDS_APPID - 222840 (Left 4 Dead Dedicated Server, anonymous)\n# SRCDS_BETAID - an optional beta branch\n\n## The Left 4 Dead dedicated server installs anonymously\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\n## Octail: time out and retry instead of hanging the install when the download stalls\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Could not download SteamCMD; try reinstalling.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\nbeta=()\n[[ -z ${SRCDS_BETAID} ]] || beta=(-beta \"${SRCDS_BETAID}\")\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login \"${STEAM_USER}\" +app_update \"${SRCDS_APPID}\" \"${beta[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/srcds_run\" || ! -d \"/mnt/server/left4dead\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Left 4 Dead dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## A server.cfg to start from; an existing one is kept\nif [[ ! -f \"/mnt/server/left4dead/cfg/server.cfg\" ]]; then\n    mkdir -p /mnt/server/left4dead/cfg\n    printf '%s\\n' 'hostname \"Left 4 Dead server on Octail\"' 'sv_password \"\"' 'sv_lan 0' 'sv_allow_lobby_connect_only 0' > /mnt/server/left4dead/cfg/server.cfg\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "App ID",
+      "description": "The Steam app id of the Left 4 Dead Dedicated Server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "222840",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "in:222840"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Map",
+      "description": "The first map, for example l4d_hospital01_apartment (No Mercy), l4d_farm01_hilltop (Blood Harvest) or l4d_vs_hospital01_apartment (versus).",
+      "env_variable": "SRCDS_MAP",
+      "default_value": "l4d_hospital01_apartment",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^\\w{1,64}$/"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Max Players",
+      "description": "How many players may join (2-8; four survivors in co-op, eight in versus).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:2,8"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "RCON Password",
+      "description": "Source RCON password. Octail generates one when the server is created, keeps it from customers and sends console commands over RCON.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[\\w.-]+$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Beta branch",
+      "description": "An optional Steam beta branch; empty for the public build. Reinstall after changing it.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[\\w.-]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Auto-update server",
+      "description": "Check for a server update with SteamCMD at every start (1 on, 0 off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Left 4 Dead",
+    "features": {
+      "players": "source",
+      "player_query": "a2s",
+      "rcon": {
+        "type": "source",
+        "port_var": "SERVER_PORT",
+        "password_var": "RCON_PASSWORD"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 60
+      },
+      "sleep": {
+        "mode": "udp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 12288
+      }
+    }
+  }
+}

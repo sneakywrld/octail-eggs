@@ -1,0 +1,144 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Purpur egg: Arclight's launcher jar from its GitHub releases (IzzelAliz/Arclight) for NeoForge, Forge or Fabric, checked against the SHA-256 GitHub lists for the file, or for older files without one against the SHA-256 Octail recorded on 2026-10-13 (any other file without a checksum is refused); latest is the newest stable release for the loader, snapshots only on the snapshot channel or by tag. A hybrid (mods and Bukkit plugins): the Minecraft tools without the version changer or modpacks. The eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 21 to 8 images, Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/arclight.json"
+  },
+  "uuid": "b3e9a7d2-58c1-4f06-8e2a-71c4d09f6a35",
+  "name": "Arclight",
+  "author": "octail@meowgafactory.com",
+  "description": "Arclight is a hybrid Minecraft Java server: Bukkit on top of NeoForge, Forge or Fabric, so it runs that loader's mods and Bukkit/Spigot plugins on one server.",
+  "tags": [
+    "minecraft",
+    "arclight",
+    "hybrid"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} nogui"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Arclight installation (Octail): the server jar from Arclight's GitHub releases (IzzelAliz/Arclight), its\n# SHA-256 checked. A version, loader or release that doesn't exist fails the install instead of silently\n# installing another one.\n#\n# Arclight is Bukkit (CraftBukkit/Spigot) on top of NeoForge, Forge or Fabric: it runs that loader's mods\n# (mods/) and Bukkit plugins (plugins/). The jar is Arclight's launcher: on the first start it downloads the\n# loader's libraries and the Minecraft server, so the first start takes a few minutes.\n#\n# Checksums: GitHub lists a SHA-256 (`digest`) for release files uploaded since mid-2025 (Arclight 1.21.1\n# FeudalKings/1.0.1 and newer). Older releases have none, and Arclight publishes none of its own, so this\n# script carries the SHA-256 of the newest stable file per Minecraft version and loader, as Octail downloaded\n# them on 2026-10-13. Any other file without a digest is refused.\n#\n# Server files: /mnt/server\nset -eu\n\nREPO=https://api.github.com/repos/IzzelAliz/Arclight\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nLOADER=\"${ARCLIGHT_LOADER:-neoforge}\"\nRELEASE=\"${ARCLIGHT_RELEASE:-latest}\"\nCHANNEL=\"${ARCLIGHT_CHANNEL:-stable}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 120 -H 'Accept: application/vnd.github+json' \"$1\"; }\n\n# SHA-256 of release files GitHub has no digest for (downloaded and hashed by Octail on 2026-10-13).\npinned_sha256() {\n\tcase \"$1\" in\n\tarclight-forge-1.16.5-1.0.25.jar) echo 0711487fb8d624bd89bd74e8bab271c8befb96485282de5ccc6fd85cf9a40f98 ;;\n\tarclight-forge-1.18.2-1.0.12.jar) echo c3287b2a9553db80952e243dece2f8aba37261544c771e1777a1ee3ff5b7829f ;;\n\tarclight-forge-1.19.2-1.0.5.jar) echo bc964d4c4a414f4ebbf24404a0faa35a46c834ec440942773f9c65ff9374a612 ;;\n\tarclight-forge-1.19.4-1.0.8.jar) echo 8d61ea8f0ea5d27e0eb9ebed964df6fdcea163745d4cfcceea3273ba5b73841c ;;\n\tarclight-forge-1.20.1-1.0.6.jar) echo 40132f12fee21b4487cc995bb00b91b358df4b8162a48e98127a0368cf7e8c91 ;;\n\tarclight-forge-1.20.2-1.0.3.jar) echo abbc4c50973c1f4ecc0c9600e53c4f1b5484e0e6555d73075c20b65f0b1543c4 ;;\n\tarclight-forge-1.20.4-1.0.4-80ec5df.jar) echo ac5594dbad82c2f31828cf2db83f162e91a6cd205583ee81f684d423c70ad4e1 ;;\n\tarclight-neoforge-1.20.4-1.0.4-80ec5df.jar) echo 9c39f1e713ed5bae3bbbb7d77a5c6c7b9586a7adc539ed7812e2fc890a76a137 ;;\n\tarclight-fabric-1.20.4-1.0.4-80ec5df.jar) echo 7f717a1fe4e30ee53671540f09142808efced1ef19f5d68219afa458e048ebf5 ;;\n\tesac\n}\n\ncase \"${LOADER}\" in\nneoforge | forge | fabric) ;;\n*) fail \"the loader (${LOADER}) must be neoforge, forge or fabric\" ;;\nesac\ncase \"${CHANNEL}\" in\nstable | snapshot) ;;\n*) fail \"the channel (${CHANNEL}) must be stable or snapshot\" ;;\nesac\ncase \"${VERSION}\" in\nlatest | [0-9]*.[0-9]*) ;;\n*) fail \"the Minecraft version (${VERSION}) must be a release such as 1.21.1, or latest\" ;;\nesac\n\nmkdir -p /mnt/server\ncd /mnt/server\n\n# Every release (newest first). Arclight has fewer than 100 a page; up to three pages are read.\nRELEASES='[]'\nfor PAGE in 1 2 3; do\n\tBATCH=$(get \"${REPO}/releases?per_page=100&page=${PAGE}\") ||\n\t\tfail \"can't list Arclight's releases on GitHub (${REPO}/releases). GitHub allows 60 API calls an hour per address: try again later.\"\n\tRELEASES=$(printf '%s\\n%s' \"${RELEASES}\" \"${BATCH}\" | jq -s 'add')\n\t[ \"$(echo \"${BATCH}\" | jq 'length')\" -eq 100 ] || break\ndone\n\n# One line per release file: tag, prerelease, file name, download URL, digest. Only arclight-<loader>-<mc>-… jars.\nFILES=$(echo \"${RELEASES}\" | jq -c --arg l \"${LOADER}\" '\n\t.[] | {tag: .tag_name, pre: .prerelease, created: .created_at} as $r | .assets[]\n\t| select(.name | test(\"^arclight-\" + $l + \"-[0-9][0-9.]*-.*\\\\.jar$\"))\n\t| $r + {name, url: .browser_download_url, digest: (.digest // \"\"),\n\t\tmc: (.name | capture(\"^arclight-[a-z]+-(?<v>[0-9][0-9.]*[0-9])-\").v)}')\n[ -n \"${FILES}\" ] || fail \"Arclight has no ${LOADER} releases\"\n\nif [ \"${RELEASE}\" != \"latest\" ]; then\n\tPICK=$(echo \"${FILES}\" | jq -sc --arg t \"${RELEASE}\" 'map(select(.tag == $t)) | .[0] // empty')\n\t[ -n \"${PICK}\" ] || fail \"Arclight release ${RELEASE} has no ${LOADER} file. The releases are at https://github.com/IzzelAliz/Arclight/releases\"\n\tPICK_MC=$(echo \"${PICK}\" | jq -r '.mc')\n\tif [ \"${VERSION}\" != \"latest\" ] && [ \"${VERSION}\" != \"${PICK_MC}\" ]; then\n\t\tfail \"Arclight release ${RELEASE} is for Minecraft ${PICK_MC}, not ${VERSION}\"\n\tfi\nelse\n\tPICK=$(echo \"${FILES}\" | jq -sc --arg v \"${VERSION}\" --arg c \"${CHANNEL}\" '\n\t\tmap(select($c == \"snapshot\" or (.pre | not)))\n\t\t| map(select($v == \"latest\" or .mc == $v))\n\t\t| sort_by([(.mc | split(\".\") | map(tonumber)), .created]) | reverse\n\t\t| .[0] // empty')\n\tif [ -z \"${PICK}\" ]; then\n\t\tHAVE=$(echo \"${FILES}\" | jq -sr --arg c \"${CHANNEL}\" 'map(select($c == \"snapshot\" or (.pre | not)) | .mc) | unique | join(\", \")')\n\t\tHINT=\"\"\n\t\t[ \"${CHANNEL}\" = \"snapshot\" ] || HINT=\" Snapshot builds need the channel set to snapshot.\"\n\t\tfail \"Arclight has no ${CHANNEL} ${LOADER} release for Minecraft ${VERSION}. ${CHANNEL} ${LOADER} releases exist for: ${HAVE:-none}.${HINT}\"\n\tfi\nfi\n\nTAG=$(echo \"${PICK}\" | jq -r '.tag')\nNAME=$(echo \"${PICK}\" | jq -r '.name')\nURL=$(echo \"${PICK}\" | jq -r '.url')\nMC=$(echo \"${PICK}\" | jq -r '.mc')\ncase \"${URL}\" in\nhttps://github.com/IzzelAliz/Arclight/releases/download/*) ;;\n*) fail \"unexpected download address for ${NAME}: ${URL}\" ;;\nesac\nSHA=$(echo \"${PICK}\" | jq -r '.digest | ltrimstr(\"sha256:\")' | tr 'A-F' 'a-f')\nFROM=\"GitHub's digest\"\nif [ -z \"${SHA}\" ]; then\n\tSHA=$(pinned_sha256 \"${NAME}\")\n\tFROM=\"the SHA-256 Octail recorded\"\nfi\necho \"${SHA}\" | grep -Eq '^[0-9a-f]{64}$' ||\n\tfail \"${NAME} (release ${TAG}) has no checksum: GitHub lists no digest for it and Octail has none recorded. Pick a newer release.\"\n\necho \"Installing Arclight ${LOADER} for Minecraft ${MC}, release ${TAG} (${NAME}) as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --retry-delay 5 --connect-timeout 20 --max-time 600 -o \"${JAR}.download\" \"${URL}\" ||\n\tfail \"the download of ${NAME} failed\"\nGOT=$(sha256sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-256 mismatch for ${NAME} (expected ${SHA}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\nmkdir -p mods plugins\n\necho \"Arclight ${LOADER} ${MC} (${TAG}) installed, SHA-256 checked against ${FROM}. ${LOADER} mods go in mods/, Bukkit plugins in plugins/.\"\necho \"The first start downloads the loader's libraries and the Minecraft server, which takes a few minutes.\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.1, or latest for the newest one Arclight has a release for on the loader and channel. A version without one fails the install.\n\nThe Startup image must fit it: Java 21 for 1.20.5 and newer, Java 17 for 1.18 to 1.20.4, Java 8 or 11 for 1.16.5.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9]+\\.[0-9]+(\\.[0-9]+)?)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Loader",
+      "description": "The mod loader under Arclight: neoforge, forge or fabric. Mods must be for this loader. Not every Minecraft version has all three (1.21.1 and 1.20.4 do; older ones are Forge only).",
+      "env_variable": "ARCLIGHT_LOADER",
+      "default_value": "neoforge",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:neoforge,forge,fabric"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Channel",
+      "description": "stable for Arclight's releases, snapshot to also take its snapshot builds (pre-releases, such as the first builds for a new Minecraft version).",
+      "env_variable": "ARCLIGHT_CHANNEL",
+      "default_value": "stable",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:stable,snapshot"
+      ],
+      "sort": 3
+    },
+    {
+      "name": "Release",
+      "description": "A GitHub release tag to install, such as FeudalKings/1.0.1, or latest for the newest release that fits the version, loader and channel.",
+      "env_variable": "ARCLIGHT_RELEASE",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:64",
+        "regex:/^(latest|[A-Za-z0-9._-]+(\\/[A-Za-z0-9._-]+)?)$/"
+      ],
+      "sort": 4
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file (Arclight's launcher).",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 5
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 15360
+      }
+    }
+  }
+}

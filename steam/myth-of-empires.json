@@ -1,0 +1,278 @@
+{
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd myth_of_empires/egg-myth-of-empires.json (pelican-eggs, MIT licence) and the start line the game's PrivateServerTool writes (a Steam community post). Octail runs the Windows server under Wine (the image's Xvfb, as the ZAP-Hosting Linux guide does with xvfb-run) instead of Proton, keeps upstream's start options and changes the rest: the join password goes in -PrivateServerPassword, only when set (upstream had none); the address announced to the server list is the Public IP setting, else the allocation's IP, else the address api.ipify.org sees (upstream sent the allocation IP, 0.0.0.0 on many nodes); the anticheat (-UseACE) is a setting (on by default, as upstream and the tool); the shutdown service (an HTTP service for the PrivateServerTool) is off, so no port or key is needed (upstream required a key and port); admins are 17-digit Steam IDs; the map is letters, digits and _; the server's log (MOE/Saved/Logs/MOE.log) is followed on the console, the start is detected from 'Starting Game.' or the bound game port (x_octail.features.ready), Ctrl+C is handed to the server by a trap (the wine image runs the line in bash as PID 1) and waited for (upstream: no trap); vcrun2022 is installed into the Wine prefix once (WINETRICKS_RUN); the free-form extra flags are dropped; the myth-of-empires and wine tags, an automatic query port (+1), the Steam query (A2S) for player counts, the no_console_input flag (Wine reads no commands), install sandbox defaults and resource hints (the game's hosts say 9 to 12 GB), curl with timeouts and retries, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/myth-of-empires.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Myth of Empires",
+  "author": "eggs@octail.net",
+  "uuid": "7e947479-9ec6-4ba5-9818-48f9e84a5622",
+  "description": "Myth of Empires is a sandbox war game: survive, craft, build and lead troops to conquer territory and build your empire. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "myth-of-empires",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "MOE_IP=${PUBLIC_IP}; if [ -z \"${MOE_IP}\" ]; then MOE_IP=${SERVER_IP}; if [ -z \"${MOE_IP}\" ] || [ \"${MOE_IP}\" = \"0.0.0.0\" ]; then MOE_IP=$(curl -fsS --max-time 10 https://api.ipify.org || true); fi; echo \"Octail: Public IP is empty, using ${MOE_IP}.\"; fi; wine ./MOE/Binaries/Win64/MOEServer.exe {{MAP_NAME}} -game -server -DataLocalFile -NotCheckServerSteamAuth -log -LOCALLOGTIMES -PrivateServer -disable_qim -MultiHome=0.0.0.0 -OutAddress=${MOE_IP} -SessionName=\"{{SERVER_NAME}}\" $( [ -z \"${SERVER_PASSWORD}\" ] || printf -- '-PrivateServerPassword=%s' \"${SERVER_PASSWORD}\" ) -GameServerPVPType={{PVP}} -MaxPlayers={{MAX_PLAYERS}} -MapDifficultyRate=1 $( [ \"${ANTI_CHEAT}\" = 1 ] && printf %s -UseACE ) -EnableVACBan=1 -ServerId={{SERVER_ID}} -ClusterId={{CLUSTER_ID}} -Port={{SERVER_PORT}} -QueryPort={{QUERY_PORT}} -bStartShutDownServiceInPrivateServer=false -ServerAdminAccounts=\"{{ADMIN_IDS}}\" & MOE_PID=$!; trap \"kill -INT ${MOE_PID} 2>/dev/null; wait ${MOE_PID}\" INT TERM; tail -c0 -F /home/container/MOE/Saved/Logs/MOE.log --pid=${MOE_PID} 2>/dev/null & wait ${MOE_PID}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "LogInit: Display: Starting Game."
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/MOE/Binaries/Win64/MOEServer.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Myth of Empires dedicated server; try reinstalling.\"\n    exit 1\nfi\nmkdir -p /mnt/server/MOE/Saved/Logs\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server list.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Myth of Empires Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\\"\\\\\\r\\n]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join (letters, digits, - and _). Empty = no password.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "alpha_dash",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "The most players online at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "50",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,150"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Map",
+      "description": "The map to load: LargeTerrain_Central_Main or LargeTerrain_Central2_Main.",
+      "env_variable": "MAP_NAME",
+      "default_value": "LargeTerrain_Central_Main",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_]+$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "PvP",
+      "description": "1 = PvP, 0 = PvE.",
+      "env_variable": "PVP",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:0,1"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Anticheat",
+      "description": "1 = the game's anticheat (-UseACE) is on. Turn it off if the server doesn't start under Wine.",
+      "env_variable": "ANTI_CHEAT",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Server Admins",
+      "description": "Optional: 17-digit Steam IDs of the admins, separated by ;.",
+      "env_variable": "ADMIN_IDS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[0-9]{17}(;[0-9]{17})*;?$/"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Server ID",
+      "description": "The server's number in its cluster.",
+      "env_variable": "SERVER_ID",
+      "default_value": "100",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,99999"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Cluster ID",
+      "description": "The cluster the server belongs to.",
+      "env_variable": "CLUSTER_ID",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,99999"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Public IP",
+      "description": "The server's public IPv4 address, announced to the server list. Empty = the server's own IP when it has one (not 0.0.0.0), else the address api.ipify.org sees.",
+      "env_variable": "PUBLIC_IP",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "ip"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Query Port",
+      "description": "Steam query (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "11889",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 13,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "1794810",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1794810"
+      ]
+    },
+    {
+      "sort": 14,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    },
+    {
+      "sort": 15,
+      "name": "Winetricks",
+      "description": "Installed into the Wine prefix once, at the first start (the server needs the Visual C++ runtime).",
+      "env_variable": "WINETRICKS_RUN",
+      "default_value": "vcrun2022",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:vcrun2022"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Myth of Empires",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 12288,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

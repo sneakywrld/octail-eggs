@@ -1,0 +1,149 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' games-standalone urbanterror egg was only read for reference: it runs the interactive UrTUpdater, answering its licence prompt itself, with nothing checked). Octail downloads the official 4.3.4 full release zip from urbanterror.info's mirrors, checks it against the MD5 urbanterror.info publishes and a SHA-256 recorded in the script, unpacks only the Linux 64-bit dedicated server and q3ut4/ (a reinstall keeps server.cfg, mapcycle.txt and added files), writes a minimal q3ut4/server.cfg once and edits it with the file parser before every start (name, slots, message of the day, join password, rcon password, game type), starts the first map and the public listing from the command line, runs on octail-yolks' Debian image and adds the say broadcast, the UDP port start check, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/urban-terror.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Urban Terror",
+  "author": "eggs@octail.net",
+  "uuid": "254f2712-8fe9-4dd1-90fd-02d6ce203f29",
+  "description": "Urban Terror is a free, realism-flavoured team shooter on the ioquake3 engine: capture the flag, team survivor, bomb mode, jump maps and more, with wall jumps and power sliding.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./Quake3-UrT-Ded.x86_64 ] || { echo \"Urban Terror is not installed: reinstall the server.\"; exit 1; }; exec ./Quake3-UrT-Ded.x86_64 +set fs_game q3ut4 +set fs_basepath \"$(pwd)\" +set fs_homepath \"$(pwd)\" +set dedicated $((1 + {{PUBLIC_LIST}})) +set net_port {{SERVER_PORT}} +set com_hunkmegs 256 +exec server.cfg +map \"{{MAP}}\"",
+  "config": {
+    "files": "{\n    \"q3ut4/server.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"set sv_hostname \": \"set sv_hostname \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"set sv_maxclients \": \"set sv_maxclients {{server.environment.MAX_PLAYERS}}\",\n            \"set g_motd \": \"set g_motd \\\"{{server.environment.MOTD}}\\\"\",\n            \"set g_password \": \"set g_password \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"set rconpassword \": \"set rconpassword \\\"{{server.environment.RCON_PASSWORD}}\\\"\",\n            \"set g_gametype \": \"set g_gametype {{server.environment.GAMETYPE}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"------- Game Initialization -------\"\n}",
+    "logs": "{}",
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Urban Terror installation script (Octail): the official 4.3.4 full release zip from urbanterror.info's mirrors,\n# checked against the MD5 urbanterror.info publishes and the SHA-256 recorded here, with only what the dedicated\n# server needs unpacked: the Linux 64-bit dedicated server and q3ut4/ (game data and example configs). The\n# interactive UrTUpdater isn't used. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## Urban Terror 4.3.4, the current release (2018). The MD5 is the one https://www.urbanterror.info/downloads/\n## lists; the site publishes no SHA-256, so Octail recorded the zip's own (2026-10-13). A new release needs both\n## updated here.\nVERSION=4.3.4\nZIP=UrbanTerror434_full.zip\nMD5=9bf7f0092161391697d24f6b004a6c6b\nSHA256=716669cc6c525663b791852e51ff9c94d96f382be39279dab6084dddacb5a4e7\n\napt-get update -qq\napt-get install -y -qq curl unzip ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs Urban Terror's Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\ncd /mnt/server\n## about 1.4 GB: downloaded into the server folder (the installer's /tmp may be small), removed afterwards\nDL=/mnt/server/.urt-download.zip\nOK=\nfor URL in \"https://cdn.urbanterror.info/urt/43/releases/zips/${ZIP}\" \"https://mirror2.urbanterror.info/${ZIP}\"; do\n    echo \"Downloading ${URL}\"\n    if curl -fSL --connect-timeout 30 --max-time 3600 --retry 3 -o \"$DL\" \"$URL\" &&\n        echo \"${MD5}  ${DL}\" | md5sum -c --quiet - && echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n        OK=1\n        break\n    fi\n    echo \"That download failed or doesn't match its checksums; trying the next mirror.\"\ndone\nif [ -z \"$OK\" ]; then\n    rm -f \"$DL\"\n    echo \"Installation failed: no mirror gave a download matching Urban Terror ${VERSION}'s checksums.\"\n    exit 1\nfi\n\n## the release's own files only: server.cfg, mapcycle.txt, maps and anything else you added to q3ut4/ stay\nrm -rf /mnt/server/.urt-unpack\nmkdir -p /mnt/server/.urt-unpack q3ut4\nunzip -q -o \"$DL\" 'UrbanTerror43/Quake3-UrT-Ded.x86_64' 'UrbanTerror43/q3ut4/*' -d /mnt/server/.urt-unpack\nrm -f \"$DL\"\nU=/mnt/server/.urt-unpack/UrbanTerror43\nif [ ! -f \"$U/Quake3-UrT-Ded.x86_64\" ] || [ ! -f \"$U/q3ut4/zUrT43_qvm.pk3\" ]; then\n    rm -rf /mnt/server/.urt-unpack\n    echo \"Installation failed: the dedicated server or its data is missing from ${ZIP}.\"\n    exit 1\nfi\nmv -f \"$U\"/q3ut4/* q3ut4/\nmv -f \"$U/Quake3-UrT-Ded.x86_64\" .\nchmod +x Quake3-UrT-Ded.x86_64\nrm -rf /mnt/server/.urt-unpack\n\n## the map rotation, only when there is none (the release's example lists the official maps)\nif [ ! -f q3ut4/mapcycle.txt ]; then\n    cp q3ut4/mapcycle_example.txt q3ut4/mapcycle.txt\nfi\n\n## a minimal q3ut4/server.cfg, only when there is none; Octail sets the lines below before every start, and\n## q3ut4/server_example.cfg is the release's example with every setting explained\nif [ ! -f q3ut4/server.cfg ]; then\n    cat > q3ut4/server.cfg <<'EOF'\n// Urban Terror server settings. Octail sets the lines below before every start (Startup tab); add your own\n// settings under them. Every setting explained: server_example.cfg next to this file.\nset sv_hostname \"Urban Terror Server\"\nset sv_maxclients 16\nset g_motd \"\"\nset g_password \"\"\nset rconpassword \"\"\nset g_gametype 7\nset g_mapcycle \"mapcycle.txt\"\nset sv_allowDownload 1\nsets sv_dlURL \"urbanterror.info\"\nsets auth_enable 1\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Urban Terror ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server list (up to 64 characters, no double quotes or backslashes; ^1-^7 colour codes work).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Urban Terror Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (2-32). Urban Terror advises 16 at most; most maps are built for that.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 lists the server on the Urban Terror master servers; 0 keeps it off the list (players join by address).",
+      "env_variable": "PUBLIC_LIST",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Start Map",
+      "description": "The map loaded at start, such as ut4_turnpike, ut4_casa or ut4_abbey (or a map you upload into q3ut4/ as a .pk3). After it, the server follows q3ut4/mapcycle.txt.",
+      "env_variable": "MAP",
+      "default_value": "ut4_turnpike",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_.-]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Type",
+      "description": "0 free for all, 1 last man standing, 3 team deathmatch, 4 team survivor, 5 follow the leader, 6 capture and hold, 7 capture the flag, 8 bomb, 9 jump, 10 freeze tag, 11 gun game.",
+      "env_variable": "GAMETYPE",
+      "default_value": "7",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1,3,4,5,6,7,8,9,10,11",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown while players load the map (no double quotes or backslashes).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join. No double quotes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Optional: the remote console password for the in-game /rcon commands (8-64 characters, no spaces, quotes, backslashes, semicolons or carets). Hidden once saved. Empty = rcon off.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\;^]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "urban-terror",
+    "ioquake3",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "Urban Terror",
+    "features": {
+      "broadcast_command": "say {message}",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 3600
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 4096
+      }
+    },
+    "variables": {
+      "RCON_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

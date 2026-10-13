@@ -87,7 +87,7 @@
       "name": "[SERVER] Server Name",
       "description": "Name of the server in the server browser (no double quotes or backslashes).",
       "env_variable": "SERVER_NAME",
-      "default_value": "A Pelican Hosted Server",
+      "default_value": "An Octail server",
       "user_viewable": true,
       "user_editable": true,
       "rules": [

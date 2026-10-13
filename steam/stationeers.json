@@ -208,7 +208,7 @@
       "name": "Station Name",
       "description": "The name of the world save and of the server in the list (up to 100 characters, no double quotes, slashes or backslashes). The save with this name is loaded at every start, or created.",
       "env_variable": "STATION_NAME",
-      "default_value": "Pelican Hosted Server",
+      "default_value": "An Octail server",
       "user_viewable": true,
       "user_editable": true,
       "rules": [

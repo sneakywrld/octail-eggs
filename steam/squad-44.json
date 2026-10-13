@@ -1,0 +1,238 @@
+{
+  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd post_scriptum egg and jsknnr/squad44-server were read as a reference only). App 746200 (Squad 44, formerly Post Scriptum; Steam still names the server that way) from anonymous SteamCMD, the Linux build PostScriptum/Binaries/Linux/PostScriptumServer started with Port=, QueryPort= and RANDOM= (the map rotation mode). Server.cfg (name, slots, reserved slots, advertising, team changes and balance) and Rcon.cfg (port, password) are set by the file parser before every start; the install writes either file only when the game shipped none. Automatic ports: game + 1, query, query + 1 and RCON. Source RCON with a password Octail generates carries the console commands and the Players tab (A2S list, AdminKick, AdminBan, AdminWarn), AdminBroadcast for broadcasts. Start line \"Engine Initialization\", or the game port (UDP) bound from 30 s on; stop with Ctrl+C. SteamCMD is retried up to 3 times (its first run on a fresh install often fails with \"Missing configuration\"), the steamcmd download times out and retries, and the install fails when the server binary is missing.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/squad-44.json"
+  },
+  "exported_at": "2026-10-13T00:00:00+00:00",
+  "name": "Squad 44",
+  "author": "eggs@octail.net",
+  "uuid": "d63f3432-721a-4a80-9389-f21f2875cd8e",
+  "description": "Squad 44 (formerly Post Scriptum) is a World War II tactical shooter by Offworld Industries: large-scale infantry, armour and artillery battles with up to 80 players, built on squad play and communication.",
+  "tags": [
+    "squad-44",
+    "post-scriptum",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./PostScriptum/Binaries/Linux/PostScriptumServer Port={{SERVER_PORT}} QueryPort={{QUERY_PORT}} RANDOM={{MAP_ROTATION}} -log",
+  "config": {
+    "files": "{\n    \"PostScriptum/ServerConfig/Server.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"ServerName=\": \"ServerName=\\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"MaxPlayers=\": \"MaxPlayers={{server.environment.MAX_PLAYERS}}\",\n            \"NumReservedSlots=\": \"NumReservedSlots={{server.environment.RESERVED_SLOTS}}\",\n            \"ShouldAdvertise=\": \"ShouldAdvertise={{server.environment.ADVERTISE}}\",\n            \"AllowTeamChanges=\": \"AllowTeamChanges={{server.environment.ALLOW_TEAM_CHANGES}}\",\n            \"PreventTeamChangeIfUnbalanced=\": \"PreventTeamChangeIfUnbalanced={{server.environment.TEAM_BALANCE}}\",\n            \"EnforceTeamBalance=\": \"EnforceTeamBalance={{server.environment.TEAM_BALANCE}}\"\n        }\n    },\n    \"PostScriptum/ServerConfig/Rcon.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"Port=\": \"Port={{server.environment.RCON_PORT}}\",\n            \"Password=\": \"Password={{server.environment.RCON_PASSWORD}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"Engine Initialization\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Squad 44 dedicated server (Octail's own install script; pelican-eggs' Post Scriptum egg was read as a reference only).\n# App 746200 (still named Post Scriptum on Steam), the Linux build, anonymous SteamCMD. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -uo pipefail\n\n## anonymous login: the Squad 44 server needs no Steam account\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd /mnt/server/steamapps # steamapps: SteamCMD's disk write error when it is missing\nif ! curl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz \\\n    https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz; then\n    echo \"Installation failed: SteamCMD couldn't be downloaded.\"\n    exit 1\nfi\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise, even running as root; the files are given to the server's user after the install.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nBETA=()\n[ -z \"${SRCDS_BETAID:-}\" ] || BETA=(-beta \"${SRCDS_BETAID}\")\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} +app_update \"${SRCDS_APPID}\" \"${BETA[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/PostScriptum/Binaries/Linux/PostScriptumServer\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Squad 44 dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x /mnt/server/PostScriptum/Binaries/Linux/PostScriptumServer\n\n## Octail: the RCON settings live in Rcon.cfg; write one only when the game shipped none (a reinstall keeps yours).\n## Octail sets Port= and Password= before every start.\nmkdir -p /mnt/server/PostScriptum/ServerConfig\nif [ ! -f /mnt/server/PostScriptum/ServerConfig/Rcon.cfg ]; then\n    cat > /mnt/server/PostScriptum/ServerConfig/Rcon.cfg <<'OCTAIL_EOF'\n// RCON settings. Octail sets Port= and Password= before every start (the Startup tab).\nIP=0.0.0.0\nPort=21114\nPassword=\nMaxConnections=5\nSecondsBeforeTimeoutCheck=120\nOCTAIL_EOF\nfi\n\n## Octail: the same for Server.cfg; the file parser only replaces lines that are there\nif [ ! -f /mnt/server/PostScriptum/ServerConfig/Server.cfg ]; then\n    cat > /mnt/server/PostScriptum/ServerConfig/Server.cfg <<'OCTAIL_EOF'\n// Server settings. Octail sets the lines below from the Startup tab before every start; add the game's other\n// settings (MapVoting=, ServerMessageInterval=, TKAutoKickEnabled=, ...) as you like.\nServerName=\"Squad 44 server\"\nMaxPlayers=80\nNumReservedSlots=0\nShouldAdvertise=true\nAllowTeamChanges=true\nPreventTeamChangeIfUnbalanced=true\nNumPlayersDiffForTeamChanges=3\nEnforceTeamBalance=true\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 80 characters, no \" or \\).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Squad 44 server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]{1,80}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "80",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,100",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Reserved Slots",
+      "description": "Slots kept free for admins and members listed in Admins.cfg.",
+      "env_variable": "RESERVED_SLOTS",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:0,20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Advertise",
+      "description": "true lists the server in the public server browser.",
+      "env_variable": "ADVERTISE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Allow Team Changes",
+      "description": "false stops every player from changing teams.",
+      "env_variable": "ALLOW_TEAM_CHANGES",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Team Balance",
+      "description": "true keeps the teams even: no team change into the bigger team, and balancing when they drift apart.",
+      "env_variable": "TEAM_BALANCE",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map Rotation",
+      "description": "NONE plays MapRotation.cfg in order, FIRST picks a random first map, ALWAYS shuffles the whole rotation.",
+      "env_variable": "MAP_ROTATION",
+      "default_value": "NONE",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:NONE,FIRST,ALWAYS",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Port + 1",
+      "description": "Squad 44 also uses the game port + 1 (UDP). Set by Octail when the server is created (the port after the game port). The game picks this port itself; Octail only reserves it.",
+      "env_variable": "GAME_PORT_2",
+      "default_value": "7788",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Steam query port (UDP), passed as QueryPort=. Set by Octail when the server is created (two after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27165",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port + 1",
+      "description": "Squad 44 also uses the query port + 1 (UDP). Set by Octail when the server is created (three after the game port). The game picks this port itself; Octail only reserves it.",
+      "env_variable": "QUERY_PORT_2",
+      "default_value": "27166",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Port",
+      "description": "RCON port (TCP), written to PostScriptum/ServerConfig/Rcon.cfg at every start. Set by Octail when the server is created (four after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "21114",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Generated by Octail when the server is created; written to Rcon.cfg. Octail sends console commands over RCON; admin tools can use it too.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|alpha_dash|between:8,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "The Steam app id of the dedicated server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "746200",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:746200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1), or start the installed files (0). Players can only join a server of their own game version.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Squad 44",
+    "features": {
+      "players": {
+        "list": "a2s",
+        "kick": "AdminKick \"{name}\" {reason}",
+        "ban": "AdminBan \"{name}\" 0 {reason}",
+        "message": "AdminWarn \"{name}\" {message}"
+      },
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "rcon": {
+        "type": "source",
+        "port_var": "RCON_PORT",
+        "password_var": "RCON_PASSWORD"
+      },
+      "port_vars": {
+        "GAME_PORT_2": "primary+1",
+        "QUERY_PORT": "primary+2",
+        "QUERY_PORT_2": "primary+3",
+        "RCON_PORT": "primary+4"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 30
+      },
+      "broadcast_command": "AdminBroadcast {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

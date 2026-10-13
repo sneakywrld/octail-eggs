@@ -1,0 +1,105 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail: PocketMine-MP, Bedrock server software in PHP. The install takes PocketMine-MP.phar from pmmp's GitHub releases and pmmp's own PHP binary for Linux x86_64 (pmmp/PHP-Binaries, the PHP version the release's build_info.json names), each checked against the SHA-256 digest GitHub lists; the binary runs on Octail's Debian 12 image (it needs glibc 2.35+ and libstdc++, its own libraries come with it). Tagged minecraft, bedrock and pocketmine with the minecraft_bedrock flag: the node pings it like a Bedrock server, and it gets none of Bedrock Dedicated Server's tools (its server.properties has on/off switches and its lists are white-list.txt and ops.txt) but the Players tab: names from the GameSpy4 query on the game port, kick, ban, pardon and messages as console commands (players preset pocketmine). No EULA: --no-wizard skips PocketMine's setup wizard, and the install writes server.properties so the first start already uses the server's port.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/pocketmine.json"
+  },
+  "uuid": "858ad50f-be5b-4152-90a7-63836512fc2a",
+  "name": "PocketMine-MP",
+  "author": "octail@meowgafactory.com",
+  "description": "PocketMine-MP is a server for Minecraft: Bedrock Edition (phones, tablets, consoles and Windows) written in PHP, with a large library of plugins. It is not made by Mojang: it has no vanilla world generation or mob AI, so it suits minigames, lobbies and plugin-driven servers best.",
+  "tags": [
+    "minecraft",
+    "bedrock",
+    "pocketmine",
+    "php"
+  ],
+  "features": [
+    "minecraft_bedrock"
+  ],
+  "docker_images": {
+    "Debian 12": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -x bin/php7/bin/php ] || [ ! -f PocketMine-MP.phar ]; then echo 'PocketMine-MP or its PHP binary is missing: reinstall the server (Settings, Reinstall).'; exit 1; fi; exec ./bin/php7/bin/php ./PocketMine-MP.phar --no-wizard --enable-ansi"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-port": "{{server.allocations.default.port}}",
+          "enable-ipv6": "off",
+          "enable-query": "on"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# PocketMine-MP installation (Octail): PocketMine-MP.phar from pmmp's GitHub releases (latest or a version) and\n# pmmp's own PHP binary for Linux x86_64 (github.com/pmmp/PHP-Binaries), both checked against the SHA-256 digests\n# GitHub lists for the release assets. The PHP version is the one the release's build_info.json names, or the one\n# staff pin. Plugins, worlds, players, server.properties and pocketmine.yml stay on reinstall.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --connect-timeout 30 --max-time 60 --retry 3 \"$1\"; }\ndownload() { curl -fsSL --connect-timeout 30 --max-time 900 --retry 3 -o \"$2\" \"$1\"; }\n# The asset named $2 of the release JSON $1, as {name, url, sha256}; empty when it has none.\nasset() {\n\techo \"$1\" | jq -c --arg n \"$2\" '[.assets[] | select(.name == $n)][0] // empty\n\t\t| {name, url: .browser_download_url, sha256: ((.digest // \"\") | ltrimstr(\"sha256:\") | ascii_downcase)}'\n}\n# Downloads asset JSON $1 to $2 and checks its SHA-256.\nfetch_checked() {\n\tlocal name url sum\n\tname=$(echo \"$1\" | jq -r '.name')\n\turl=$(echo \"$1\" | jq -r '.url')\n\tsum=$(echo \"$1\" | jq -r '.sha256')\n\techo \"${sum}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"GitHub lists no SHA-256 for ${name}\"\n\tdownload \"${url}\" \"$2\" || fail \"the download of ${name} failed\"\n\tif ! echo \"${sum}  $2\" | sha256sum -c --quiet -; then\n\t\trm -f \"$2\"\n\t\tfail \"${name} doesn't match its SHA-256 (${sum})\"\n\tfi\n}\n\nARCH=$(uname -m)\ncase \"${ARCH}\" in\nx86_64 | amd64) ;;\n*) fail \"pmmp publishes PHP binaries for Linux x86_64 only, and this node is ${ARCH}\" ;;\nesac\n\nVERSION=\"${PMMP_VERSION:-latest}\"\nPHP=\"${PHP_VERSION:-auto}\"\necho \"${VERSION}\" | grep -Eq '^(latest|[0-9]+\\.[0-9]+\\.[0-9]+)$' ||\n\tfail \"the PocketMine-MP version (${VERSION}) must be a version such as 5.44.3 or latest\"\necho \"${PHP}\" | grep -Eq '^(auto|[0-9]+\\.[0-9]+)$' || fail \"the PHP version (${PHP}) must be auto or a version such as 8.2\"\n\nRELEASES=https://api.github.com/repos/pmmp/PocketMine-MP/releases\nif [ \"${VERSION}\" = latest ]; then\n\tRELEASE=$(get \"${RELEASES}/latest\") || fail \"GitHub didn't list the latest PocketMine-MP release\"\nelse\n\tRELEASE=$(get \"${RELEASES}/tags/${VERSION}\") || fail \"PocketMine-MP ${VERSION} isn't a release on GitHub\"\nfi\nTAG=$(echo \"${RELEASE}\" | jq -r '.tag_name // empty')\n[ -n \"${TAG}\" ] || fail \"GitHub's answer names no release\"\nPHAR=$(asset \"${RELEASE}\" PocketMine-MP.phar)\nINFO=$(asset \"${RELEASE}\" build_info.json)\nif [ -z \"${PHAR}\" ] || [ -z \"${INFO}\" ]; then\n\tfail \"release ${TAG} has no PocketMine-MP.phar or build_info.json\"\nfi\n\nWORK=$(mktemp -d)\ntrap 'rm -rf \"${WORK}\"' EXIT\nfetch_checked \"${INFO}\" \"${WORK}/build_info.json\"\nMAJOR=\"${TAG%%.*}\"\nif [ \"${PHP}\" = auto ]; then\n\tPHP=$(jq -r '.php_version // empty' \"${WORK}/build_info.json\")\n\techo \"${PHP}\" | grep -Eq '^[0-9]+\\.[0-9]+$' || fail \"build_info.json of ${TAG} names no PHP version\"\nfi\n\nPHP_TAG=\"pm${MAJOR}-php-${PHP}-latest\"\nPHP_RELEASE=$(get \"https://api.github.com/repos/pmmp/PHP-Binaries/releases/tags/${PHP_TAG}\") ||\n\tfail \"pmmp publishes no PHP ${PHP} binary for PocketMine-MP ${MAJOR} (release ${PHP_TAG})\"\nPHP_ASSET=$(asset \"${PHP_RELEASE}\" \"PHP-${PHP}-Linux-x86_64-PM${MAJOR}.tar.gz\")\n[ -n \"${PHP_ASSET}\" ] || fail \"release ${PHP_TAG} has no Linux x86_64 PHP binary\"\n\necho \"Installing PocketMine-MP ${TAG} with PHP ${PHP} (${PHP_TAG})\"\nfetch_checked \"${PHAR}\" \"${WORK}/PocketMine-MP.phar\"\nfetch_checked \"${PHP_ASSET}\" \"${WORK}/php.tar.gz\"\nmkdir -p \"${WORK}/php\"\ntar -xzf \"${WORK}/php.tar.gz\" -C \"${WORK}/php\"\n[ -f \"${WORK}/php/bin/php7/bin/php\" ] || fail \"the PHP archive has no bin/php7/bin/php\"\n\nmkdir -p /mnt/server\ncd /mnt/server\nrm -rf bin/php7\nmkdir -p bin\nmv \"${WORK}/php/bin/php7\" bin/php7\nchmod +x bin/php7/bin/php\nmv -f \"${WORK}/PocketMine-MP.phar\" PocketMine-MP.phar\n\n# The binary was built in /home/runner: point its php.ini at the extensions (OPcache) where the server sees them.\nEXT=$(find bin/php7/lib/php/extensions -mindepth 1 -maxdepth 1 -type d -name '*debug-zts*' | head -n 1)\n[ -n \"${EXT}\" ] || fail \"the PHP archive has no extension folder\"\nINI=bin/php7/bin/php.ini\nsed -i '/^extension_dir=/d' \"${INI}\"\nsed -i \"1i extension_dir=\\\"/home/container/${EXT}\\\"\" \"${INI}\"\n\nmkdir -p plugins plugin_data worlds players\n# The panel rewrites the port, IPv6 (off: containers publish IPv4 ports) and the query (the Players tab reads it)\n# at every start. Writing them now means the first start already uses the server's port; the rest stays PocketMine's.\nif [ ! -f server.properties ]; then\n\tprintf '%s\\n' '#Properties Config file' 'server-port=19132' 'enable-ipv6=off' 'enable-query=on' >server.properties\nfi\n\nif [ ! -x bin/php7/bin/php ] || [ ! -f PocketMine-MP.phar ]; then\n\tfail \"PocketMine-MP or its PHP binary is missing\"\nfi\necho \"PocketMine-MP ${TAG} and PHP ${PHP} installed (SHA-256 checked). Put plugins (.phar) into plugins/.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "PocketMine-MP Version",
+      "description": "The PocketMine-MP release to install, such as 5.44.3, or latest for the newest stable release. Applied on the next reinstall.",
+      "env_variable": "PMMP_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+\\.[0-9]+\\.[0-9]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "PHP Version",
+      "description": "The PHP binary to install from pmmp's PHP-Binaries: auto takes the version the PocketMine-MP release names, or pin one such as 8.2.",
+      "env_variable": "PHP_VERSION",
+      "default_value": "auto",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:10",
+        "regex:/^(auto|[0-9]+\\.[0-9]+)$/"
+      ],
+      "sort": 2
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "players": {
+        "preset": "pocketmine"
+      },
+      "broadcast_command": "say {message}",
+      "sleep": "minecraft_bedrock",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 1024
+      }
+    }
+  }
+}

@@ -263,9 +263,31 @@
         "string",
         "max:20"
       ]
+    },
+    {
+      "sort": 18,
+      "name": "Query Port",
+      "description": "Valheim always uses the game port + 1 for Steam queries. Octail reserves it when the server is created; the game doesn't read this setting.",
+      "env_variable": "QUERY_PORT",
+      "default_value": 2457,
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "integer"
+      ]
     }
   ],
   "x_octail": {
+    "features": {
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      }
+    },
     "category": "Valheim"
   }
 }

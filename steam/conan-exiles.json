@@ -108,7 +108,7 @@
       "name": "Server Name",
       "description": "The name in the server browser (no double quotes or backslashes).",
       "env_variable": "SRV_NAME",
-      "default_value": "Pelican hosted Server",
+      "default_value": "An Octail server",
       "user_viewable": true,
       "user_editable": true,
       "rules": [

@@ -1,0 +1,113 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Paper egg (minecraft-paper.yaml): the jar from Leaf's download API (api.leafmc.one, PaperMC's API v2 shape) with its SHA-256 checked, latest meaning the newest Minecraft version with a build in Leaf's default channel, a version or build that does not exist fails the install, the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 and 21 images (Leaf starts at 1.21.4; 26.x needs Java 25), Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/leaf.json"
+  },
+  "uuid": "5d0f7a52-3c1e-4b8e-9a64-2f1c8e7d4b19",
+  "name": "Leaf",
+  "author": "octail@meowgafactory.com",
+  "description": "Leaf is a performance fork of Paper (with Gale's and other forks' optimisations and async options). Runs Paper, Spigot and Bukkit plugins.",
+  "tags": [
+    "minecraft",
+    "leaf"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Leaf installation (Octail): the jar from Leaf's download API (api.leafmc.one, PaperMC's API v2 shape),\n# its SHA-256 checked. \"latest\" picks the newest Minecraft version with a build in Leaf's default channel\n# (the newest version when none has one) and the newest default build of that version (the newest\n# experimental one when there is none). A version or build that doesn't exist fails the install.\n#\n# Server files: /mnt/server\nset -eu\n\nAPI=https://api.leafmc.one/v2/projects/leaf\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\nBUILD=\"${BUILD_NUMBER:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nPROJECT_JSON=$(get \"${API}\") || fail \"can't reach Leaf's download API (${API})\"\n# Newest first: Leaf lists its versions in text order (\"1.21.11\" before \"1.21.4\", \"26.1.2\" after both).\nALL=$(echo \"${PROJECT_JSON}\" | jq -r '.versions // [] | map(select(type == \"string\")) |\n\tsort_by(split(\".\") | map(tonumber? // 0)) | reverse | .[]')\n[ -n \"${ALL}\" ] || fail \"Leaf's API lists no versions\"\n\nif [ -z \"${VERSION}\" ] || [ \"${VERSION}\" = \"latest\" ]; then\n\tVERSION=\"\"\n\tfor v in ${ALL}; do\n\t\tDEFAULT=$(get \"${API}/versions/${v}/builds\" | jq -r '[.builds[] | select(.channel == \"default\")] | length') || DEFAULT=0\n\t\tif [ \"${DEFAULT}\" -gt 0 ] 2>/dev/null; then\n\t\t\tVERSION=\"${v}\"\n\t\t\tbreak\n\t\tfi\n\tdone\n\tif [ -z \"${VERSION}\" ]; then\n\t\tVERSION=$(echo \"${ALL}\" | head -n 1)\n\t\techo \"No Minecraft version has a Leaf build in the default channel yet; using ${VERSION}.\"\n\tfi\nfi\necho \"${ALL}\" | grep -qxF \"${VERSION}\" ||\n\tfail \"Leaf has no Minecraft ${VERSION}. The versions are listed at https://www.leafmc.one/download\"\n\nBUILDS=$(get \"${API}/versions/${VERSION}/builds\") || fail \"can't list the Leaf builds of ${VERSION}\"\nif [ -z \"${BUILD}\" ] || [ \"${BUILD}\" = \"latest\" ]; then\n\tBUILD=$(echo \"${BUILDS}\" | jq -r '(.builds // [] | sort_by(.build)) as $all |\n\t\t([$all[] | select(.channel == \"default\")] | last | .build?) // ($all | last | .build?) // empty')\n\t[ -n \"${BUILD}\" ] || fail \"Leaf has no builds for ${VERSION}\"\nfi\ncase \"${BUILD}\" in\n*[!0-9]*) fail \"the build number (${BUILD}) must be a number or latest\" ;;\nesac\n\nINFO=$(echo \"${BUILDS}\" | jq -c --arg b \"${BUILD}\" '.builds[] | select((.build | tostring) == $b)') || INFO=\"\"\n[ -n \"${INFO}\" ] || fail \"Leaf has no build ${BUILD} for ${VERSION}\"\nNAME=$(echo \"${INFO}\" | jq -r '.downloads.primary.name // empty')\nSHA256=$(echo \"${INFO}\" | jq -r '.downloads.primary.sha256 // empty' | tr 'A-F' 'a-f')\nCHANNEL=$(echo \"${INFO}\" | jq -r '.channel // empty')\necho \"${NAME}\" | grep -Eq '^[A-Za-z0-9._+-]+\\.jar$' || fail \"Leaf's API named no jar for build ${BUILD} of ${VERSION}\"\necho \"${SHA256}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"Leaf's API gave no SHA-256 for build ${BUILD} of ${VERSION}\"\nif [ \"${CHANNEL}\" != \"default\" ]; then\n\techo \"Note: Leaf ${VERSION} build ${BUILD} is marked ${CHANNEL}, not default (stable).\"\nfi\n\necho \"Installing Leaf ${VERSION} build ${BUILD} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --retry 3 --connect-timeout 20 -o \"${JAR}.download\" \"${API}/versions/${VERSION}/builds/${BUILD}/downloads/${NAME}\" ||\n\tfail \"the download of Leaf ${VERSION} build ${BUILD} failed\"\nGOT=$(sha256sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SHA256}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-256 mismatch for Leaf ${VERSION} build ${BUILD} (expected ${SHA256}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Leaf ${VERSION} build ${BUILD} installed (SHA-256 checked).\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.11, or latest for the newest version with a build in Leaf's default (stable) channel. A version Leaf has no build for fails the install.\n\nThe Startup image must fit it: Java 25 for 26.x, Java 21 or 25 for 1.21.x.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:32",
+        "regex:/^(latest|[0-9A-Za-z.-]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    },
+    {
+      "name": "Build Number",
+      "description": "The Leaf build to install, or latest for the newest default-channel build of that Minecraft version (the newest experimental one when it has none).",
+      "env_variable": "BUILD_NUMBER",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+)$/"
+      ],
+      "sort": 3
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

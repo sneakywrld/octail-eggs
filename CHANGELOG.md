@@ -4,25 +4,32 @@
 
 The eggs added, changed and removed by each publish.
 
-## 2026-10-12
+## 2026-10-13
 
-First publish: 102 eggs.
+First publish: 129 eggs.
 
 Added:
 
+- `minecraft/arclight.json`
 - `minecraft/bedrock.json`
 - `minecraft/bungeecord.json`
 - `minecraft/fabric.json`
 - `minecraft/folia.json`
 - `minecraft/forge.json`
 - `minecraft/geyser.json`
+- `minecraft/leaf.json`
+- `minecraft/mohist.json`
 - `minecraft/neoforge.json`
 - `minecraft/paper.json`
+- `minecraft/pocketmine.json`
+- `minecraft/powernukkitx.json`
+- `minecraft/pufferfish.json`
 - `minecraft/purpur.json`
 - `minecraft/quilt.json`
 - `minecraft/spigot.json`
 - `minecraft/sponge.json`
 - `minecraft/velocity.json`
+- `source/black-mesa.json`
 - `source/counter-strike-2.json`
 - `source/counter-strike-source.json`
 - `source/day-of-defeat-source.json`
@@ -30,10 +37,14 @@ Added:
 - `source/fistful-of-frags.json`
 - `source/garrysmod.json`
 - `source/generic.json`
+- `source/half-life-2-deathmatch.json`
 - `source/insurgency.json`
 - `source/left-4-dead-2.json`
+- `source/left-4-dead.json`
 - `source/no-more-room-in-hell.json`
+- `source/team-fortress-2-classified.json`
 - `source/team-fortress-2.json`
+- `source/zombie-panic-source.json`
 - `goldsrc/counter-strike-16.json`
 - `goldsrc/counter-strike-condition-zero.json`
 - `goldsrc/day-of-defeat.json`
@@ -68,23 +79,32 @@ Added:
 - `steam/empyrion.json`
 - `steam/enshrouded.json`
 - `steam/euro-truck-simulator-2.json`
+- `steam/ground-branch.json`
 - `steam/holdfast.json`
 - `steam/hurtworld.json`
 - `steam/icarus.json`
 - `steam/insurgency-sandstorm.json`
 - `steam/killing-floor-2.json`
+- `steam/killing-floor.json`
 - `steam/mordhau.json`
+- `steam/myth-of-empires.json`
+- `steam/natural-selection-2.json`
 - `steam/necesse.json`
 - `steam/night-of-the-dead.json`
 - `steam/palworld.json`
 - `steam/pavlov-vr.json`
+- `steam/pixark.json`
 - `steam/project-zomboid.json`
+- `steam/quake-live.json`
 - `steam/return-to-moria.json`
+- `steam/rising-world.json`
+- `steam/risk-of-rain-2.json`
 - `steam/satisfactory.json`
 - `steam/scp-secret-laboratory.json`
 - `steam/sons-of-the-forest.json`
 - `steam/soulmask.json`
 - `steam/space-engineers.json`
+- `steam/squad-44.json`
 - `steam/squad.json`
 - `steam/starbound.json`
 - `steam/stationeers.json`
@@ -94,15 +114,22 @@ Added:
 - `steam/the-isle.json`
 - `steam/unturned.json`
 - `steam/v-rising.json`
+- `steam/wurm-unlimited.json`
 - `steamcmd/generic.json`
 - `standalone/beammp.json`
 - `standalone/ddnet.json`
 - `standalone/factorio.json`
+- `standalone/hytale.json`
 - `standalone/luanti.json`
 - `standalone/mindustry.json`
+- `standalone/openarena.json`
 - `standalone/openrct2.json`
 - `standalone/openttd.json`
+- `standalone/red-eclipse.json`
 - `standalone/space-station-14.json`
+- `standalone/unreal-tournament-2004.json`
+- `standalone/unreal-tournament-99.json`
+- `standalone/urban-terror.json`
 - `standalone/vintage-story.json`
 - `standalone/xonotic.json`
 - `voice/mumble.json`
