@@ -22,7 +22,7 @@ Back to [all eggs](../README.md#source).
 | No More Room in Hell | [no-more-room-in-hell.json](no-more-room-in-hell.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-no-more-room-in-hell) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Team Fortress 2 Classified | [team-fortress-2-classified.json](team-fortress-2-classified.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✗ 2026-10-13](../TESTED.md#source-team-fortress-2-classified) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Team Fortress 2 | [team-fortress-2.json](team-fortress-2.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [—](../TESTED.md#source-team-fortress-2) | RCON (source), Players tab, sleep (udp) |
-| Zombie Panic! Source | [zombie-panic-source.json](zombie-panic-source.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✗ 2026-10-13](../TESTED.md#source-zombie-panic-source) | RCON (source), Players tab, sleep (udp), start detected by port |
+| Zombie Panic! Source | [zombie-panic-source.json](zombie-panic-source.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-16](../TESTED.md#source-zombie-panic-source) | RCON (source), Players tab, sleep (udp), start detected by port |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

@@ -6,8 +6,8 @@ The last real run of each egg on one of Octail's nodes, with the runtime image i
 its ready line (or its bound game port, for eggs that detect the start that way), sent a console command, stopped.
 A run is limited like a customer server (the memory limit below).
 
-62 of 129 eggs have a run on the current images: 56 passed, 6 failed.
-16 couldn't be run yet and 51 haven't been tried on these images.
+63 of 129 eggs have a run on the current images: 59 passed, 4 failed.
+17 couldn't be run yet and 49 haven't been tried on these images.
 
 | Egg | Result | Date | Image | Ready | Memory peak / limit | Node | Earlier | Note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -45,7 +45,7 @@ A run is limited like a customer server (the memory limit below).
 | <a name="source-no-more-room-in-hell"></a>[source/no-more-room-in-hell.json](source/no-more-room-in-hell.json) | not tested yet | – | – | – | – | – | – | new egg (Source); not yet run on a node |
 | <a name="source-team-fortress-2-classified"></a>[source/team-fortress-2-classified.json](source/team-fortress-2-classified.json) | ✗ failed | 2026-10-13 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | ? / 3072 MiB | node1 | – | install install_failed after 442 s: UpdateUI: skip show logo / [----] !!! Fatal Error: Steamcmd needs 250MB of free disk space to update. / SteamCMD did not fi… |
 | <a name="source-team-fortress-2"></a>[source/team-fortress-2.json](source/team-fortress-2.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
-| <a name="source-zombie-panic-source"></a>[source/zombie-panic-source.json](source/zombie-panic-source.json) | ✗ failed | 2026-10-13 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | 23 / 2048 MiB | node1 | – | no start line after 400 s |
+| <a name="source-zombie-panic-source"></a>[source/zombie-panic-source.json](source/zombie-panic-source.json) | ✓ passed | 2026-10-16 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 13 s | 145 / 2048 MiB | node1 | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:source) | – |
 | <a name="goldsrc-counter-strike-16"></a>[goldsrc/counter-strike-16.json](goldsrc/counter-strike-16.json) | ✓ passed | 2026-10-12 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 16 s | 90 / 1024 MiB | node1 | – | – |
 | <a name="goldsrc-counter-strike-condition-zero"></a>[goldsrc/counter-strike-condition-zero.json](goldsrc/counter-strike-condition-zero.json) | ✓ passed | 2026-10-12 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 11 s | 86 / 1024 MiB | node1 | – | – |
 | <a name="goldsrc-day-of-defeat"></a>[goldsrc/day-of-defeat.json](goldsrc/day-of-defeat.json) | ✓ passed | 2026-10-12 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 10 s | 95 / 1024 MiB | node1 | – | – |
@@ -99,7 +99,7 @@ A run is limited like a customer server (the memory limit below).
 | <a name="steam-quake-live"></a>[steam/quake-live.json](steam/quake-live.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 6 s | 77 / 1024 MiB | node1 | – | – |
 | <a name="steam-return-to-moria"></a>[steam/return-to-moria.json](steam/return-to-moria.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-rising-world"></a>[steam/rising-world.json](steam/rising-world.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 10 s | 717 / 4096 MiB | node1 | – | – |
-| <a name="steam-risk-of-rain-2"></a>[steam/risk-of-rain-2.json](steam/risk-of-rain-2.json) | ✗ failed | 2026-10-13 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | – | ? / 4096 MiB | node1 | – | install install_failed after 32 s: Waiting for client config...OK / Waiting for user info...OK / "@sSteamCmdForcePlatformType" = "windows" / PosixFileOpen: RES… |
+| <a name="steam-risk-of-rain-2"></a>[steam/risk-of-rain-2.json](steam/risk-of-rain-2.json) | not run | – | – | – | – | – | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:wine) | Steam's public branch of app 1180760 (the dedicated server) has carried an empty depot since 2025-11: SteamCMD reports it installed and leaves no files; nothing on a server can fix that, and the egg says so when it happens. The last real run (2026-10-13) failed for this reason. |
 | <a name="steam-satisfactory"></a>[steam/satisfactory.json](steam/satisfactory.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-scp-secret-laboratory"></a>[steam/scp-secret-laboratory.json](steam/scp-secret-laboratory.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="steam-sons-of-the-forest"></a>[steam/sons-of-the-forest.json](steam/sons-of-the-forest.json) | ✓ passed | 2026-10-10 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | 83 s | 6448 / 8192 MiB | node1 | – | – |
@@ -128,8 +128,8 @@ A run is limited like a customer server (the memory limit below).
 | <a name="standalone-openttd"></a>[standalone/openttd.json](standalone/openttd.json) | ✓ passed | 2026-10-10 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 12 s | 10 / 8192 MiB | node1 | – | – |
 | <a name="standalone-red-eclipse"></a>[standalone/red-eclipse.json](standalone/red-eclipse.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 2 / 512 MiB | node1 | – | – |
 | <a name="standalone-space-station-14"></a>[standalone/space-station-14.json](standalone/space-station-14.json) | ✓ passed | 2026-10-13 | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | 11 s | 505 / 4096 MiB | node1 | ✗ 2026-10-12 (ghcr.io/sneakywrld/octail-yolks:dotnet_10) | – |
-| <a name="standalone-unreal-tournament-2004"></a>[standalone/unreal-tournament-2004.json](standalone/unreal-tournament-2004.json) | not tested yet | – | – | – | – | – | – | – |
-| <a name="standalone-unreal-tournament-99"></a>[standalone/unreal-tournament-99.json](standalone/unreal-tournament-99.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="standalone-unreal-tournament-2004"></a>[standalone/unreal-tournament-2004.json](standalone/unreal-tournament-2004.json) | ✓ passed | 2026-10-16 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 87 / 1024 MiB | node1 | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:debian) | – |
+| <a name="standalone-unreal-tournament-99"></a>[standalone/unreal-tournament-99.json](standalone/unreal-tournament-99.json) | ✓ passed | 2026-10-16 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 31 / 512 MiB | node1 | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:debian) | – |
 | <a name="standalone-urban-terror"></a>[standalone/urban-terror.json](standalone/urban-terror.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 94 / 512 MiB | node1 | – | – |
 | <a name="standalone-vintage-story"></a>[standalone/vintage-story.json](standalone/vintage-story.json) | ✓ passed | 2026-10-12 | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | 33 s | 1182 / 3072 MiB | node1 | ✓ 2026-10-08 (upstream) | – |
 | <a name="standalone-xonotic"></a>[standalone/xonotic.json](standalone/xonotic.json) | ✓ passed | 2026-10-12 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 386 / 1024 MiB | node1 | – | – |
