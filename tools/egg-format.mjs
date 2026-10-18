@@ -540,6 +540,12 @@ export function featureProblems(f, envNames = new Set()) {
         p.push('player_query.port_offset must be a whole number from -100 to 100');
     }
   }
+  if (
+    f.player_log !== undefined &&
+    f.player_log !== false &&
+    !['minecraft', 'velocity', 'bedrock', 'vintagestory', 'none'].includes(f.player_log)
+  )
+    p.push('features.player_log must be "minecraft", "velocity", "bedrock", "vintagestory", "none" or false');
   if (f.players !== undefined && f.players !== false && f.players !== true) {
     const o = typeof f.players === 'string' ? { preset: f.players } : f.players;
     if (!isObj(o)) p.push('features.players must be a preset name or an object');
