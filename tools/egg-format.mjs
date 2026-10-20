@@ -122,6 +122,53 @@ export function phpRegex(pattern) {
   }
 }
 
+// --- catastrophic-backtracking (ReDoS) shapes (SEC-B3) -------------------------------------------------------------
+//
+// A nested quantifier: a group whose entire body is one quantified atom ("a+", ".*", "\d+", "[a-z]*", …) and nothing
+// else, itself quantified again ("(a+)+", "(.*)*", …). That shape lets the engine re-partition the same input between
+// the inner and outer repeat in exponentially many ways, so a crafted egg `regex:`/`not_regex:` rule with it is a
+// ReDoS against the panel process once a customer's startup-variable value (up to 4096 chars) is tested against it.
+// This is a static, single-level shape check (no `safe-regex`-style dependency exists in this codebase and none is
+// added for this): it catches the classic forms the audit names without flagging ordinary "(sep atom)*" patterns
+// (e.g. "(-\S+(\s+-\S+)*)?", used by a shipped egg), whose inner group always consumes at least one character that
+// the outer repeat can't also claim, so it can't backtrack exponentially.
+const GROUP_THEN_QUANTIFIER = /\((?:\?:)?([^()]*)\)([+*])/g;
+const SINGLE_QUANTIFIED_ATOM = /^(?:\\.|\[(?:\\.|[^\]\\])*\]|\.|[^+*?{}()|^$\\])[+*]$/;
+
+/** True when `source` (a RegExp's `.source`, or any pattern body) has a nested-quantifier ReDoS shape. */
+export function hasCatastrophicBacktracking(source) {
+  const str2 = String(source ?? '');
+  GROUP_THEN_QUANTIFIER.lastIndex = 0;
+  let m;
+  while ((m = GROUP_THEN_QUANTIFIER.exec(str2))) {
+    if (SINGLE_QUANTIFIED_ATOM.test(m[1])) return true;
+  }
+  return false;
+}
+
+/**
+ * `rules` (already split by splitRules) with any regex/not_regex entry whose pattern has a catastrophic-backtracking
+ * shape removed, so it's never stored for an importer to later run against a customer value. Importers call this
+ * when building a variable's rules; `ruleProblems` reports the same patterns as an import warning so the shape is
+ * visible even though the importer silently drops the rule instead of failing the whole egg.
+ */
+export function dropUnsafeRegexRules(rules) {
+  const dropped = [];
+  const kept = (Array.isArray(rules) ? rules : []).filter((rule) => {
+    const i = String(rule).indexOf(':');
+    const name = i === -1 ? rule : rule.slice(0, i);
+    const arg = i === -1 ? '' : rule.slice(i + 1);
+    if (!RULES_REGEX.includes(name)) return true;
+    const re = phpRegex(arg);
+    if (re && hasCatastrophicBacktracking(re.source)) {
+      dropped.push(rule);
+      return false;
+    }
+    return true;
+  });
+  return { rules: kept, dropped };
+}
+
 /** Problems with one variable's `rules` (a string or a list), as messages. */
 export function ruleProblems(rules) {
   if (rules != null && typeof rules !== 'string' && !Array.isArray(rules)) {
@@ -143,7 +190,12 @@ export function ruleProblems(rules) {
     } else if (RULES_LIST.includes(name)) {
       if (arg === '') problems.push(`rule "${rule}" needs a list of values`);
     } else if (RULES_REGEX.includes(name)) {
-      if (!phpRegex(arg)) problems.push(`rule "${rule}" has a pattern that doesn't compile`);
+      const re = phpRegex(arg);
+      if (!re) problems.push(`rule "${rule}" has a pattern that doesn't compile`);
+      else if (hasCatastrophicBacktracking(re.source))
+        problems.push(
+          `rule "${rule}" has a pattern vulnerable to catastrophic backtracking (nested quantifiers) and is dropped on import`,
+        );
     } else problems.push(`unknown rule "${rule}"`);
   }
   return problems;
