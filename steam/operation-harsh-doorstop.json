@@ -1,0 +1,217 @@
+{
+  "_comment": "Octail's own egg (LinuxGSM's ohdserver settings and its Game.ini were read as a reference only). App 950900 (Operation: Harsh Doorstop Dedicated Server) from anonymous SteamCMD, the Linux build HarshDoorstop/Binaries/Linux/HarshDoorstopServer-Linux-Shipping started with the map and slots as URL options and -Port, -QueryPort, -RconPort and -SteamServerName. Game.ini (HarshDoorstop/Saved/Config/LinuxServer/) is edited with the ini parser before every start: the name, the join password and the RCON switch and password ([/Script/RCON.RCONServerSystem], off until the owner turns it on). Query (+1, A2S: player count and the Players tab list) and RCON (+2, TCP) are automatic port variables; RCON isn't wired to Octail's console. The server reads no console input; start detected by the game port (UDP) from 30 s on; stop with Ctrl+C. SteamCMD is retried up to 3 times (its first run on a fresh install often fails with \"Missing configuration\"), the steamcmd download times out and retries, and the install fails when the server binary is missing.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/operation-harsh-doorstop.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "Operation: Harsh Doorstop",
+  "author": "eggs@octail.net",
+  "uuid": "06da4943-6d7d-4d6b-b654-6556d35398b4",
+  "description": "Operation: Harsh Doorstop is a free, open-ended military sandbox shooter on Unreal Engine 4: large combined-arms battles across modern and historical eras, with deep mod support.",
+  "tags": [
+    "operation-harsh-doorstop",
+    "unreal-engine",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup": "./HarshDoorstop/Binaries/Linux/HarshDoorstopServer-Linux-Shipping \"{{MAP}}?MaxPlayers={{MAX_PLAYERS}}\" -Port={{SERVER_PORT}} -QueryPort={{QUERY_PORT}} -RconPort={{RCON_PORT}} -SteamServerName=\"{{SERVER_NAME}}\" -log",
+  "config": {
+    "files": "{\n    \"HarshDoorstop/Saved/Config/LinuxServer/Game.ini\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"/Script/DonkehFramework.DFGameSession.ServerName\": \"{{server.environment.SERVER_NAME}}\",\n            \"/Script/DonkehFramework.DFGameSession.Password\": \"{{server.environment.SERVER_PASSWORD}}\",\n            \"/Script/RCON.RCONServerSystem.bEnabled\": \"{{server.environment.RCON_ENABLED}}\",\n            \"/Script/RCON.RCONServerSystem.Password\": \"{{server.environment.RCON_PASSWORD}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": []\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Operation: Harsh Doorstop dedicated server (Octail's own install script; LinuxGSM's ohdserver settings were read as a\n# reference only). App 950900, the Linux build, anonymous SteamCMD. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -uo pipefail\n\n## anonymous login: the Operation: Harsh Doorstop server needs no Steam account\nSTEAM_USER=anonymous\n\n## download and install steamcmd\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd /mnt/server/steamapps # steamapps: SteamCMD's disk write error when it is missing\nif ! curl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz \\\n    https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz; then\n    echo \"Installation failed: SteamCMD couldn't be downloaded.\"\n    exit 1\nfi\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise, even running as root; the files are given to the server's user after the install.\nchown -R root:root /mnt/server/steamcmd /mnt/server/steamapps\nexport HOME=/mnt/server\n\n## install the server with steamcmd (the Linux depot)\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nBETA=()\n[ -z \"${SRCDS_BETAID:-}\" ] || BETA=(-beta \"${SRCDS_BETAID}\")\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} +app_update \"${SRCDS_APPID}\" \"${BETA[@]}\" validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 and 64 bit Steam client libraries\nmkdir -p /mnt/server/.steam/sdk32 /mnt/server/.steam/sdk64\ncp -v linux32/steamclient.so /mnt/server/.steam/sdk32/steamclient.so\ncp -v linux64/steamclient.so /mnt/server/.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nBIN=/mnt/server/HarshDoorstop/Binaries/Linux/HarshDoorstopServer-Linux-Shipping\nif [[ ! -f \"$BIN\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Operation: Harsh Doorstop dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x \"$BIN\"\n\n## Octail: the server's settings live in HarshDoorstop/Saved/Config/LinuxServer/; Octail sets the name, join password\n## and RCON password in Game.ini before every start (the file is made then when it isn't there yet)\nmkdir -p /mnt/server/HarshDoorstop/Saved/Config/LinuxServer\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no \" or \\).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Operation: Harsh Doorstop server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "32",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,100",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The map the server starts on (LinuxGSM's default AAS-TestMap). The rotation after it is in HarshDoorstop/Saved/Config/LinuxServer/MapCycle.cfg (Argonne, Montecassino, LamDong, Khafji_P, Risala, ...).",
+      "env_variable": "MAP",
+      "default_value": "AAS-TestMap",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9_-]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@%+!-]{0,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON",
+      "description": "True turns on the server's remote console on the RCON port (for admin tools; set an RCON Password first).",
+      "env_variable": "RCON_ENABLED",
+      "default_value": "False",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:True,False",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "The remote console password (8-64 letters, digits, - and _). Hidden once saved.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([A-Za-z0-9_-]{8,64})?$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Query Port",
+      "description": "Steam query port (UDP), passed as -QueryPort. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "7778",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Port",
+      "description": "Remote console port (TCP), passed as -RconPort. Set by Octail when the server is created (two after the game port).",
+      "env_variable": "RCON_PORT",
+      "default_value": "7779",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|integer|between:1024,65535",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "App ID",
+      "description": "The Steam app id of the Operation: Harsh Doorstop dedicated server.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "950900",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": "required|string|in:950900",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Beta Branch",
+      "description": "Optional: a Steam beta branch of the server; empty for the public build. Reinstall after changing it.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[\\w.-]*$/",
+        "max:64"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1), or start the installed files (0). Players can only join a server of their own game version.",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Operation: Harsh Doorstop",
+    "features": {
+      "no_console_input": true,
+      "players": {
+        "list": "a2s"
+      },
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1",
+        "RCON_PORT": "primary+2"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 30
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 20480
+      }
+    },
+    "variables": {
+      "RCON_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

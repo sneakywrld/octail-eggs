@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4). Based on games-standalone factorio/factorio/egg-factorio.yaml (pelican-eggs, MIT licence), converted to JSON. Octail adds Source RCON on an automatic RCON port with a generated password (RCON on by default), generic UDP idle sleep (off until staff enable it per server), a broadcast command (plain console text is chat), install sandbox defaults and resource hints.",
+  "_comment": "Octail curated egg (plan §6.4). Based on games-standalone factorio/factorio/egg-factorio.yaml (pelican-eggs, MIT licence), converted to JSON. Octail changes the install script (the headless release checked against the SHA-256 list factorio.com publishes, a version that isn't listed fails the install, failures exit non-zero, and a reinstall no longer overwrites data/map-settings.json: upstream looked for it in the wrong folder) and adds RCON on an automatic port with a generated password (RCON on by default, Factorio's own RCON exec path rather than Source's: see tentacle/src/rcon/factorio.js), generic UDP idle sleep (off until staff enable it per server), a broadcast command (plain console text is chat), a Players tab over `/players online`/`/kick`/`/ban`/`/unban` with unquoted names (Factorio's console doesn't respect quotes), install sandbox defaults and resource hints.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/factorio.json"
@@ -46,7 +46,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\n# Factorio Installation Script\n#\n# Server Files: /mnt/server\napt update \napt install -y curl tar xz-utils jq\n\nVERSION_JSON=$(curl -sSL https://factorio.com/api/latest-releases)\n\nlatest_stable=$(echo $VERSION_JSON | jq -r '.stable.headless')\nlatest_experimental=$(echo $VERSION_JSON | jq -r '.experimental.headless')\n\nif [ -z \"${FACTORIO_VERSION}\" ] || [ \"${FACTORIO_VERSION}\" == \"latest\" ]; then\n  DL_VERSION=$latest_stable\nelif [ \"${FACTORIO_VERSION}\" == \"experimental\" ]; then\n  DL_VERSION=$latest_experimental\nelse\n  DL_VERSION=${FACTORIO_VERSION}\nfi\n\nmkdir -p /mnt/server\ncd /mnt/server\n\necho -e \"\n running 'curl -sL https://www.factorio.com/get-download/${DL_VERSION}/headless/linux64 -o factorio-${DL_VERSION}' \n\"\n\ncurl -sL https://www.factorio.com/get-download/${DL_VERSION}/headless/linux64 -o factorio-${DL_VERSION}\n\ntar -xf factorio-${DL_VERSION} --strip-components=1 -C /mnt/server\n\nrm factorio-${DL_VERSION}\n\nif [ -e data/map-gen-settings.json ]; then\n    echo \"map-gen exists\"\nelse\n    echo \"copying map-gen default settings\"\n    mv data/map-gen-settings.example.json data/map-gen-settings.json\nfi\n\nif [ -e data/server-settings.json ]; then\n    echo \"server settings exists\"\nelse\n    echo \"copying server default settings\"\n    mv data/server-settings.example.json data/server-settings.json\nfi\n\nif [ -e map-settings.json ]; then\n    echo \"map settings exists\"\nelse\n    echo \"copying map default settings\"\n    mv data/map-settings.example.json data/map-settings.json\nfi\n\nif [ -e ./saves/${SAVE_NAME}.zip ]; then\n    echo \"save file exists\"\nelse\n    ./bin/x64/factorio --create ./saves/${SAVE_NAME} --map-gen-settings data/map-gen-settings.json --map-settings data/map-settings.json\n    chmod o+w ./saves/${SAVE_NAME}.zip\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
+      "script": "#!/bin/bash\n# Factorio installation script (pelican-eggs, changed for Octail: the headless server checked against the SHA-256\n# list factorio.com publishes, failures exit non-zero, a reinstall keeps your settings and saves)\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl tar xz-utils jq ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs Factorio's Linux x86_64 headless server (this node is $(uname -m)).\"\n    exit 1\nfi\n\nSAVE_NAME=\"${SAVE_NAME:-gamesave}\"\n\n## latest = the newest stable headless release, experimental = the newest experimental one, or a version such as 2.0.72\nVERSION=\"${FACTORIO_VERSION:-latest}\"\ncase \"$VERSION\" in\n    latest | experimental)\n        CHANNEL=stable\n        [ \"$VERSION\" = experimental ] && CHANNEL=experimental\n        VERSION=$(curl -fsSL --retry 3 https://factorio.com/api/latest-releases | jq -r \".${CHANNEL}.headless // empty\" || true)\n        if [ -z \"$VERSION\" ]; then\n            echo \"Installation failed: the newest Factorio version couldn't be read from factorio.com.\"\n            exit 1\n        fi\n        ;;\nesac\n\n## factorio.com lists the SHA-256 of every release; the headless file is named factorio-headless_linux_<version>.tar.xz\n## (2.0 and newer) or factorio_headless_x64_<version>.tar.xz (older)\nSUM=$(curl -fsSL --retry 3 https://www.factorio.com/download/sha256sums/ | awk -v a=\"factorio-headless_linux_${VERSION}.tar.xz\" -v b=\"factorio_headless_x64_${VERSION}.tar.xz\" '$2 == a || $2 == b { print tolower($1); exit }' || true)\nif [ -z \"$SUM\" ]; then\n    echo \"Installation failed: Factorio ${VERSION} isn't in factorio.com's SHA-256 list (check the version).\"\n    exit 1\nfi\n\nmkdir -p /mnt/server\ncd /mnt/server\n## downloaded into the server folder (the installer's /tmp is small), removed afterwards\nDL=/mnt/server/.factorio-download.tar.xz\necho \"Downloading Factorio ${VERSION} (headless)\"\nif ! curl -fsSL --retry 3 -o \"$DL\" \"https://www.factorio.com/get-download/${VERSION}/headless/linux64\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download of Factorio ${VERSION} failed.\"\n    exit 1\nfi\nif ! echo \"${SUM}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match factorio.com's SHA-256.\"\n    exit 1\nfi\ntar -xJf \"$DL\" --strip-components=1 -C /mnt/server\nrm -f \"$DL\"\nif [ ! -x /mnt/server/bin/x64/factorio ]; then\n    echo \"Installation failed: bin/x64/factorio is missing after unpacking Factorio ${VERSION}.\"\n    exit 1\nfi\n\n## the settings files, only when there are none (a reinstall keeps yours)\nfor f in map-gen-settings server-settings map-settings; do\n    if [ -e \"data/${f}.json\" ]; then\n        echo \"data/${f}.json exists\"\n    else\n        echo \"copying the default data/${f}.json\"\n        cp \"data/${f}.example.json\" \"data/${f}.json\"\n    fi\ndone\n\nmkdir -p saves\nif [ -e \"./saves/${SAVE_NAME}.zip\" ]; then\n    echo \"save file exists\"\nelse\n    ./bin/x64/factorio --create \"./saves/${SAVE_NAME}\" --map-gen-settings data/map-gen-settings.json --map-settings data/map-settings.json\n    chmod o+w \"./saves/${SAVE_NAME}.zip\"\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Factorio ${VERSION}.\"\necho \"-----------------------------------------\"\n",
       "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
       "entrypoint": "bash"
     }
@@ -68,7 +68,7 @@
     },
     {
       "name": "Factorio Version",
-      "description": "Which version of Factorio to install and use.",
+      "description": "latest (the newest stable release), experimental (the newest experimental one) or a version such as 2.0.72. Players need the same version. Reinstall to switch.",
       "env_variable": "FACTORIO_VERSION",
       "default_value": "latest",
       "user_viewable": true,
@@ -76,7 +76,8 @@
       "rules": [
         "required",
         "string",
-        "between:3,12"
+        "max:20",
+        "regex:/^(latest|experimental|\\d+\\.\\d+\\.\\d+)$/"
       ],
       "sort": 1
     },
@@ -246,12 +247,18 @@
     "category": "Factorio",
     "features": {
       "rcon": {
-        "type": "source",
+        "type": "factorio",
         "port_var": "RCON_PORT",
         "password_var": "RCON_PASSWORD"
       },
       "port_vars": {
         "RCON_PORT": "primary+1"
+      },
+      "players": {
+        "list": "factorio_rcon",
+        "kick": "/kick {name} {reason}",
+        "ban": "/ban {name} {reason}",
+        "unban": "/unban {name}"
       },
       "sleep": {
         "mode": "udp"

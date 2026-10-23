@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4). Based on minecraft java/fabric/egg-fabric.yaml (pelican-eggs, MIT licence). Octail adds the fabric tag and Minecraft Java idle sleep.",
+  "_comment": "Octail curated egg (plan §6.4). Based on minecraft java/fabric/egg-fabric.yaml (pelican-eggs, MIT licence). Octail adds the fabric tag and Minecraft Java idle sleep, and its own install script on the Quilt egg's pattern: the Fabric installer checked against the SHA-256 Fabric's Maven repository publishes, the Mojang server jar against Mojang's SHA-1, a version Fabric doesn't have fails the install, the launcher keeps the Server Jar File name. The start line uses the container's memory like the other Minecraft eggs (-XX:MaxRAMPercentage instead of -Xmx with the whole limit, which left no room for the JVM itself), and the query port follows the main port.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/fabric.json"
@@ -26,7 +26,7 @@
   },
   "file_denylist": [],
   "startup_commands": {
-    "Default": "java -Xms128M -Xmx{{SERVER_MEMORY}}M -jar {{SERVER_JARFILE}}"
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} nogui"
   },
   "config": {
     "files": {
@@ -35,7 +35,8 @@
         "find": {
           "server-ip": "0.0.0.0",
           "enable-query": true,
-          "server-port": "{{server.allocations.default.port}}"
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
         }
       }
     },
@@ -50,7 +51,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\n# Fabric MC Installation Script\n#\n# Server Files: /mnt/server\napt update\napt install -y curl jq unzip dos2unix wget\nmkdir -p /mnt/server\ncd /mnt/server\n\n# Enable snapshots\nif [ -z \"$MC_VERSION\" ] || [ \"$MC_VERSION\" == \"latest\" ]; then\n  MC_VERSION=$(curl -sSL https://meta.fabricmc.net/v2/versions/game | jq -r '.[] | select(.stable== true )|.version' | head -n1)\nelif [ \"$MC_VERSION\" == \"snapshot\" ]; then\n  MC_VERSION=$(curl -sSL https://meta.fabricmc.net/v2/versions/game | jq -r '.[] | select(.stable== false )|.version' | head -n1)\nfi\n\nif [ -z \"$FABRIC_VERSION\" ] || [ \"$FABRIC_VERSION\" == \"latest\" ]; then\n  FABRIC_VERSION=$(curl -sSL https://meta.fabricmc.net/v2/versions/installer | jq -r '.[0].version')\nfi\n\nif [ -z \"$LOADER_VERSION\" ] || [ \"$LOADER_VERSION\" == \"latest\" ]; then\n  LOADER_VERSION=$(curl -sSL https://meta.fabricmc.net/v2/versions/loader | jq -r '.[] | select(.stable== true )|.version' | head -n1)\nelif [ \"$LOADER_VERSION\" == \"snapshot\" ]; then\n  LOADER_VERSION=$(curl -sSL https://meta.fabricmc.net/v2/versions/loader | jq -r '.[] | select(.stable== false )|.version' | head -n1)\nfi\n\nwget -O fabric-installer.jar https://maven.fabricmc.net/net/fabricmc/fabric-installer/$FABRIC_VERSION/fabric-installer-$FABRIC_VERSION.jar\njava -jar fabric-installer.jar server -mcversion $MC_VERSION -loader $LOADER_VERSION -downloadMinecraft\nmv server.jar minecraft-server.jar\nmv fabric-server-launch.jar server.jar\necho \"serverJar=minecraft-server.jar\" > fabric-server-launcher.properties\necho -e \"Install Complete\"",
+      "script": "#!/bin/bash\n# Fabric installation (Octail): the Fabric installer from Fabric's Maven repository, checked against the SHA-256\n# file Maven publishes next to it, the Mojang server jar checked against the SHA-1 Mojang lists for it, then the\n# installer's server launcher (fabric-server-launch.jar and libraries/). The installer fetches the loader's\n# libraries from Fabric's Maven repository over HTTPS; it doesn't check them, and neither does this script.\n# A Minecraft or loader version Fabric doesn't have fails the install instead of installing another one.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nMETA=https://meta.fabricmc.net/v2/versions\nMOJANG=https://piston-meta.mojang.com/mc/game/version_manifest_v2.json\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVANILLA=minecraft-server.jar\nVERSION=\"${MC_VERSION:-latest}\"\nLOADER=\"${LOADER_VERSION:-latest}\"\nINSTALLER=\"${FABRIC_VERSION:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\nfetch() { curl -fsSL --retry 3 --connect-timeout 20 -o \"$2\" \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\n[[ \"${JAR}\" =~ ^[A-Za-z0-9._-]+\\.jar$ ]] || fail \"the jar name (${JAR}) must be a plain .jar file name\"\n[ \"${JAR}\" != \"${VANILLA}\" ] || fail \"${VANILLA} is the Mojang server jar; pick another name for the Fabric launcher\"\nfor v in \"${VERSION}\" \"${LOADER}\" \"${INSTALLER}\"; do\n\t[[ \"${v}\" =~ ^[0-9A-Za-z.+-]+$ ]] || fail \"versions can only hold letters, digits, dots, dashes and plus signs (${v})\"\ndone\n\n# Minecraft version: the newest stable one, the newest snapshot, or one Fabric lists.\nGAMES=$(get \"${META}/game\") || fail \"can't reach Fabric's meta service (${META})\"\ncase \"${VERSION}\" in\nlatest) VERSION=$(echo \"${GAMES}\" | jq -r 'map(select(.stable)) | .[0].version // empty') ;;\nsnapshot) VERSION=$(echo \"${GAMES}\" | jq -r 'map(select(.stable | not)) | .[0].version // empty') ;;\nesac\n[ -n \"${VERSION}\" ] || fail \"Fabric's meta service named no Minecraft version\"\necho \"${GAMES}\" | jq -e --arg v \"${VERSION}\" 'any(.[]; .version == $v)' >/dev/null ||\n\tfail \"Fabric has no Minecraft ${VERSION}. The versions are listed at ${META}/game\"\n\n# Loader: the newest stable one for this Minecraft version, the newest of all (snapshot), or the one given.\nFOR_GAME=$(get \"${META}/loader/${VERSION}\") || fail \"can't list the Fabric loaders for ${VERSION}\"\ncase \"${LOADER}\" in\nlatest)\n\tLOADER=$(echo \"${FOR_GAME}\" | jq -r 'map(select(.loader.stable)) | .[0].loader.version // empty')\n\t[ -n \"${LOADER}\" ] || fail \"Fabric has no stable loader for Minecraft ${VERSION}. Set Loader Version to snapshot or a version.\"\n\t;;\nsnapshot) LOADER=$(echo \"${FOR_GAME}\" | jq -r '.[0].loader.version // empty') ;;\nesac\n[ -n \"${LOADER}\" ] || fail \"Fabric has no loader for Minecraft ${VERSION}\"\necho \"${FOR_GAME}\" | jq -e --arg l \"${LOADER}\" 'any(.[]; .loader.version == $l)' >/dev/null ||\n\tfail \"Fabric loader ${LOADER} doesn't support Minecraft ${VERSION}\"\n\n# Installer: the meta service lists them, Fabric's Maven repository has the jar and its SHA-256.\nINSTALLERS=$(get \"${META}/installer\") || fail \"can't list the Fabric installers\"\nif [ \"${INSTALLER}\" = \"latest\" ]; then\n\tPICK=$(echo \"${INSTALLERS}\" | jq -c 'map(select(.stable)) | .[0] // empty')\nelse\n\tPICK=$(echo \"${INSTALLERS}\" | jq -c --arg v \"${INSTALLER}\" 'map(select(.version == $v)) | .[0] // empty')\nfi\n[ -n \"${PICK}\" ] || fail \"Fabric has no installer ${INSTALLER}\"\nINSTALLER=$(echo \"${PICK}\" | jq -r '.version')\nURL=$(echo \"${PICK}\" | jq -r '.url // empty')\n[[ \"${URL}\" =~ ^https://maven\\.fabricmc\\.net/ ]] || fail \"Fabric's meta service named no Maven download for installer ${INSTALLER}\"\nSUM=$(get \"${URL}.sha256\" | awk '{print tolower($1)}') || fail \"Fabric's Maven repository has no SHA-256 for installer ${INSTALLER}\"\n[[ \"${SUM}\" =~ ^[0-9a-f]{64}$ ]] || fail \"Fabric's Maven repository has no SHA-256 for installer ${INSTALLER}\"\nrm -f fabric-installer.jar\nfetch \"${URL}\" fabric-installer.jar || fail \"the download of the Fabric installer ${INSTALLER} failed\"\nGOT=$(sha256sum fabric-installer.jar | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SUM}\" ]; then\n\trm -f fabric-installer.jar\n\tfail \"SHA-256 mismatch for the Fabric installer ${INSTALLER} (expected ${SUM}, got ${GOT})\"\nfi\n\n# The Mojang server jar, checked against the SHA-1 Mojang lists (for the version file and the jar).\nMANIFEST=$(get \"${MOJANG}\") || fail \"can't reach Mojang's version manifest\"\nENTRY=$(echo \"${MANIFEST}\" | jq -c --arg v \"${VERSION}\" '.versions | map(select(.id == $v)) | .[0] // empty')\n[ -n \"${ENTRY}\" ] || fail \"Mojang's version manifest has no Minecraft ${VERSION}\"\nfetch \"$(echo \"${ENTRY}\" | jq -r '.url')\" version.json.download || fail \"can't download Mojang's file for ${VERSION}\"\n[ \"$(sha1sum version.json.download | cut -d ' ' -f 1)\" = \"$(echo \"${ENTRY}\" | jq -r '.sha1')\" ] ||\n\tfail \"SHA-1 mismatch for Mojang's file for ${VERSION}\"\nSERVER_URL=$(jq -r '.downloads.server.url // empty' version.json.download)\nSERVER_SHA1=$(jq -r '.downloads.server.sha1 // empty' version.json.download)\nrm -f version.json.download\nif ! [[ \"${SERVER_URL}\" =~ ^https:// ]] || ! [[ \"${SERVER_SHA1}\" =~ ^[0-9a-f]{40}$ ]]; then\n\tfail \"Mojang lists no server download for ${VERSION}\"\nfi\nfetch \"${SERVER_URL}\" \"${VANILLA}.download\" || fail \"the download of the Minecraft ${VERSION} server failed\"\nGOT=$(sha1sum \"${VANILLA}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SERVER_SHA1}\" ]; then\n\trm -f \"${VANILLA}.download\"\n\tfail \"SHA-1 mismatch for the Minecraft ${VERSION} server (expected ${SERVER_SHA1}, got ${GOT})\"\nfi\nmv -f \"${VANILLA}.download\" \"${VANILLA}\"\n\n# The launcher and its libraries, written into the server folder.\necho \"Installing Fabric loader ${LOADER} for Minecraft ${VERSION} (installer ${INSTALLER})\"\nrm -f fabric-server-launch.jar\nSTATUS=0\njava -jar fabric-installer.jar server -mcversion \"${VERSION}\" -loader \"${LOADER}\" -dir /mnt/server || STATUS=$?\nrm -f fabric-installer.jar\n[ \"${STATUS}\" -eq 0 ] || fail \"the Fabric installer failed (see its output above)\"\n[ -s fabric-server-launch.jar ] || fail \"the Fabric installer wrote no fabric-server-launch.jar\"\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv fabric-server-launch.jar \"${JAR}\"\n# The launcher starts the Mojang jar named here.\necho \"serverJar=${VANILLA}\" >fabric-server-launcher.properties\n\necho \"Fabric loader ${LOADER} for Minecraft ${VERSION} installed as ${JAR} (installer SHA-256 and Mojang SHA-1 checked).\"\necho \"Most Fabric mods also need Fabric API in mods/: the Mods & plugins tab installs it with them.\"\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
       "container": "ghcr.io/sneakywrld/octail-yolks:installer_java_11",
       "entrypoint": "bash"
     }
@@ -58,7 +59,7 @@
   "variables": [
     {
       "name": "Fabric Loader Version",
-      "description": "The version of Fabric Loader to install.",
+      "description": "The Fabric Loader version, such as 0.20.1: latest for the newest stable loader for the Minecraft version, snapshot for the newest one. A loader that does not support the Minecraft version fails the install.",
       "env_variable": "LOADER_VERSION",
       "default_value": "latest",
       "user_viewable": true,
@@ -66,13 +67,14 @@
       "rules": [
         "required",
         "string",
-        "between:3,15"
+        "max:32",
+        "regex:/^(latest|snapshot|[0-9A-Za-z.+-]+)$/"
       ],
       "sort": 1
     },
     {
       "name": "Fabric Version",
-      "description": "The version of Fabric to install.",
+      "description": "The version of the Fabric installer that sets the server up, or latest for the newest stable one.",
       "env_variable": "FABRIC_VERSION",
       "default_value": "latest",
       "user_viewable": true,
@@ -80,13 +82,14 @@
       "rules": [
         "required",
         "string",
-        "between:3,15"
+        "max:32",
+        "regex:/^(latest|[0-9A-Za-z.+-]+)$/"
       ],
       "sort": 2
     },
     {
       "name": "Minecraft Version",
-      "description": "The version of Minecraft to install. Use \"latest\" to install the latest version, or use \"snapshot\"\nto install the latest snapshot.",
+      "description": "The Minecraft version, such as 1.21.11: latest for the newest release Fabric supports, snapshot for the newest snapshot. A version Fabric does not have fails the install.\n\nThe Startup image must fit it: Java 25 for the newest releases, Java 21 for 1.20.5 to 1.21.x, Java 17 for 1.17 to 1.20.4, Java 8 or 11 before that.",
       "env_variable": "MC_VERSION",
       "default_value": "latest",
       "user_viewable": true,
@@ -94,13 +97,14 @@
       "rules": [
         "required",
         "string",
-        "between:3,15"
+        "max:32",
+        "regex:/^(latest|snapshot|[0-9A-Za-z.+-]+)$/"
       ],
       "sort": 3
     },
     {
       "name": "Server Jar File",
-      "description": "The name of the server jarfile to run the server with.",
+      "description": "The name of the server jar file (Fabric's launcher; Mojang's server is minecraft-server.jar next to it).",
       "env_variable": "SERVER_JARFILE",
       "default_value": "server.jar",
       "user_viewable": true,
@@ -118,6 +122,14 @@
     "features": {
       "sleep": {
         "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
       }
     }
   }

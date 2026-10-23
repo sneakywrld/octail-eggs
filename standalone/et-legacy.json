@@ -1,0 +1,172 @@
+{
+  "_comment": "Octail's own egg (LinuxGSM's etlserver settings and ET: Legacy's own Linux installer were read as a reference). The install downloads ET: Legacy 2.86.2's official Linux x86_64 release archive from etlegacy.com (checked against the MD5 the site publishes and a SHA-256 recorded in the script), then id Software's Wolfenstein: Enemy Territory 2.60 Linux installer from ftp.gwdg.de's mirror of id's FTP (the SHA-256 ET: Legacy's installer checks) and takes only pak0-2.pk3 (each SHA-256 pinned) and the game's licence out of its makeself archive without running it. The game data comes with id Software's Enemy Territory licence, so nothing is downloaded until the owner sets Accept Enemy Territory Licence to TRUE (eula_variable: with the host's server_tools.auto_accept_eula on, the panel accepts). etmain/server.cfg is made once from ET: Legacy's etl_server.cfg (its map cycle, dedicated and private-slot lines changed) and edited with the file parser before every start (name, slots, join and rcon passwords, message, the watchdog's map cycle); the start line sets the port, the public listing (dedicated 1 or 2) and the map cycle (campaign, objective, last man standing or map vote). Runs on octail-yolks' Debian image; say broadcast, quit stop, start line \"------- Game Initialization -------\" or the game port (UDP) bound, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/et-legacy.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "ET: Legacy",
+  "author": "eggs@octail.net",
+  "uuid": "a7588c0e-2e90-4f6b-8e9a-01166019c234",
+  "description": "ET: Legacy is the open-source continuation of Wolfenstein: Enemy Territory, the free World War II team shooter: Allies against Axis in objective, campaign and last man standing modes with five classes.",
+  "tags": [
+    "et-legacy",
+    "enemy-territory",
+    "idtech3",
+    "open-source"
+  ],
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./etlded.x86_64 ] || { echo \"ET: Legacy is not installed: set Accept Enemy Territory Licence to TRUE on the Startup tab and reinstall the server.\"; exit 1; }; exec ./etlded.x86_64 +set fs_basepath \"$(pwd)\" +set fs_homepath \"$(pwd)\" +set fs_game legacy +set dedicated $((1 + {{PUBLIC_LIST}})) +set net_port {{SERVER_PORT}} +exec server.cfg +exec {{MAP_CYCLE}}.cfg",
+  "config": {
+    "files": "{\n    \"etmain/server.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"set sv_hostname \": \"set sv_hostname \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"set sv_maxclients \": \"set sv_maxclients \\\"{{server.environment.MAX_PLAYERS}}\\\"\",\n            \"set g_password \": \"set g_password \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"set rconpassword \": \"set rconpassword \\\"{{server.environment.RCON_PASSWORD}}\\\"\",\n            \"set server_motd0 \": \"set server_motd0 \\\"{{server.environment.MOTD}}\\\"\",\n            \"set com_watchdog_cmd \": \"set com_watchdog_cmd \\\"exec {{server.environment.MAP_CYCLE}}.cfg\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": [\n        \"------- Game Initialization -------\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# ET: Legacy installation script (Octail): ET: Legacy's official Linux x86_64 release archive from etlegacy.com, then\n# the Wolfenstein: Enemy Territory 2.60 game data (pak0-2.pk3) from id Software's Linux installer, the way ET: Legacy's\n# own Linux installer fetches it (ftp.gwdg.de mirrors id Software's FTP). Every download is checked: the release\n# against the MD5 etlegacy.com publishes and the SHA-256 recorded here, the id installer against the SHA-256 in ET:\n# Legacy's installer, and the three data files against their own SHA-256. The game data comes with id Software's\n# Enemy Territory licence: nothing is downloaded until the server's owner accepts it on the Startup tab. Failures exit\n# non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## ET: Legacy 2.86.2 (the release archive, etlegacy.com file 785): MD5 from https://www.etlegacy.com/download, SHA-256\n## recorded by Octail on 2026-10-23. A new release needs the version, file number and both checksums updated here.\nVERSION=2.86.2\nETL_URL=https://www.etlegacy.com/download/file/785\nETL_MD5=be9f55b08ef2c9528f3c93f445338e66\nETL_SHA256=7f0d5aa3f630cbe6574592d1f41b2feb5542c5e7decada30f84251b3f8908018\n## Wolfenstein: Enemy Territory 2.60 for Linux (id Software): the SHA-256 is the one ET: Legacy's installer checks; the\n## game data sits in its makeself archive after a 8756-byte shell header (the first 373 lines).\nET_RUN=et-linux-2.60.x86.run\nET_URL=https://ftp.gwdg.de/pub/misc/ftp.idsoftware.com/idstuff/et/linux/et-linux-2.60.x86.run\nET_SHA256=41cbbc1afb8438bc8fc74a64a171685550888856005111cbf9af5255f659ae36\nET_OFFSET=8756\nPAK0_SHA256=712966b20e06523fe81419516500e499c86b2b4fec823856ddbd333fcb3d26e5\nPAK1_SHA256=5610fd749024405b4425a7ce6397e58187b941d22092ef11d4844b427df53e5d\nPAK2_SHA256=a48ab749a1a12ab4d9137286b1f23d642c29da59845b2bafc8f64e052cf06f3e\n\nif [ \"${ACCEPT_ET_EULA:-FALSE}\" != TRUE ]; then\n    echo \"ET: Legacy isn't installed yet: it needs the Wolfenstein: Enemy Territory game data, which comes with id\"\n    echo \"Software's licence (EULA_Wolfenstein_Enemy_Territory.txt in the game's installer). Read it, set Accept\"\n    echo \"Enemy Territory Licence to TRUE on the Startup tab and reinstall.\"\n    exit 1\nfi\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs ET: Legacy's Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\napt-get update -qq\napt-get install -y -qq curl ca-certificates tar gzip > /dev/null\n\n## downloads are staged on the server's own disk (the installer's /tmp may be small), removed afterwards\ncd /mnt/server\nSTAGE=/mnt/server/.octail-install\nrm -rf \"$STAGE\"\nmkdir -p \"$STAGE\"\n\n## fetch <file> <url>: one download with time limits and retries\nfetch() {\n    echo \"Downloading $2\"\n    if ! curl -fSL --connect-timeout 30 --max-time 3600 --retry 3 --retry-delay 5 -o \"$STAGE/$1\" \"$2\"; then\n        rm -rf \"$STAGE\"\n        echo \"Installation failed: $2 couldn't be downloaded.\"\n        exit 1\n    fi\n}\n## check <file> <algorithm> <sum>: fails the install on a mismatch\ncheck() {\n    if ! echo \"$3  $STAGE/$1\" | \"$2sum\" -c --quiet -; then\n        rm -rf \"$STAGE\"\n        echo \"Installation failed: $1 doesn't match its $2 checksum.\"\n        exit 1\n    fi\n}\n\nfetch etlegacy.tar.gz \"$ETL_URL\"\ncheck etlegacy.tar.gz md5 \"$ETL_MD5\"\ncheck etlegacy.tar.gz sha256 \"$ETL_SHA256\"\nfetch \"$ET_RUN\" \"$ET_URL\"\ncheck \"$ET_RUN\" sha256 \"$ET_SHA256\"\n\n## the game data and its licence from id Software's installer, unpacked without running it\nmkdir -p \"$STAGE/et\"\ntail -c +\"$((ET_OFFSET + 1))\" \"$STAGE/$ET_RUN\" | tar -xzf - -C \"$STAGE/et\" etmain/pak0.pk3 etmain/pak1.pk3 \\\n    etmain/pak2.pk3 Docs/EULA_Wolfenstein_Enemy_Territory.txt\nrm -f \"$STAGE/$ET_RUN\"\ncheck et/etmain/pak0.pk3 sha256 \"$PAK0_SHA256\"\ncheck et/etmain/pak1.pk3 sha256 \"$PAK1_SHA256\"\ncheck et/etmain/pak2.pk3 sha256 \"$PAK2_SHA256\"\n\n## ET: Legacy's own files (the server, the legacy mod, its example configs); a reinstall keeps server.cfg, maps and\n## everything else you added\ntar -xzf \"$STAGE/etlegacy.tar.gz\" -C /mnt/server --strip-components=1\nmkdir -p etmain\nmv -f \"$STAGE\"/et/etmain/pak0.pk3 \"$STAGE\"/et/etmain/pak1.pk3 \"$STAGE\"/et/etmain/pak2.pk3 etmain/\nmv -f \"$STAGE/et/Docs/EULA_Wolfenstein_Enemy_Territory.txt\" .\nrm -rf \"$STAGE\"\nif [ ! -f etlded.x86_64 ] || [ ! -f legacy/qagame.mp.x86_64.so ] || [ ! -f etmain/etl_server.cfg ]; then\n    echo \"Installation failed: the dedicated server or the legacy mod is missing from the ET: Legacy archive.\"\n    exit 1\nfi\nchmod +x etlded.x86_64\n\n## etmain/server.cfg, only when there is none: ET: Legacy's example server config. Octail sets the name, slots,\n## passwords and message before every start and picks the map cycle on the start line, so the example's own \"exec\n## <cycle>.cfg\" lines and its \"set dedicated\" (also on the start line) are commented out. The example keeps 4 of the\n## slots for players with the private password; Octail starts with none (set sv_privateclients to use them).\nif [ ! -f etmain/server.cfg ]; then\n    sed -E -e 's#^(exec (campaign|objective|lms|mapvote)cycle\\.cfg)#//\\1#' -e 's#^set dedicated #//set dedicated #' \\\n        -e 's#^set sv_privateclients \"[0-9]+\"#set sv_privateclients \"0\"#' etmain/etl_server.cfg > etmain/server.cfg\nfi\nfor KEY in 'set sv_hostname ' 'set sv_maxclients ' 'set g_password ' 'set rconpassword ' 'set server_motd0 ' \\\n    'set com_watchdog_cmd '; do\n    if ! grep -q \"^${KEY}\" etmain/server.cfg; then\n        echo \"${KEY}\\\"\\\"\" >> etmain/server.cfg\n    fi\ndone\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: ET: Legacy ${VERSION} with the Enemy Territory 2.60 game data.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Accept Enemy Territory Licence",
+      "description": "The game data (pak0-2.pk3) comes with id Software's Wolfenstein: Enemy Territory licence, kept as EULA_Wolfenstein_Enemy_Territory.txt in the server folder after the install. TRUE accepts it for this server, and the install then downloads the game; with FALSE the install stops and downloads nothing. Reinstall after changing it.",
+      "env_variable": "ACCEPT_ET_EULA",
+      "default_value": "FALSE",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:TRUE,FALSE",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the server list (up to 64 characters, no double quotes or backslashes; ^1-^9 colour codes work). ET shows 26 characters without colour codes.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "ET: Legacy Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]{1,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (2-64).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "20",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:2,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map Cycle",
+      "description": "How the server plays its maps: campaigncycle (campaigns), objectivecycle (single objective maps), lmscycle (last man standing) or mapvotecycle (players vote for the next map). Each is a .cfg in etmain/ with its map list.",
+      "env_variable": "MAP_CYCLE",
+      "default_value": "mapvotecycle",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:campaigncycle,objectivecycle,lmscycle,mapvotecycle",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 lists the server on the master servers; 0 keeps it off the list (players join by address).",
+      "env_variable": "PUBLIC_LIST",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown on the join screen (no double quotes or backslashes).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]*$/",
+        "max:100"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join. No double quotes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]*$/",
+        "max:64"
+      ],
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Optional: the remote console password for /rcon in the game (8-64 characters, no spaces, quotes, backslashes, semicolons or carets). Hidden once saved. Empty = rcon off.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[^\\s\"'\\\\;^]{8,64}$/"
+      ],
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "x_octail": {
+    "category": "Wolfenstein: Enemy Territory",
+    "features": {
+      "eula_variable": {
+        "env": "ACCEPT_ET_EULA",
+        "accept": "TRUE"
+      },
+      "broadcast_command": "say {message}",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 2048
+      }
+    },
+    "variables": {
+      "RCON_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

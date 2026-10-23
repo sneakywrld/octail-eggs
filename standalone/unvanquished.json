@@ -1,0 +1,159 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official Unvanquished universal zip from GitHub, latest or a chosen version, checks it against the SHA-512 file the project publishes with each release, unpacks the Linux engine (daemonded and its NaCl loader, x86_64 or arm64) and the game packages (pkg/), keeps home/ (settings, admin list, logs, your own packages in home/pkg/) on a reinstall, writes home/config/server.cfg once and edits it with the file parser before every start (name, slots, listing, join password, rcon password, message of the day, bots, first map), passes the port on the command line (IPv4 only), runs on octail-yolks' Debian image and adds the console commands (say broadcast, quit stop), the UDP port start check, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/unvanquished.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "Unvanquished",
+  "author": "eggs@octail.net",
+  "uuid": "80a9c706-b339-4c91-973d-4117766ca9f2",
+  "description": "Unvanquished is a free, open-source team shooter with real-time strategy: aliens against humans, each side building its base, evolving or buying better gear, and destroying the other side.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./daemonded ] || { echo \"Unvanquished is not installed: reinstall the server.\"; exit 1; }; exec ./daemonded -homepath \"$(pwd)/home\" -set net_enabled 1 -set net_port {{SERVER_PORT}} +exec server.cfg",
+  "config": {
+    "files": "{\n    \"home/config/server.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"set sv_hostname \": \"set sv_hostname \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"set sv_maxclients \": \"set sv_maxclients {{server.environment.MAX_PLAYERS}}\",\n            \"set server.private \": \"set server.private {{server.environment.SERVER_PRIVATE}}\",\n            \"set g_password \": \"set g_password \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"set rcon.server.password \": \"set rcon.server.password \\\"{{server.environment.RCON_PASSWORD}}\\\"\",\n            \"set g_motd \": \"set g_motd \\\"{{server.environment.MOTD}}\\\"\",\n            \"set g_bot_defaultFill \": \"set g_bot_defaultFill {{server.environment.BOT_FILL}}\",\n            \"map \": \"map {{server.environment.MAP}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"----- Server Initialization -----\"\n}",
+    "logs": "{}",
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Unvanquished installation script (Octail): the official universal zip from GitHub, checked against the SHA-512 file\n# the project publishes with each release, with the Linux engine (daemonded and its NaCl loader) and the game\n# packages (pkg/) unpacked. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq unzip ca-certificates > /dev/null\n\ncase \"$(uname -m)\" in\n    x86_64) ENGINE=linux-amd64.zip ;;\n    aarch64) ENGINE=linux-arm64.zip ;;\n    *)\n        echo \"Installation failed: Unvanquished publishes Linux engines for x86_64 and arm64 (this node is $(uname -m)).\"\n        exit 1\n        ;;\nesac\n\nVERSION=\"${UNV_VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    TAG=$(curl -fsSL --connect-timeout 30 --retry 3 https://api.github.com/repos/Unvanquished/Unvanquished/releases/latest \\\n        | jq -r '.tag_name // empty' 2> /dev/null || true)\n    VERSION=\"${TAG#v}\"\n    if [ -z \"$VERSION\" ]; then\n        echo \"Installation failed: the newest Unvanquished release couldn't be read from GitHub.\"\n        exit 1\n    fi\nfi\nNAME=\"unvanquished_${VERSION}\"\nBASE=\"https://github.com/Unvanquished/Unvanquished/releases/download/v${VERSION}\"\n\n## about 630 MB: downloaded into the server folder (the installer's /tmp may be small), removed afterwards\nrm -rf /mnt/server/.unv-download\nmkdir -p /mnt/server/.unv-download\ncd /mnt/server/.unv-download\necho \"Downloading ${BASE}/${NAME}.zip\"\nif ! curl -fsSL --connect-timeout 30 --retry 3 -o \"${NAME}.sha512sum\" \"${BASE}/${NAME}.sha512sum\"; then\n    echo \"Installation failed: Unvanquished ${VERSION} wasn't found on GitHub (check the version).\"\n    exit 1\nfi\nif ! curl -fSL --connect-timeout 30 --max-time 3600 --retry 3 -o \"${NAME}.zip\" \"${BASE}/${NAME}.zip\"; then\n    rm -rf /mnt/server/.unv-download\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\n## the published list names the zip (\"<sha512> *unvanquished_<version>.zip\"); only that line is checked\nif ! tr -d '\\r' < \"${NAME}.sha512sum\" | grep -E \"^[0-9a-f]{128} [ *]${NAME}\\.zip$\" | sha512sum -c --quiet -; then\n    rm -rf /mnt/server/.unv-download\n    echo \"Installation failed: the download doesn't match Unvanquished ${VERSION}'s published SHA-512.\"\n    exit 1\nfi\n\nunzip -q \"${NAME}.zip\" \"${NAME}/pkg/*\" \"${NAME}/${ENGINE}\"\nrm -f \"${NAME}.zip\"\nif [ ! -f \"${NAME}/${ENGINE}\" ] || [ ! -d \"${NAME}/pkg\" ]; then\n    rm -rf /mnt/server/.unv-download\n    echo \"Installation failed: the engine or the game packages are missing from ${NAME}.zip.\"\n    exit 1\nfi\n\n## the engine and pkg/ are replaced; home/ (settings, admin list, logs, your own .dpk files in home/pkg/) stays\ncd /mnt/server\nrm -rf pkg\nmv \".unv-download/${NAME}/pkg\" pkg\nunzip -q -o \".unv-download/${NAME}/${ENGINE}\" -d /mnt/server\nrm -rf /mnt/server/.unv-download\nif [ ! -f daemonded ] || [ ! -f nacl_loader ]; then\n    echo \"Installation failed: daemonded is missing after unpacking ${ENGINE}.\"\n    exit 1\nfi\nchmod +x daemonded daemon daemon-tty crash_server nacl_loader nacl_helper_bootstrap 2> /dev/null || true\necho \"${VERSION}\" > .unv-version\nmkdir -p home/config home/pkg\n\n## your settings file, only when there is none: the server runs it at every start, and Octail sets the lines below\n## before every start (Startup tab)\nif [ ! -f home/config/server.cfg ]; then\n    cat > home/config/server.cfg <<'EOF'\n// Your Unvanquished server settings, run at every start (+exec server.cfg). Octail sets the lines below before\n// every start (Startup tab); add your own settings under them. Template with every common setting explained:\n// https://github.com/Unvanquished/Unvanquished/blob/master/dist/configs/config/server.cfg\nset sv_hostname \"My Unvanquished server\"\nset sv_maxclients 24\nset server.private 0\nset g_password \"\"\nset rcon.server.password \"\"\nset g_motd \"\"\nset g_bot_defaultFill 5\nset sv_networkScope 2\nset sv_allowdownload 0\nset g_initialMapRotation rotation1\nmap plat23\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Unvanquished ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Unvanquished Version",
+      "description": "latest (the newest release on GitHub) or a version such as 0.56.2. Players need the same version. Reinstall to switch.",
+      "env_variable": "UNV_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^(latest|\\d+\\.\\d+(\\.\\d+)?)$/|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no double quotes, backslashes, semicolons or dollar signs; ^1 to ^9 are colours).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My Unvanquished server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\;$\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (1-64; more than 24 is not recommended).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "24",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server List",
+      "description": "0 lists the server in the public server browser; 1 keeps it off the list but answers status queries (players join by address); 2 also hides its status.",
+      "env_variable": "SERVER_PRIVATE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1,2",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join. No double quotes, backslashes, semicolons or dollar signs.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\;$\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Optional: the password for remote admin commands from a game client (/rcon). 8-64 characters, no spaces, quotes, backslashes, semicolons or dollar signs. Hidden once saved. Empty = rcon off.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\;$]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown to joining players (no double quotes, backslashes, semicolons or dollar signs).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\;$\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Bots per Team",
+      "description": "Bots fill each team up to this many players (0-15); 0 = no bots.",
+      "env_variable": "BOT_FILL",
+      "default_value": "5",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:0,15",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "First Map",
+      "description": "The map loaded at start; the rotation (rotation1) takes over after it: plat23, chasm, forlorn, parpax, perseus, spacetracks, station15, thunder, vega, yocto, antares.",
+      "env_variable": "MAP",
+      "default_value": "plat23",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_-]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "unvanquished",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "Unvanquished",
+    "features": {
+      "broadcast_command": "say {message}",
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 3600
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 3072
+      }
+    },
+    "variables": {
+      "RCON_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official AssaultCube 1.3.0.2 release from GitHub, checks it against a SHA-256 recorded in the script (the project publishes none), unpacks the 64-bit Linux server, config/, the maps and the bot files (not the Windows files, the client binary or the source), keeps your edited config/ files on a reinstall, writes config/octail-cmdline.txt once with a random private server key (-Y, needed to register on the master server) and edits it with the file parser before every start (description, message of the day, slots, join password, admin password), passes the port and the master server registration on the command line, reserves the server info port (the main port + 1), runs on octail-yolks' Debian image and adds the Ctrl+C stop, the log-only console (the server reads no input), the UDP port start check, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/assaultcube.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "AssaultCube",
+  "author": "eggs@octail.net",
+  "uuid": "df44c63e-2c1e-41c3-84b1-cd2ab6c3ff93",
+  "description": "AssaultCube is a free, open-source, fast first-person shooter on the Cube engine: realistic weapons, small maps and quick rounds of team deathmatch, capture the flag, one shot one kill and more.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./bin_unix/linux_64_server ] || { echo \"AssaultCube is not installed: reinstall the server.\"; exit 1; }; exec ./bin_unix/linux_64_server -f{{SERVER_PORT}} -Cconfig/octail-cmdline.txt $([ \"{{PUBLIC_LIST}}\" = 1 ] && echo -m)",
+  "config": {
+    "files": "{\n    \"config/octail-cmdline.txt\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"-n \": \"-n {{server.environment.SERVER_NAME}}\",\n            \"-o \": \"-o {{server.environment.MOTD}}\",\n            \"-c \": \"-c {{server.environment.MAX_PLAYERS}}\",\n            \"-p \": \"-p {{server.environment.SERVER_PASSWORD}}\",\n            \"-x \": \"-x {{server.environment.ADMIN_PASSWORD}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"dedicated server started, waiting for clients\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# AssaultCube installation script (Octail): the official 1.3.0.2 release from GitHub, checked against the SHA-256\n# recorded here, with the 64-bit Linux server, config/, the maps and the bot files unpacked (not the Windows files,\n# the client binary or the source code). Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## AssaultCube 1.3.0.2 \"Lockdown Edition\", the current release (2022). GitHub and assault.cubers.net publish no\n## checksum for the archive, so Octail recorded its SHA-256 (2026-10-23). A new release needs it updated here.\nVERSION=1.3.0.2\nFILE=AssaultCube_v1.3.0.2_LockdownEdition_RC1.tar.bz2\nSHA256=9b3118e7929253f0114fa06cad8310faab646d177b4660406011152f34086b55\n\napt-get update -qq\napt-get install -y -qq curl bzip2 tar ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs AssaultCube's Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\ncd /mnt/server\nDL=/mnt/server/.assaultcube-download.tar.bz2\nURL=\"https://github.com/assaultcube/AC/releases/download/v${VERSION}/${FILE}\"\necho \"Downloading ${URL}\"\nif ! curl -fSL --connect-timeout 30 --max-time 1800 --retry 3 -o \"$DL\" \"$URL\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\nif ! echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match AssaultCube ${VERSION}'s checksum.\"\n    exit 1\nfi\n\nrm -rf /mnt/server/.assaultcube-unpack\nmkdir -p /mnt/server/.assaultcube-unpack\nU=/mnt/server/.assaultcube-unpack\ntar -xjf \"$DL\" -C \"$U\" --exclude='./bin_win32' --exclude='./source' --exclude='./bin_unix/linux_64_client' \\\n    --exclude='./screenshots' --exclude='./docs/images'\nrm -f \"$DL\"\nif [ ! -f \"$U/bin_unix/linux_64_server\" ] || [ ! -d \"$U/config\" ]; then\n    rm -rf \"$U\"\n    echo \"Installation failed: the server is missing from ${FILE}.\"\n    exit 1\nfi\n## the release's files replace the old ones, except config/: your edited settings, map rotation and passwords stay\n## (new files from the release are added)\nmkdir -p config\ncp -rn \"$U\"/config/. config/\nrm -rf \"$U/config\"\ncp -rf \"$U\"/. /mnt/server/\nrm -rf \"$U\"\nchmod +x bin_unix/linux_64_server\nmkdir -p logs demos packages/maps/servermaps/incoming\n\n## the start options, only when there are none: the server reads them at every start (-C), and Octail sets the lines\n## below before every start (Startup tab). The private server key (-Y) lets it register on the master server; it's\n## made here once, at random, and stays with this server.\nif [ ! -f config/octail-cmdline.txt ]; then\n    KEY=$(od -An -tx1 -N32 /dev/urandom | tr -d ' \\n')\n    cat > config/octail-cmdline.txt <<EOF\n// AssaultCube start options (one per line, see config/servercmdline.txt and docs/server.html for all of them).\n// Octail sets the -n, -o, -c, -p and -x lines below before every start (Startup tab); add your own options under\n// them. -Y is this server's private key for the master server: keep it secret.\n-n My AssaultCube server\n-o \n-c 12\n-p \n-x \n-Y ${KEY}\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: AssaultCube ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The description in the server browser (up to 64 characters, no slashes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My AssaultCube server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\\/\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown when players connect (no slashes or backslashes).",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\/\\\\\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (1-16; the master server lists servers with up to 16).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "12",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,16",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 registers the server on the AssaultCube master server (players need the main port and the one after it); 0 keeps it LAN-only (players join by address).",
+      "env_variable": "PUBLIC_LIST",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join. No spaces, slashes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\\/\\\\]*$/|max:32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Admin Password",
+      "description": "Optional: in the game, /setadmin 1 <password> gives you administrator rights (8-64 characters, no spaces, quotes, slashes, backslashes or semicolons). Hidden once saved. Empty = no admin password (config/serverpwd.cfg can hold more).",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\/\\\\;]{8,64}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "assaultcube",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "AssaultCube",
+    "features": {
+      "no_console_input": true,
+      "fixed_ports": {
+        "server info": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 1024
+      }
+    },
+    "variables": {
+      "ADMIN_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

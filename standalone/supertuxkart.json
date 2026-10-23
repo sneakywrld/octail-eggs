@@ -1,0 +1,158 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official SuperTuxKart Linux release (x86_64 or arm64) from GitHub, latest or a chosen version, checks it against the SHA-256 digest GitHub lists for the release file (1.5 and newer have one), replaces bin/, lib/ and data/ on a reinstall (server_config.xml and the saved online login stay), runs the game without graphics as a server with STK's network console on standard input (quit, kick, kickban, listpeers...), passes the port, slots, game mode, difficulty, message of the day, password and server name as start options (values come from the environment, never pasted into the command), hosts a LAN server (joined by address) or, with an STK online account, a WAN server listed in the game's server browser (the login is saved with --init-user before the start), runs on octail-yolks' Debian image and adds the quit stop, the UDP port start check, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/supertuxkart.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "SuperTuxKart",
+  "author": "eggs@octail.net",
+  "uuid": "f8f48fce-f88a-49ad-be76-7e582c9ecb68",
+  "description": "SuperTuxKart is a free, open-source 3D kart racer with Tux and friends: online races, time trials, soccer, free-for-all battles and capture the flag.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./bin/supertuxkart ] || { echo \"SuperTuxKart is not installed: reinstall the server.\"; exit 1; }; export LD_LIBRARY_PATH=\"$(pwd)/lib\"; MODE=--lan-server; if [ -n \"{{STK_USERNAME}}\" ] && [ -n \"{{STK_PASSWORD}}\" ]; then ./bin/supertuxkart --no-graphics --init-user \"--login={{STK_USERNAME}}\" \"--password={{STK_PASSWORD}}\"; MODE=--wan-server; fi; exec ./bin/supertuxkart --server-config=server_config.xml --network-console --port={{SERVER_PORT}} --max-players={{MAX_PLAYERS}} --mode={{GAME_MODE}} --difficulty={{DIFFICULTY}} \"--motd={{MOTD}}\" \"--server-password={{SERVER_PASSWORD}}\" \"$MODE={{SERVER_NAME}}\"",
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": [\n        \"Creating a LAN server '\",\n        \"Creating a WAN server '\"\n    ]\n}",
+    "logs": "{}",
+    "stop": "quit"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# SuperTuxKart installation script (Octail): the official Linux release from GitHub (the game, its data and bundled\n# libraries; the server is the game run without graphics), checked against the SHA-256 digest GitHub lists for the\n# release file. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\napt-get update -qq\napt-get install -y -qq curl jq tar gzip ca-certificates > /dev/null\n\ncase \"$(uname -m)\" in\n    x86_64) ARCH=x86_64 ;;\n    aarch64) ARCH=arm64 ;;\n    *)\n        echo \"Installation failed: SuperTuxKart publishes Linux builds for x86_64 and arm64 (this node is $(uname -m)).\"\n        exit 1\n        ;;\nesac\n\nAPI=https://api.github.com/repos/supertuxkart/stk-code/releases\nVERSION=\"${STK_VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    REL=$(curl -fsSL --connect-timeout 30 --retry 3 \"$API/latest\" || true)\nelse\n    REL=$(curl -fsSL --connect-timeout 30 --retry 3 \"$API/tags/${VERSION}\" || true)\nfi\nTAG=$(echo \"$REL\" | jq -r '.tag_name // empty' 2> /dev/null || true)\nif [ -z \"$TAG\" ]; then\n    echo \"Installation failed: SuperTuxKart release ${VERSION} wasn't found on GitHub (check the version).\"\n    exit 1\nfi\nFILE=\"SuperTuxKart-${TAG}-linux-${ARCH}.tar.gz\"\nASSET=$(echo \"$REL\" | jq -c --arg f \"$FILE\" '.assets[] | select(.name == $f)' | head -n 1)\nURL=$(echo \"$ASSET\" | jq -r '.browser_download_url // empty')\nDIGEST=$(echo \"$ASSET\" | jq -r '.digest // empty')\nif [ -z \"$URL\" ]; then\n    echo \"Installation failed: release ${TAG} has no ${FILE}.\"\n    exit 1\nfi\n## GitHub lists a SHA-256 for release files uploaded since mid-2025 (SuperTuxKart 1.5 and newer)\ncase \"$DIGEST\" in\n    sha256:*) SHA256=\"${DIGEST#sha256:}\" ;;\n    *)\n        echo \"Installation failed: GitHub lists no SHA-256 for ${FILE}, so it can't be checked (use 1.5 or newer).\"\n        exit 1\n        ;;\nesac\n\ncd /mnt/server\n## about 750 MB: downloaded into the server folder (the installer's /tmp may be small), removed afterwards\nDL=/mnt/server/.stk-download.tar.gz\necho \"Downloading ${URL}\"\nif ! curl -fSL --connect-timeout 30 --max-time 3600 --retry 3 -o \"$DL\" \"$URL\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\nif ! echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match the checksum GitHub lists for ${FILE}.\"\n    exit 1\nfi\n\nrm -rf /mnt/server/.stk-unpack\nmkdir -p /mnt/server/.stk-unpack\ntar -xzf \"$DL\" -C /mnt/server/.stk-unpack --strip-components=1\nrm -f \"$DL\"\nU=/mnt/server/.stk-unpack\nif [ ! -f \"$U/bin/supertuxkart\" ] || [ ! -d \"$U/data\" ]; then\n    rm -rf \"$U\"\n    echo \"Installation failed: the game is missing from ${FILE}.\"\n    exit 1\nfi\n\n## the release's files are replaced; server_config.xml, the saved online login (.config/) and your other files stay\nrm -rf bin lib data\nmv \"$U/bin\" \"$U/lib\" \"$U/data\" .\ncp -f \"$U\"/*.sh . 2> /dev/null || true\nrm -rf \"$U\"\nchmod +x bin/supertuxkart\necho \"${TAG}\" > .stk-version\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: SuperTuxKart ${TAG}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "SuperTuxKart Version",
+      "description": "latest (the newest release on GitHub) or a version such as 1.5 (1.5 or newer: older releases have no checksum to check). Players need the same version. Reinstall to switch.",
+      "env_variable": "STK_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^(latest|\\d+\\.\\d+(\\.\\d+)?)$/|max:20",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the server list (up to 64 characters).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My SuperTuxKart server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (1-16; more than 8 can slow races down).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "8",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,16",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Mode",
+      "description": "0 normal race, 1 time trial, 2 free-for-all battle, 3 soccer, 4 follow the leader, 5 capture the flag.",
+      "env_variable": "GAME_MODE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1,2,3,4,5",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Difficulty",
+      "description": "0 beginner, 1 intermediate, 2 expert, 3 SuperTux.",
+      "env_variable": "DIFFICULTY",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1,2,3",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Message of the Day",
+      "description": "Optional: shown in the lobby.",
+      "env_variable": "MOTD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\r\\n]*$/|max:200",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join (a private server). Empty = anyone can join.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "STK Account Name",
+      "description": "Optional: an online account from online.supertuxkart.net. With the account and its password the server is a WAN server, listed in the game's server browser; without them it is a LAN server that players join by address.",
+      "env_variable": "STK_USERNAME",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[A-Za-z0-9_.-]{3,30}$/",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "STK Account Password",
+      "description": "Optional: the password of the STK account above, used once at every start to save the login. Hidden once saved.",
+      "env_variable": "STK_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|max:128",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "supertuxkart",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "SuperTuxKart",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 3600
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 4096
+      }
+    },
+    "variables": {
+      "STK_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

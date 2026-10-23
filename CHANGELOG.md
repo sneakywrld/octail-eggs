@@ -4,21 +4,24 @@
 
 The eggs added, changed and removed by each publish.
 
-## 2026-10-20
+## 2026-10-23
 
-First publish: 129 eggs.
+First publish: 158 eggs.
 
 Added:
 
 - `minecraft/arclight.json`
 - `minecraft/bedrock.json`
 - `minecraft/bungeecord.json`
+- `minecraft/cuberite.json`
 - `minecraft/fabric.json`
 - `minecraft/folia.json`
 - `minecraft/forge.json`
+- `minecraft/gate.json`
 - `minecraft/geyser.json`
 - `minecraft/leaf.json`
 - `minecraft/mohist.json`
+- `minecraft/nanolimbo.json`
 - `minecraft/neoforge.json`
 - `minecraft/paper.json`
 - `minecraft/pocketmine.json`
@@ -28,6 +31,7 @@ Added:
 - `minecraft/quilt.json`
 - `minecraft/spigot.json`
 - `minecraft/sponge.json`
+- `minecraft/vanilla.json`
 - `minecraft/velocity.json`
 - `source/black-mesa.json`
 - `source/counter-strike-2.json`
@@ -69,7 +73,9 @@ Added:
 - `steam/assetto-corsa.json`
 - `steam/astroneer.json`
 - `steam/avorion.json`
+- `steam/ballistic-overkill.json`
 - `steam/barotrauma.json`
+- `steam/chivalry-medieval-warfare.json`
 - `steam/conan-exiles.json`
 - `steam/core-keeper.json`
 - `steam/craftopia.json`
@@ -79,6 +85,7 @@ Added:
 - `steam/empyrion.json`
 - `steam/enshrouded.json`
 - `steam/euro-truck-simulator-2.json`
+- `steam/foundry.json`
 - `steam/ground-branch.json`
 - `steam/holdfast.json`
 - `steam/hurtworld.json`
@@ -91,6 +98,8 @@ Added:
 - `steam/natural-selection-2.json`
 - `steam/necesse.json`
 - `steam/night-of-the-dead.json`
+- `steam/nightingale.json`
+- `steam/operation-harsh-doorstop.json`
 - `steam/palworld.json`
 - `steam/pavlov-vr.json`
 - `steam/pixark.json`
@@ -99,8 +108,10 @@ Added:
 - `steam/return-to-moria.json`
 - `steam/rising-world.json`
 - `steam/risk-of-rain-2.json`
+- `steam/runescape-dragonwilds.json`
 - `steam/satisfactory.json`
 - `steam/scp-secret-laboratory.json`
+- `steam/smalland.json`
 - `steam/sons-of-the-forest.json`
 - `steam/soulmask.json`
 - `steam/space-engineers.json`
@@ -114,28 +125,46 @@ Added:
 - `steam/the-isle.json`
 - `steam/unturned.json`
 - `steam/v-rising.json`
+- `steam/vein.json`
+- `steam/warfork.json`
+- `steam/windrose.json`
 - `steam/wurm-unlimited.json`
 - `steamcmd/generic.json`
+- `standalone/assaultcube.json`
 - `standalone/beammp.json`
 - `standalone/ddnet.json`
+- `standalone/et-legacy.json`
 - `standalone/factorio.json`
 - `standalone/hytale.json`
 - `standalone/luanti.json`
 - `standalone/mindustry.json`
 - `standalone/openarena.json`
+- `standalone/openra.json`
 - `standalone/openrct2.json`
 - `standalone/openttd.json`
 - `standalone/red-eclipse.json`
 - `standalone/space-station-14.json`
+- `standalone/supertuxkart.json`
+- `standalone/teeworlds.json`
+- `standalone/tes3mp.json`
 - `standalone/unreal-tournament-2004.json`
 - `standalone/unreal-tournament-99.json`
+- `standalone/unvanquished.json`
 - `standalone/urban-terror.json`
 - `standalone/vintage-story.json`
 - `standalone/xonotic.json`
 - `voice/mumble.json`
 - `voice/teamspeak.json`
+- `apps/bun-app.json`
+- `apps/deno-app.json`
 - `apps/go-app.json`
 - `apps/java-jar.json`
+- `apps/lavalink.json`
+- `apps/mariadb.json`
 - `apps/nodejs-app.json`
+- `apps/postgresql.json`
 - `apps/python-app.json`
+- `apps/red-discordbot.json`
+- `apps/uptime-kuma.json`
+- `apps/valkey.json`
 - `testing/test-game.json`

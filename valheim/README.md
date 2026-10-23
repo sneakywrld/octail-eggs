@@ -7,7 +7,7 @@ Back to [all eggs](../README.md#valheim).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Valheim BepINex | [bepinex.json](bepinex.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#valheim-bepinex) | player count, Thunderstore mods |
+| Valheim BepINex | [bepinex.json](bepinex.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [—](../TESTED.md#valheim-bepinex) | player count, Thunderstore mods, no console input |
 | Valheim | [valheim.json](valheim.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | QUERY_PORT +1 | [✓ 2026-10-10](../TESTED.md#valheim-valheim) | player count, no console input |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.

@@ -8,7 +8,7 @@
   "name": "Risk of Rain 2",
   "author": "eggs@octail.net",
   "uuid": "3e24bf20-2c21-4e2d-986b-41125989b58b",
-  "description": "Escape a chaotic alien planet by fighting through hordes of monsters, alone or with up to three friends. The Windows dedicated server, run under Wine.",
+  "description": "Escape a chaotic alien planet by fighting through hordes of monsters, alone or with up to three friends. The Windows dedicated server, run under Wine. Installs currently fail: since November 2025 Steam's public branch of the dedicated server (app 1180760) holds no files, and the install says so.",
   "tags": [
     "risk-of-rain-2",
     "bepinex",

@@ -1,0 +1,219 @@
+{
+  "_comment": "Octail's own egg (no upstream file). Lavalink, the standalone audio node Discord music bots connect to: Lavalink.jar from the official GitHub release (latest or a tag), checked against the SHA-256 digest the GitHub API lists (a release without one is refused), failures exit non-zero. application.yml is written once by the install (Lavalink's example, trimmed); the port and bind address are passed as Spring Boot arguments (--server.port, --server.address) and the password and source switches as Spring's environment names (LAVALINK_SERVER_PASSWORD, LAVALINK_SERVER_SOURCES_*), which override the file, so the password is never written to disk. The password is write-only (secret) and the start refuses to run without one. The heap (-Xmx) is a share of the server's memory, as in the Java App egg. Lavalink reads no console input; it stops on Ctrl+C. The start is Lavalink's ready line or the TCP port once bound.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/lavalink.json"
+  },
+  "uuid": "a059588d-018d-4eb5-a891-963255bd0b33",
+  "name": "Lavalink",
+  "author": "eggs@octail.net",
+  "description": "Lavalink: the audio node Discord music bots (discord.js, JDA, Red, Python bots) connect to for playback. Official release jar, checksum checked; your bot connects with the server address, port and the password set on the Startup tab.",
+  "tags": [
+    "app",
+    "java",
+    "discord-bot",
+    "lavalink",
+    "music"
+  ],
+  "features": [],
+  "docker_images": {
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ -z \"${LAVALINK_SERVER_PASSWORD}\" ]; then echo '[Octail] Set Lavalink Password on the Startup tab: your bot connects with it.'; exit 1; fi; if [ ! -f Lavalink.jar ]; then echo '[Octail] Lavalink.jar is missing: reinstall the server.'; exit 1; fi; exec java $([ \"{{SERVER_MEMORY}}\" -gt 0 ] 2>/dev/null && printf -- '-Xmx%sM' \"$(( {{SERVER_MEMORY}} * {{HEAP_PERCENT}} / 100 ))\") ${JAVA_ARGS} -jar Lavalink.jar --server.port={{SERVER_PORT}} --server.address=0.0.0.0"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Lavalink is ready to accept connections"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Lavalink installation script (Octail's own): Lavalink.jar from the official GitHub release (latest or a tag), checked\n# against the SHA-256 digest the GitHub API lists for it (a release without one is refused), failures exit non-zero.\n# application.yml is written only when there is none; the port, the bind address, the password and the sources come\n# from the Startup tab at every start and override it.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\nVERSION=\"${LAVALINK_VERSION:-latest}\"\nif [ \"$VERSION\" = \"latest\" ]; then\n    API=\"https://api.github.com/repos/lavalink-devs/Lavalink/releases/latest\"\nelse\n    API=\"https://api.github.com/repos/lavalink-devs/Lavalink/releases/tags/${VERSION}\"\nfi\nif ! RELEASE=$(curl -fsSL --proto '=https' \"$API\"); then\n    echo \"Installation failed: Lavalink release ${VERSION} wasn't found on GitHub.\"\n    exit 1\nfi\nTAG=$(echo \"$RELEASE\" | jq -r '.tag_name')\nURL=$(echo \"$RELEASE\" | jq -r '.assets[] | select(.name == \"Lavalink.jar\") | .browser_download_url')\nDIGEST=$(echo \"$RELEASE\" | jq -r '.assets[] | select(.name == \"Lavalink.jar\") | .digest // empty')\nif [ -z \"$URL\" ]; then\n    echo \"Installation failed: release ${TAG} has no Lavalink.jar.\"\n    exit 1\nfi\ncase \"$URL\" in\n    https://github.com/lavalink-devs/Lavalink/releases/download/*) ;;\n    *)\n        echo \"Installation failed: unexpected download address ${URL}.\"\n        exit 1\n        ;;\nesac\ncase \"$DIGEST\" in\n    sha256:*) ;;\n    *)\n        echo \"Installation failed: GitHub lists no SHA-256 for Lavalink ${TAG} (only releases from mid-2025 on have one); pick a newer version.\"\n        exit 1\n        ;;\nesac\n\necho \"Installing Lavalink ${TAG} from ${URL}\"\ncd /mnt/server\nif ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o Lavalink.jar.new \"$URL\"; then\n    rm -f Lavalink.jar.new\n    echo \"Installation failed: Lavalink.jar couldn't be downloaded.\"\n    exit 1\nfi\nif ! echo \"${DIGEST#sha256:}  Lavalink.jar.new\" | sha256sum -c --quiet -; then\n    rm -f Lavalink.jar.new\n    echo \"Installation failed: the download doesn't match the SHA-256 GitHub lists.\"\n    exit 1\nfi\necho \"Checksum OK (SHA-256 from GitHub).\"\nmv -f Lavalink.jar.new Lavalink.jar\nmkdir -p plugins logs\n\n## application.yml only when there is none (Lavalink's example, trimmed): yours to edit, except what the Startup tab sets\nif [ ! -f application.yml ]; then\n    cat > application.yml <<'OCTAIL_EOF'\n# Lavalink settings: https://lavalink.dev/configuration/\n# Octail passes the port and the bind address (server.port, server.address), the password\n# (LAVALINK_SERVER_PASSWORD) and the source switches (LAVALINK_SERVER_SOURCES_*) from the Startup tab at every start;\n# they override the values below. Everything else here is yours: stop the server, edit, start.\nserver:\n  port: 2333\n  address: 0.0.0.0\n  http2:\n    enabled: false\nplugins:\n#  youtube: # settings of the YouTube plugin, see https://github.com/lavalink-devs/youtube-source#plugin\n#    enabled: true\nlavalink:\n  plugins:\n#    - dependency: \"dev.lavalink.youtube:youtube-plugin:VERSION\" # downloaded into plugins/ at the next start\n#      snapshot: false\n  server:\n    password: \"\" # set Lavalink Password on the Startup tab instead\n    sources:\n      # The built-in YouTube source is deprecated upstream: use the YouTube plugin above instead.\n      youtube: false\n      bandcamp: true\n      soundcloud: true\n      twitch: true\n      vimeo: true\n      nico: true\n      http: false\n      local: false\n    filters:\n      volume: true\n      equalizer: true\n      karaoke: true\n      timescale: true\n      tremolo: true\n      vibrato: true\n      distortion: true\n      rotation: true\n      channelMix: true\n      lowPass: true\n    nonAllocatingFrameBuffer: false\n    bufferDurationMs: 400\n    frameBufferDurationMs: 5000\n    opusEncodingQuality: 10\n    resamplingQuality: LOW\n    trackStuckThresholdMs: 10000\n    useSeekGhosting: true\n    youtubePlaylistLoadLimit: 6\n    playerUpdateInterval: 5\n    youtubeSearchEnabled: true\n    soundcloudSearchEnabled: true\n    gc-warnings: true\n    timeouts:\n      connectTimeoutMs: 3000\n      connectionRequestTimeoutMs: 3000\n      socketTimeoutMs: 3000\n\nmetrics:\n  prometheus:\n    enabled: false\n    endpoint: /metrics\n\nlogging:\n  file:\n    path: ./logs/\n  level:\n    root: INFO\n    lavalink: INFO\n  request:\n    enabled: true\n    includeClientInfo: true\n    includeHeaders: false\n    includeQueryString: true\n    includePayload: true\n    maxPayloadLength: 10000\n  logback:\n    rollingpolicy:\n      max-file-size: 100MB\n      max-history: 7\nOCTAIL_EOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Lavalink ${TAG}.\"\necho \"Set Lavalink Password on the Startup tab before the first start.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Lavalink Password",
+      "description": "The password your bot connects with (8-128 letters, digits and _ . @ # % + -). Required before the first start; never written to the server folder or shown again once set.",
+      "env_variable": "LAVALINK_SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@#%+-]{8,128}$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Lavalink Version",
+      "description": "latest (the newest release on GitHub) or a release such as 4.2.2. Only releases with a SHA-256 on GitHub install (4.1.1 and newer). Reinstall to switch.",
+      "env_variable": "LAVALINK_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|[0-9]+\\.[0-9]+\\.[0-9]+)$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "SoundCloud",
+      "description": "1: play and search SoundCloud.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_SOUNDCLOUD",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Bandcamp",
+      "description": "1: play Bandcamp links.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_BANDCAMP",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Twitch",
+      "description": "1: play Twitch streams.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_TWITCH",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Vimeo",
+      "description": "1: play Vimeo links.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_VIMEO",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Niconico",
+      "description": "1: play Niconico links.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_NICO",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "HTTP Links",
+      "description": "1: play any http(s) audio link a bot user sends. Off by default: it makes the server fetch any address it is given.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_HTTP",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Local Files",
+      "description": "1: play audio files from the server folder.",
+      "env_variable": "LAVALINK_SERVER_SOURCES_LOCAL",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "boolean"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Heap Share",
+      "description": "The share of the server's memory given to the Java heap (-Xmx), in percent. The rest is left for the JVM and the audio buffers; lower it if the server is killed for memory.",
+      "env_variable": "HEAP_PERCENT",
+      "default_value": "75",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:25,95"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Java Options",
+      "description": "Extra JVM flags before -jar, such as -XX:+UseZGC.",
+      "env_variable": "JAVA_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:512",
+        "regex:/^(-\\S+(\\s+-\\S+)*)?\\s*$/"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 900
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 1024
+      }
+    },
+    "variables": {
+      "LAVALINK_SERVER_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

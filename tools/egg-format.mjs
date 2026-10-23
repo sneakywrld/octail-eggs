@@ -426,12 +426,33 @@ export function workshopGame(egg) {
 // --- the other features --------------------------------------------------------------------------------------------
 
 /** Tentacle's RCON clients (tentacle/src/rcon/index.js); `rcon: true` means `minecraft`. */
-export const RCON_TYPES = Object.freeze(['source', 'webrcon', 'satisfactory', 'minecraft']);
+export const RCON_TYPES = Object.freeze(['source', 'webrcon', 'satisfactory', 'minecraft', 'factorio']);
 /** Tentacle's player queries (tentacle/src/query/status.js). */
 export const PLAYER_QUERY_TYPES = Object.freeze(['a2s', 'rcon_status']);
 /** The Players tab: presets, list sources and actions (tentacle/src/players/index.js). */
-export const PLAYERS_PRESETS = Object.freeze(['source', 'rust', 'pocketmine']);
-export const PLAYERS_LISTS = Object.freeze(['a2s', 'rcon_status', 'webrcon', 'minecraft_query']);
+export const PLAYERS_PRESETS = Object.freeze([
+  'source',
+  'rust',
+  'pocketmine',
+  'palworld',
+  'conan',
+  'ark',
+  'eco',
+  'tshock',
+]);
+export const PLAYERS_LISTS = Object.freeze([
+  'a2s',
+  'rcon_status',
+  'webrcon',
+  'minecraft_query',
+  'factorio_rcon',
+  'ark_listplayers',
+  'palworld_rest',
+  'conan_listplayers',
+  'telnet_7dtd',
+  'eco_players',
+  'tshock_rest',
+]);
 export const PLAYERS_ACTIONS = Object.freeze(['kick', 'ban', 'unban', 'message', 'broadcast']);
 const PLAYERS_PLACEHOLDERS = ['name', 'steamid', 'userid', 'reason', 'message'];
 /** Idle sleep modes (shared/src/sleep.js). */
@@ -475,6 +496,24 @@ export function rconVariables(features) {
   if (!rcon) return { port: null, password: null };
   if (rcon.type === 'satisfactory') return { port: rcon.port_var, password: null };
   return { port: rcon.port_var ?? 'RCON_PORT', password: rcon.password_var ?? 'RCON_PASS' };
+}
+
+/**
+ * Env vars the panel fills with a random value when the server is created and nothing set one (plan §6.5): the
+ * RCON password (rconVariables, when the egg wires actual console RCON) plus any name an egg lists in
+ * `generated_secrets` — for an internal credential Tentacle manages itself that no customer ever needs to see or
+ * set, with no RCON/console wiring involved at all (e.g. TShock's seeded REST account password,
+ * tentacle/src/players/index.js's `tshock` preset). Each such variable should be hidden (`user_viewable: false`,
+ * `user_editable: false`) and `secret: true`, the same as a managed RCON password, so it's never shown or copied
+ * in clear; this function only decides which variables get a fresh random value at creation, not how they're
+ * displayed (hiding and masking already work for any variable with those flags, with or without this).
+ */
+export function generatedSecretVariables(features) {
+  const rconPassword = rconVariables(features).password;
+  const extra = Array.isArray(features?.generated_secrets)
+    ? features.generated_secrets.filter((v) => typeof v === 'string' && v)
+    : [];
+  return [...new Set([rconPassword, ...extra].filter(Boolean))];
 }
 
 /**
@@ -606,6 +645,11 @@ export function featureProblems(f, envNames = new Set()) {
         p.push(`players: the preset must be one of ${PLAYERS_PRESETS.join(', ')}`);
       if (o.list !== undefined && !PLAYERS_LISTS.includes(o.list))
         p.push(`players.list must be one of ${PLAYERS_LISTS.join(', ')}`);
+      // `port_var`/`password_var`: the egg variables holding 7 Days to Die's telnet port and
+      // password (tentacle/src/players/index.js), the same shape as the `rcon` feature's.
+      if (o.list === 'telnet_7dtd' || o.list === 'tshock_rest')
+        for (const k of ['port_var', 'password_var'])
+          if (o[k] !== undefined && !hasVar(o[k])) p.push(`players.${k}: ${o[k]} is not a variable of the egg`);
       for (const a of PLAYERS_ACTIONS) {
         const problem = o[a] === undefined ? null : playersTemplateProblem(a, o[a]);
         if (problem) p.push(problem);
@@ -621,6 +665,14 @@ export function featureProblems(f, envNames = new Set()) {
         if (!RESOURCE_HINTS.includes(k)) p.push(`resources has an unknown key "${k}" (${RESOURCE_HINTS.join(', ')})`);
         else if (!Number.isInteger(v) || v <= 0) p.push(`resources.${k} must be a positive whole number`);
       }
+  }
+  if (f.generated_secrets !== undefined) {
+    if (!Array.isArray(f.generated_secrets) || !f.generated_secrets.every((v) => typeof v === 'string' && v)) {
+      p.push('features.generated_secrets must be a list of variable names');
+    } else {
+      for (const name of f.generated_secrets)
+        if (!hasVar(name)) p.push(`generated_secrets: ${name} is not a variable of the egg`);
+    }
   }
   p.push(...installSandboxProblems(f.install_sandbox));
   if (f.steam_workshop !== undefined && f.steam_workshop !== false && !workshopGame({ features: f }))

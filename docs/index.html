@@ -1,0 +1,532 @@
+<!doctype html>
+<!--
+  Octail eggs statistics: a static page for GitHub Pages (Settings -> Pages -> Deploy from a branch -> main, /docs).
+  No build step and no external scripts: the data is stats.js next to this file, which build-repo.mjs writes
+  (window.OCTAIL_STATS, the same object as stats.json at the repository root). Opening the file locally works too.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Octail eggs stats</title>
+    <meta
+      name="description"
+      content="The game-server eggs Octail ships: categories, real-node test results, runtime images."
+    />
+    <style>
+      :root {
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --text: #1d2330;
+        --muted: #5d6677;
+        --line: #e2e6ee;
+        --accent: #3b6fe0;
+        --pass: #1f9d55;
+        --fail: #d64545;
+        --blocked: #d08b12;
+        --untested: #9aa3b2;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --bg: #0f1218;
+          --panel: #171b23;
+          --text: #e6e9ef;
+          --muted: #98a1b3;
+          --line: #2a303c;
+          --accent: #7aa2ff;
+          --pass: #3ccf7f;
+          --fail: #ff6b6b;
+          --blocked: #f0b43c;
+          --untested: #6b7385;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --bg: #0f1218;
+        --panel: #171b23;
+        --text: #e6e9ef;
+        --muted: #98a1b3;
+        --line: #2a303c;
+        --accent: #7aa2ff;
+        --pass: #3ccf7f;
+        --fail: #ff6b6b;
+        --blocked: #f0b43c;
+        --untested: #6b7385;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+      }
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: baseline;
+        justify-content: space-between;
+      }
+      h1 {
+        font-size: 1.6rem;
+        margin: 0;
+      }
+      h2 {
+        font-size: 1.15rem;
+        margin: 32px 0 12px;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 6px 10px;
+      }
+      button {
+        cursor: pointer;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .card .value {
+        font-size: 1.7rem;
+        white-space: nowrap;
+        font-weight: 650;
+        font-variant-numeric: tabular-nums;
+      }
+      .card .value.long {
+        font-size: 1.25rem;
+        line-height: 2.55rem;
+      }
+      .card .label {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .bar {
+        display: flex;
+        height: 10px;
+        border-radius: 5px;
+        overflow: hidden;
+        background: var(--line);
+        min-width: 80px;
+      }
+      .bar span {
+        display: block;
+        height: 100%;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: -1px;
+      }
+      .table-wrap {
+        overflow-x: auto;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      td.num,
+      th.num {
+        text-align: right;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.86em;
+      }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .filters input {
+        flex: 1 1 220px;
+      }
+      .status-pass {
+        color: var(--pass);
+      }
+      .status-fail {
+        color: var(--fail);
+      }
+      .status-blocked {
+        color: var(--blocked);
+      }
+      .status-untested {
+        color: var(--muted);
+      }
+      footer {
+        margin-top: 32px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Octail eggs</h1>
+          <div class="muted" id="subtitle">Loading…</div>
+        </div>
+        <button id="theme" type="button" aria-label="Switch between light and dark">Theme</button>
+      </header>
+      <section class="cards" id="cards"></section>
+      <section>
+        <div class="bar" id="status-bar" style="margin-top: 20px; height: 14px"></div>
+        <div class="legend" id="status-legend"></div>
+      </section>
+      <h2>Categories</h2>
+      <div class="table-wrap"><table id="categories"></table></div>
+      <h2>Runtime images</h2>
+      <div class="table-wrap"><table id="images"></table></div>
+      <h2 id="games-title">Games</h2>
+      <div class="filters">
+        <input id="q" type="search" placeholder="Search a game, category or image" aria-label="Search" />
+        <select id="f-status" aria-label="Status">
+          <option value="">Every result</option>
+          <option value="pass">Passed</option>
+          <option value="fail">Failed</option>
+          <option value="blocked">Blocked</option>
+          <option value="untested">Untested</option>
+        </select>
+        <select id="f-category" aria-label="Category">
+          <option value="">Every category</option>
+        </select>
+      </div>
+      <div class="table-wrap"><table id="games"></table></div>
+      <footer id="footer"></footer>
+    </main>
+    <script src="stats.js"></script>
+    <script>
+      (function () {
+        var REPO = 'https://github.com/sneakywrld/octail-eggs';
+        var YOLKS = 'https://github.com/sneakywrld/octail-yolks';
+        var STATUS = {
+          pass: { label: 'Passed', icon: '✅' },
+          fail: { label: 'Failed', icon: '❌' },
+          blocked: { label: 'Blocked', icon: '⚠️' },
+          untested: { label: 'Untested', icon: '—' },
+        };
+        var root = document.documentElement;
+        var themeButton = document.getElementById('theme');
+        try {
+          var saved = localStorage.getItem('octail-theme');
+          if (saved) root.setAttribute('data-theme', saved);
+        } catch (e) {}
+        themeButton.addEventListener('click', function () {
+          var dark =
+            root.getAttribute('data-theme') === 'dark' ||
+            (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+          var next = dark ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          try {
+            localStorage.setItem('octail-theme', next);
+          } catch (e) {}
+        });
+
+        function esc(s) {
+          return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+          });
+        }
+        function mib(n) {
+          return n >= 1024 ? (n / 1024).toFixed(1).replace(/\.0$/, '') + ' GB' : n + ' MiB';
+        }
+        function imageLink(i) {
+          return /[/:]/.test(i)
+            ? '<code>' + esc(i) + '</code>'
+            : '<a href="' + YOLKS + '#' + esc(i) + '"><code>' + esc(i) + '</code></a>';
+        }
+        function bar(c, total) {
+          return (
+            '<div class="bar">' +
+            ['pass', 'fail', 'blocked', 'untested']
+              .map(function (k) {
+                return c[k]
+                  ? '<span title="' +
+                      STATUS[k].label +
+                      ': ' +
+                      c[k] +
+                      '" style="width:' +
+                      (100 * c[k]) / total +
+                      '%;background:var(--' +
+                      k +
+                      ')"></span>'
+                  : '';
+              })
+              .join('') +
+            '</div>'
+          );
+        }
+
+        var s = window.OCTAIL_STATS;
+        if (!s) {
+          document.getElementById('subtitle').textContent =
+            'stats.js is missing: this page is published with the repository (docs/).';
+          return;
+        }
+        var t = s.tested;
+        document.getElementById('subtitle').innerHTML =
+          'The game-server eggs <a href="' +
+          REPO +
+          '">octail-eggs</a> ships, as of ' +
+          esc(s.date) +
+          '. Every egg runs on <a href="' +
+          YOLKS +
+          '">octail-yolks</a> images.';
+
+        var runtime = s.images.filter(function (i) {
+          return i.kind === 'runtime';
+        });
+        var cards = [
+          [s.eggs, 'eggs'],
+          [s.categories.length, 'categories'],
+          [t.pass, 'passed a real run'],
+          [t.pass_rate == null ? 'n/a' : t.pass_rate + '%', 'of runs pass'],
+          [t.coverage == null ? 'n/a' : t.coverage + '%', 'of eggs have a run'],
+          [t.last_run || '–', 'last smoke run'],
+          [runtime.length, 'runtime images'],
+        ];
+        if (s.added && s.added.known) cards.push([s.added.eggs.length, 'new in ' + s.added.days + ' days']);
+        document.getElementById('cards').innerHTML = cards
+          .map(function (c) {
+            return (
+              '<div class="card"><div class="value' +
+              (String(c[0]).length > 7 ? ' long' : '') +
+              '">' +
+              esc(c[0]) +
+              '</div><div class="label">' +
+              esc(c[1]) +
+              '</div></div>'
+            );
+          })
+          .join('');
+
+        document.getElementById('status-bar').outerHTML = bar(t, s.eggs).replace(
+          '<div class="bar">',
+          '<div class="bar" style="margin-top:20px;height:14px">',
+        );
+        document.getElementById('status-legend').innerHTML = ['pass', 'fail', 'blocked', 'untested']
+          .map(function (k) {
+            return (
+              '<span><span class="dot" style="background:var(--' +
+              k +
+              ')"></span>' +
+              STATUS[k].label +
+              ' ' +
+              t[k] +
+              '</span>'
+            );
+          })
+          .join('');
+
+        document.getElementById('categories').innerHTML =
+          '<thead><tr><th>Category</th><th class="num">Eggs</th><th class="num">Passed</th><th class="num">Failed</th>' +
+          '<th class="num">Blocked</th><th class="num">Untested</th><th style="width:30%">Results</th></tr></thead><tbody>' +
+          s.categories
+            .map(function (c) {
+              return (
+                '<tr><td><a href="' +
+                REPO +
+                '/tree/main/' +
+                esc(c.folder) +
+                '">' +
+                esc(c.title) +
+                '</a></td>' +
+                '<td class="num">' +
+                c.eggs +
+                '</td><td class="num">' +
+                c.pass +
+                '</td><td class="num">' +
+                c.fail +
+                '</td><td class="num">' +
+                c.blocked +
+                '</td><td class="num">' +
+                c.untested +
+                '</td><td>' +
+                bar(c, c.eggs) +
+                '</td></tr>'
+              );
+            })
+            .join('') +
+          '</tbody>';
+
+        var maxEggs = Math.max.apply(
+          null,
+          runtime
+            .map(function (i) {
+              return i.eggs;
+            })
+            .concat([1]),
+        );
+        document.getElementById('images').innerHTML =
+          '<thead><tr><th>Image</th><th class="num">Games</th><th class="num">Passed</th><th style="width:40%"></th></tr></thead><tbody>' +
+          runtime
+            .map(function (i) {
+              return (
+                '<tr><td>' +
+                imageLink(i.image) +
+                '</td><td class="num">' +
+                i.eggs +
+                '</td><td class="num">' +
+                i.pass +
+                '</td><td><div class="bar"><span style="width:' +
+                (100 * i.pass) / maxEggs +
+                '%;background:var(--pass)"></span><span style="width:' +
+                (100 * (i.eggs - i.pass)) / maxEggs +
+                '%;background:var(--untested)"></span></div></td></tr>'
+              );
+            })
+            .join('') +
+          '</tbody>';
+
+        var catSelect = document.getElementById('f-category');
+        s.categories.forEach(function (c) {
+          var o = document.createElement('option');
+          o.value = c.folder;
+          o.textContent = c.title;
+          catSelect.appendChild(o);
+        });
+
+        function statusCell(g) {
+          var r = g.tested.result;
+          var text = STATUS[r].icon + ' ' + STATUS[r].label.toLowerCase();
+          var facts = [];
+          if (r === 'pass') {
+            if (g.tested.ready_s != null) facts.push('ready ' + g.tested.ready_s + ' s');
+            if (g.tested.peak_mib) facts.push('peak ' + mib(g.tested.peak_mib));
+            if (g.tested.date) facts.push(g.tested.date);
+          } else if (g.tested.note && r !== 'untested') facts.push(g.tested.note);
+          return (
+            '<span class="status-' +
+            r +
+            '">' +
+            esc(text) +
+            '</span>' +
+            (facts.length ? ' <span class="muted">' + esc(facts.join(' · ')) + '</span>' : '')
+          );
+        }
+        var q = document.getElementById('q');
+        var fStatus = document.getElementById('f-status');
+        function renderGames() {
+          var needle = q.value.trim().toLowerCase();
+          var rows = s.games.filter(function (g) {
+            if (fStatus.value && g.tested.result !== fStatus.value) return false;
+            if (catSelect.value && g.folder !== catSelect.value) return false;
+            if (!needle) return true;
+            return [g.name, g.category, g.path].concat(g.images).join(' ').toLowerCase().indexOf(needle) >= 0;
+          });
+          document.getElementById('games-title').textContent = 'Games (' + rows.length + ' of ' + s.games.length + ')';
+          document.getElementById('games').innerHTML =
+            '<thead><tr><th>Game</th><th>Category</th><th>Image</th><th>Smoke test</th></tr></thead><tbody>' +
+            rows
+              .map(function (g) {
+                var imgs =
+                  g.tested.image && (g.tested.result === 'pass' || g.tested.result === 'fail')
+                    ? [g.tested.image]
+                    : g.images;
+                return (
+                  '<tr><td><a href="' +
+                  REPO +
+                  '/blob/main/' +
+                  esc(g.path) +
+                  '">' +
+                  esc(g.name) +
+                  '</a></td><td>' +
+                  esc(g.category) +
+                  '</td><td>' +
+                  imgs.map(imageLink).join(' ') +
+                  '</td><td>' +
+                  statusCell(g) +
+                  '</td></tr>'
+                );
+              })
+              .join('') +
+            '</tbody>';
+        }
+        [q, fStatus, catSelect].forEach(function (el) {
+          el.addEventListener('input', renderGames);
+        });
+        renderGames();
+
+        document.getElementById('footer').innerHTML =
+          'Generated from the Octail monorepo with the repository (schema ' +
+          esc(s.schema) +
+          '). Raw data: <a href="' +
+          REPO +
+          '/blob/main/stats.json">stats.json</a> · details per egg: <a href="' +
+          REPO +
+          '/blob/main/TESTED.md">TESTED.md</a>.';
+      })();
+    </script>
+  </body>
+</html>

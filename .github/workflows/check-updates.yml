@@ -1,0 +1,69 @@
+# Weekly check of the versions our eggs pin with a checksum (tools/check-updates.mjs: GitHub releases, Jenkins builds,
+# the Steam Runtime, ContentDB, Mojang, PaperMC, …) against the upstream source each egg downloads from. Keeps one
+# open issue, "Outdated eggs (upstream versions)", up to date: opened when a pin is behind, its body replaced by each
+# run, closed once every pin is current again. Pins upstream couldn't be asked about are listed as unknown and never
+# open the issue on their own.
+# Uses the workflow's own GITHUB_TOKEN only (issues: write for this job, read-only everything else); every action is
+# pinned to a commit SHA. Generated from the Octail monorepo (octail/scripts/eggs/repo-files/): change it there.
+name: Check upstream versions
+
+on:
+  schedule:
+    - cron: '41 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: check-updates
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write # open, edit and close the "Outdated eggs" issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # no step pushes to git
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Check pinned versions
+        id: check
+        env:
+          # Only raises the api.github.com rate limit for the release lookups (read-only use).
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node tools/check-updates.mjs --markdown "$RUNNER_TEMP/report.md"
+          cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OUTDATED: ${{ steps.check.outputs.outdated }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Outdated eggs (upstream versions)"
+          number=$(gh issue list --state open --limit 100 --json number,title \
+            --jq "map(select(.title == \"${title}\")) | .[0].number // empty")
+          if [ "${OUTDATED:-0}" -gt 0 ]; then
+            if [ -n "${number}" ]; then
+              gh issue edit "${number}" --body-file "$RUNNER_TEMP/report.md"
+              echo "Updated issue #${number}."
+            else
+              gh issue create --title "${title}" --body-file "$RUNNER_TEMP/report.md"
+            fi
+          elif [ -n "${number}" ]; then
+            gh issue comment "${number}" --body "Every pinned version is current again ([check](${RUN_URL}))."
+            gh issue close "${number}"
+            echo "Closed issue #${number}."
+          else
+            echo "Every pinned version is current."
+          fi

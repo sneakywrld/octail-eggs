@@ -3,9 +3,10 @@
  * Validates every egg in the octail-eggs repository. Standalone: plain Node (20+), no dependencies, nothing from
  * the Octail panel. Run from the repository root:
  *
- *   node tools/validate.mjs [--forbid-upstream-images] [--json] [dir]
+ *   node tools/validate.mjs [--forbid-upstream-images] [--strict] [--quiet] [--json | --github] [dir]
  *
- * Rules (each problem is reported with the file it is in; the exit code is 1 when there is any):
+ * Rules (each problem is reported with the file it is in; the exit code is 1 when there is any; warnings are listed
+ * but only fail with --strict; --quiet leaves them out):
  *   - the egg format, from tools/egg-format.mjs: the very rules the Octail panel imports eggs with (published from
  *     the panel's shared/src/egg-format.js). Anything the panel refuses to import, and anything it imports with a
  *     warning (a part it ignores or renames: unknown variable rules, malformed x_octail features, …), is a problem.
@@ -17,12 +18,17 @@
  *     - installs with the "fail the install when SteamCMD didn't download the server" check `exit 1` in it
  *     - no `http://` in install scripts (downloads over HTTPS only)
  *     - with --forbid-upstream-images: no ghcr.io/parkervcp, ghcr.io/pelican-eggs or ghcr.io/pterodactyl images
+ *   - the lint rules of tools/egg-lint.mjs (errors are problems, warnings are warnings): images on octail-yolks with
+ *     tags that exist (tools/yolks-tags.txt, when present), a stop command, a ready line, the startup line's
+ *     variables defined, no unused variables, defaults that pass their own rules, port variables passed to the game,
+ *     TLS checks on and checksums checked where the source publishes them. Each finding names its rule.
  */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { EGG_FORMATS, eggFormatProblems, eggImages } from './egg-format.mjs';
+import { eggLint } from './egg-lint.mjs';
 
 export const RAW_BASE = 'https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/';
 export const FORMATS = EGG_FORMATS;
@@ -81,6 +87,39 @@ export function eggProblems(egg, path, { forbidUpstreamImages = false } = {}) {
   return [...new Set([...errors, ...policyProblems(egg, path, { forbidUpstreamImages }), ...warnings])];
 }
 
+/**
+ * The lint findings (tools/egg-lint.mjs) for one parsed egg as { errors, warnings }, messages naming their rule.
+ * `yolksTags` (a Set) is the list of octail-yolks tags, when known.
+ */
+export function eggLintProblems(egg, { yolksTags = null } = {}) {
+  const findings = eggLint(egg, { yolksTags });
+  const of = (level) => findings.filter((f) => f.level === level).map((f) => `${f.message} [${f.rule}]`);
+  return { errors: of('error'), warnings: of('warning') };
+}
+
+/**
+ * The octail-yolks tags (a Set), or null when no list is found: `tools/yolks-tags.txt` (one tag per line, written by
+ * the generator), else `yolks/images.json` when this runs inside the Octail monorepo.
+ */
+export function loadYolksTags(root) {
+  const file = join(root, 'tools/yolks-tags.txt');
+  if (existsSync(file))
+    return new Set(
+      readFileSync(file, 'utf8')
+        .split(/\r?\n/)
+        .map((t) => t.trim())
+        .filter(Boolean),
+    );
+  // In the monorepo this file is octail/scripts/eggs/repo-files/tools/, next to scripts/eggs/build-repo.mjs.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const images = resolve(here, '../../../../../yolks/images.json');
+  if (existsSync(resolve(here, '../../build-repo.mjs')) && existsSync(images)) {
+    const doc = JSON.parse(readFileSync(images, 'utf8'));
+    if (Array.isArray(doc?.images)) return new Set(doc.images.map((i) => String(i.tag)));
+  }
+  return null;
+}
+
 function walk(dir, root, out) {
   for (const name of readdirSync(dir).sort()) {
     const full = join(dir, name);
@@ -92,10 +131,15 @@ function walk(dir, root, out) {
   return out;
 }
 
-/** Validates the repository at `root`. Returns { eggs: number, problems: [{ file, problem }] }. */
-export function validateRepo(root, { forbidUpstreamImages = false } = {}) {
+/**
+ * Validates the repository at `root`. Returns { eggs: number, problems: [{ file, problem }], warnings: [{ file,
+ * problem }] }; with `strict` the warnings are problems too. `yolksTags` defaults to loadYolksTags(root).
+ */
+export function validateRepo(root, { forbidUpstreamImages = false, strict = false, yolksTags } = {}) {
   const problems = [];
+  const warnings = [];
   const add = (file, problem) => problems.push({ file, problem });
+  const tags = yolksTags === undefined ? loadYolksTags(root) : yolksTags;
   const uuids = new Map();
   let eggs = 0;
   for (const file of walk(root, root, [])) {
@@ -103,7 +147,7 @@ export function validateRepo(root, { forbidUpstreamImages = false } = {}) {
       add(file, 'eggs in this repository are JSON: convert YAML eggs');
       continue;
     }
-    if (!file.endsWith('.json')) continue;
+    if (!file.endsWith('.json') || file === 'stats.json') continue; // stats.json: the README's numbers, not an egg
     const parts = file.split('/');
     if (parts.length !== 2 || !SLUG.test(parts[0]) || !SLUG.test(parts[1].replace(/\.json$/, ''))) {
       add(file, 'eggs belong at <category>/<slug>.json with lower-case slugs');
@@ -117,7 +161,10 @@ export function validateRepo(root, { forbidUpstreamImages = false } = {}) {
       add(file, `not valid JSON: ${err.message}`);
       continue;
     }
-    for (const problem of eggProblems(egg, file, { forbidUpstreamImages })) add(file, problem);
+    const lint = eggLintProblems(egg, { yolksTags: tags });
+    for (const problem of new Set([...eggProblems(egg, file, { forbidUpstreamImages }), ...lint.errors]))
+      add(file, problem);
+    for (const problem of lint.warnings) (strict ? problems : warnings).push({ file, problem });
     const uuid = str(egg?.uuid).toLowerCase();
     if (uuid) {
       if (uuids.has(uuid)) add(file, `uuid ${uuid} is also used by ${uuids.get(uuid)}`);
@@ -125,7 +172,7 @@ export function validateRepo(root, { forbidUpstreamImages = false } = {}) {
     }
   }
   if (eggs === 0) add('.', 'no eggs found');
-  return { eggs, problems };
+  return { eggs, problems, warnings };
 }
 
 const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -133,12 +180,24 @@ if (isMain) {
   const args = process.argv.slice(2);
   const forbidUpstreamImages = args.includes('--forbid-upstream-images');
   const json = args.includes('--json');
+  const strict = args.includes('--strict');
+  const quiet = args.includes('--quiet');
   const dir = args.find((a) => !a.startsWith('--')) ?? resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const { eggs, problems } = validateRepo(resolve(dir), { forbidUpstreamImages });
-  if (json) console.log(JSON.stringify({ eggs, problems }, null, 2));
-  else {
+  const { eggs, problems, warnings } = validateRepo(resolve(dir), { forbidUpstreamImages, strict });
+  if (json) console.log(JSON.stringify({ eggs, problems, warnings }, null, 2));
+  else if (args.includes('--github')) {
+    // GitHub Actions annotations: each finding shows on the file in the run and the pull request.
+    const esc = (s) => String(s).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+    for (const { file, problem } of problems) console.log(`::error file=${esc(file)}::${esc(problem)}`);
+    for (const { file, problem } of warnings) console.log(`::warning file=${esc(file)}::${esc(problem)}`);
+    console.log(`${eggs} eggs: ${problems.length} problem(s), ${warnings.length} warning(s).`);
+  } else {
     for (const { file, problem } of problems) console.log(`${file}: ${problem}`);
-    console.log(problems.length ? `\n${problems.length} problem(s) in ${eggs} eggs.` : `${eggs} eggs, all valid.`);
+    if (!quiet) for (const { file, problem } of warnings) console.log(`${file}: warning: ${problem}`);
+    const note = warnings.length ? ` (${warnings.length} warning(s))` : '';
+    console.log(
+      problems.length ? `\n${problems.length} problem(s) in ${eggs} eggs${note}.` : `${eggs} eggs, all valid${note}.`,
+    );
   }
   process.exitCode = problems.length ? 1 : 0;
 }

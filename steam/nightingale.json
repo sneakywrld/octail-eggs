@@ -1,0 +1,167 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), built on games-steamcmd nightingale/egg-nightingale.json (pelican-eggs, MIT licence) and Inflexion's \"Nightingale Dedicated Server\" guide, checked against the app's Steam data (app 3796810: a Linux depot, NWXServer.sh; branches public and public-test-realm). The Linux binary runs with the port, the player limit (command line only, as the guide says) and cheats as a switch; the connection and admin passwords go into NWX/Config/ServerSettings.ini ([/Script/NWX.NWXServerSettings], ini parser) instead of the command line, the file copied once from the shipped example. Upstream's starting difficulty is left out (the guide doesn't list it). The public test realm is a branch choice, Ctrl+C stops the server gracefully (the guide), port readiness (UDP, x_octail.features.ready) besides the start line, install sandbox defaults and resource hints, the anonymous login only, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/nightingale.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "Nightingale",
+  "author": "eggs@octail.net",
+  "uuid": "0e3b2aed-c8dd-44be-9be5-058d44a83f1e",
+  "description": "Survive and build across the gaslamp-fantasy Fae Realms: craft, fight and raise an estate with up to six players. The Linux dedicated server.",
+  "tags": [
+    "nightingale",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./NWX/Binaries/Linux/NWXServer-Linux-Shipping -port={{SERVER_PORT}} -multihome=0.0.0.0 -ini:Game:[/Script/Engine.GameSession]:MaxPlayers={{MAX_PLAYERS}} $( [ \"${ENABLE_CHEATS}\" = \"1\" ] && printf %s '-EnableCheats' )"
+  },
+  "config": {
+    "files": {
+      "NWX/Config/ServerSettings.ini": {
+        "parser": "ini",
+        "find": {
+          "[/Script/NWX.NWXServerSettings].Password": "{{server.environment.SERVER_PASSWORD}}",
+          "[/Script/NWX.NWXServerSettings].AdminPassword": "{{server.environment.ADMIN_PASSWORD}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "GameModeAwaiter became ready"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Linux build of the server.\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/NWX/Binaries/Linux/NWXServer-Linux-Shipping\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Nightingale dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/NWX/Binaries/Linux/NWXServer-Linux-Shipping\"\n\n## Octail: the server reads NWX/Config/ServerSettings.ini (Inflexion's guide: a copy of the shipped example); it is\n## made once and kept, and the panel sets the passwords in it before every start (ini parser).\nif [[ ! -f /mnt/server/NWX/Config/ServerSettings.ini ]] && [[ -f /mnt/server/NWX/Config/ExampleServerSettings.ini ]]; then\n    cp /mnt/server/NWX/Config/ExampleServerSettings.ini /mnt/server/NWX/Config/ServerSettings.ini\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to connect. Empty = no password (no spaces).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Admin Password",
+      "description": "Optional: players who enter it in game can kick and ban (and use cheats when they are on). Empty = none (no spaces).",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "Players in a realm; more than 6 is unsupported by the game.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "6",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,8"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Enable Cheats",
+      "description": "1 allows the cheat menu for players who enter the admin password.",
+      "env_variable": "ENABLE_CHEATS",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Branch",
+      "description": "Empty = the normal server; public-test-realm = the public test build (clients must be on it too). Reinstall after changing.",
+      "env_variable": "SRCDS_BETAID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "in:public-test-realm"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "3796810",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:3796810"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Nightingale",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 12288,
+        "disk_mb": 20480
+      }
+    }
+  }
+}

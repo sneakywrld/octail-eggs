@@ -1,0 +1,81 @@
+{
+  "_comment": "Octail's own egg (no upstream file). A MariaDB database server for customers who want their own: Debian 12's signed mariadb-server-core and mariadb-client-core packages (MariaDB 10.11 LTS) and the libraries they need, downloaded with apt-get download and unpacked into mariadb/ (the Mumble egg's method; glibc comes from the image). The first start runs mariadb-install-db as the server's own user into data/ (--cross-bootstrap: no host name lookup and no root account named after the container), then mariadbd runs an --init-file once that sets the root password for root@localhost, drops the passwordless root@127.0.0.1 and root@::1 and creates root@'%' (the password from the Startup tab, or a random one saved in root-password.txt). my.cnf is written once and is the owner's; port, bind address, data folder and socket are passed at every start. mariadbd reads no console input and shuts down cleanly on SIGTERM (SIGINT would kill it). The start is its 'ready for connections' line or the TCP port once bound.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/mariadb.json"
+  },
+  "uuid": "a73a4906-da4b-451e-a0b3-63372ca0821f",
+  "name": "MariaDB",
+  "author": "eggs@octail.net",
+  "description": "MariaDB 10.11 LTS: your own MySQL-compatible database server (Debian 12 packages). Connect with any MySQL client as root and the password from the Startup tab, or the generated one in root-password.txt.",
+  "tags": [
+    "app",
+    "database",
+    "mariadb",
+    "mysql"
+  ],
+  "features": [],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "M=\"$(pwd)/mariadb/usr\"; export LD_LIBRARY_PATH=\"${M}/lib/$(uname -m)-linux-gnu\"; if [ ! -x \"${M}/sbin/mariadbd\" ]; then echo '[Octail] mariadb/ is missing: reinstall the server.'; exit 1; fi; mkdir -p run; [ -f my.cnf ] || printf '[mariadbd]\\nskip-name-resolve\\n' > my.cnf; INIT=; if [ ! -d data/mysql ]; then echo '[Octail] Creating the database in data/ (first start)'; PW=\"${MARIADB_ROOT_PASSWORD}\"; if [ -z \"${PW}\" ]; then PW=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32); (umask 077; printf '%s\\n' \"${PW}\" > root-password.txt); echo '[Octail] Generated a root password: it is in root-password.txt'; fi; \"${M}/bin/mariadb-install-db\" --no-defaults --basedir=\"${M}\" --datadir=\"$(pwd)/data\" --auth-root-authentication-method=normal --skip-test-db --skip-name-resolve --cross-bootstrap > run/install-db.log 2>&1 || { cat run/install-db.log; echo '[Octail] Creating the database failed.'; exit 1; }; (umask 077; printf \"ALTER USER 'root'@'localhost' IDENTIFIED BY '%s';\\nDROP USER IF EXISTS 'root'@'127.0.0.1', 'root'@'::1';\\nCREATE USER IF NOT EXISTS 'root'@'%%' IDENTIFIED BY '%s';\\nGRANT ALL PRIVILEGES ON *.* TO 'root'@'%%' WITH GRANT OPTION;\\n\" \"${PW}\" \"${PW}\" > run/init.sql); INIT=\"--init-file=$(pwd)/run/init.sql\"; else rm -f run/init.sql; fi; exec \"${M}/sbin/mariadbd\" --defaults-file=my.cnf --basedir=\"${M}\" --datadir=\"$(pwd)/data\" --lc-messages-dir=\"${M}/share/mysql\" --plugin-dir=\"${M}/lib/mysql/plugin\" --port={{SERVER_PORT}} --bind-address=0.0.0.0 --socket=\"$(pwd)/run/mariadb.sock\" --pid-file=\"$(pwd)/run/mariadb.pid\" ${INIT}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "ready for connections"
+      ]
+    },
+    "logs": {},
+    "stop": "SIGTERM"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# MariaDB installation script (Octail's own): Debian 12's signed mariadb-server-core and mariadb-client-core packages\n# (MariaDB 10.11 LTS with Debian's security fixes) and the libraries they need, downloaded with apt (which checks every\n# package against Debian's signed archive) and unpacked into /mnt/server/mariadb, since the server's container can't\n# install packages. The runtime image is Debian 12 too, so the libraries match; glibc is never copied (the image's own\n# is used). The database itself is created at the first start, as the server's own user. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\ncd /mnt/server\nexport DEBIAN_FRONTEND=noninteractive\nif ! apt-get update -qq; then\n    echo \"Installation failed: apt couldn't read Debian's package lists.\"\n    exit 1\nfi\nVERSION=$(apt-cache policy mariadb-server-core | awk '$1 == \"Candidate:\" { print $2 }')\nif [ -z \"$VERSION\" ] || [ \"$VERSION\" = \"(none)\" ]; then\n    echo \"Installation failed: Debian has no mariadb-server-core package for this architecture.\"\n    exit 1\nfi\n\n## the server, the client tools mariadb-install-db needs (my_print_defaults) and every library they need, following\n## library dependencies only (no perl, debconf, systemd); the C library and its loader always come from the image\nPKGS=\" \"\nQUEUE=(mariadb-server-core mariadb-client-core)\nwhile [ \"${#QUEUE[@]}\" -gt 0 ]; do\n    PKG=\"${QUEUE[0]}\"\n    QUEUE=(\"${QUEUE[@]:1}\")\n    case \"$PKGS\" in *\" $PKG \"*) continue ;; esac\n    PKGS=\"$PKGS$PKG \"\n    for DEP in $(apt-cache depends --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \"$PKG\" |\n        awk '$1 ~ /^\\|?(Pre)?Depends:$/ && $2 !~ /^</ { print $2 }'); do\n        DEP=\"${DEP%%:*}\"\n        case \"$DEP\" in\n            libc6 | libc-bin | libc-l10n | libc6-* | libpam* | *-data | *-common | *-perl) ;;\n            lib* | zlib1g) QUEUE+=(\"$DEP\") ;;\n        esac\n    done\ndone\n\necho \"Installing MariaDB (mariadb-server-core ${VERSION}) and its libraries:${PKGS% }\"\nTMP=$(mktemp -d)\nchmod 755 \"$TMP\"\n## apt checks each download against the signed package lists\n# shellcheck disable=SC2086\nif ! (cd \"$TMP\" && apt-get download -qq $PKGS); then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: the packages couldn't be downloaded from Debian.\"\n    exit 1\nfi\n\n## the program and its libraries only: my.cnf and the databases in data/ stay on a reinstall\nrm -rf /mnt/server/mariadb\nmkdir -p /mnt/server/mariadb\nfor DEB in \"$TMP\"/*.deb; do\n    dpkg-deb -x \"$DEB\" /mnt/server/mariadb\ndone\nrm -rf \"$TMP\"\nrm -rf /mnt/server/mariadb/usr/share/doc /mnt/server/mariadb/usr/share/man\n\nfor BIN in usr/sbin/mariadbd usr/bin/mariadb-install-db usr/bin/my_print_defaults usr/bin/mariadb; do\n    if [ ! -x \"/mnt/server/mariadb/$BIN\" ]; then\n        echo \"Installation failed: $BIN is missing after unpacking the packages.\"\n        exit 1\n    fi\ndone\n\n## my.cnf, only when there is none; Octail sets the port, the bind address, the data folder and the socket at every\n## start\nif [ ! -f my.cnf ]; then\n    cat > my.cnf <<'EOF'\n# MariaDB settings for this server: https://mariadb.com/kb/en/server-system-variables/\n# Octail sets the port, the bind address (0.0.0.0), the data folder (data/) and the socket (run/) at every start; the\n# other settings are yours. Stop the server before editing.\n[mariadbd]\nskip-name-resolve\ncharacter-set-server = utf8mb4\ncollation-server = utf8mb4_unicode_ci\nmax_connections = 100\ninnodb_buffer_pool_size = 128M\n# Containers often block io_uring and native AIO; set this to 1 only if the node allows them.\ninnodb_use_native_aio = 0\nEOF\nfi\nmkdir -p run\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: MariaDB ${VERSION}.\"\necho \"The first start creates the database in data/ and the root password (Startup tab, or root-password.txt).\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Root Password",
+      "description": "Optional: the root password set when the database is created at the first start (12-64 letters, digits and _ . @ # % + -). Empty: a random one, saved in root-password.txt. Changing it later has no effect: change it with ALTER USER instead. Never shown again once set.",
+      "env_variable": "MARIADB_ROOT_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@#%+-]{12,64}$/"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 4096
+      }
+    },
+    "variables": {
+      "MARIADB_ROOT_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

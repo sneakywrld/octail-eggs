@@ -1,0 +1,188 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), built on games-steamcmd runescape_dragonwilds/egg-pterodactyl-runescape-dragonwilds.json (pelican-eggs, MIT licence) and Jagex's dedicated server guide, checked against the app's Steam data (app 4019830: a Linux depot, RSDragonwildsServer.sh). The Linux binary runs with the port and player limit; the owner id, server name, world name and passwords are set in RSDragonwilds/Saved/Config/LinuxServer/DedicatedServer.ini ([/Script/Dominion.DedicatedServerSettings], ini parser) before every start. The owner id and admin password are required with no default (upstream shipped placeholders the server would run with: the guide says it won't start without an owner id), names get length limits, port readiness (UDP, x_octail.features.ready) besides the start line, install sandbox defaults and resource hints, the anonymous login only with SteamCMD retried, and the install fails when SteamCMD didn't download the server (as upstream). SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/runescape-dragonwilds.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "RuneScape: Dragonwilds",
+  "author": "eggs@octail.net",
+  "uuid": "4b411684-4f95-4945-bedd-94c4e52db0d6",
+  "description": "Gather, build, skill and craft to survive on RuneScape's forgotten continent of Ashenfall, and slay the Dragon Queen with up to six players. The Linux dedicated server.",
+  "tags": [
+    "runescape-dragonwilds",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./RSDragonwilds/Binaries/Linux/RSDragonwildsServer-Linux-Shipping -log -port={{SERVER_PORT}} -ini:Game:[/Script/Engine.GameSession]:MaxPlayers={{MAX_PLAYERS}}"
+  },
+  "config": {
+    "files": {
+      "RSDragonwilds/Saved/Config/LinuxServer/DedicatedServer.ini": {
+        "parser": "ini",
+        "find": {
+          "[/Script/Dominion.DedicatedServerSettings].OwnerId": "{{server.environment.OWNER_ID}}",
+          "[/Script/Dominion.DedicatedServerSettings].ServerName": "{{server.environment.SERVER_NAME}}",
+          "[/Script/Dominion.DedicatedServerSettings].DefaultWorldName": "{{server.environment.WORLD_NAME}}",
+          "[/Script/Dominion.DedicatedServerSettings].AdminPassword": "{{server.environment.ADMIN_PASSWORD}}",
+          "[/Script/Dominion.DedicatedServerSettings].WorldPassword": "{{server.environment.WORLD_PASSWORD}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "CREATE SESSION - Advertise"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Linux build of the server.\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/RSDragonwilds/Binaries/Linux/RSDragonwildsServer-Linux-Shipping\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the RuneScape: Dragonwilds dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/RSDragonwilds/Binaries/Linux/RSDragonwildsServer-Linux-Shipping\"\n\n## The panel writes DedicatedServer.ini before every start (ini parser); the folder is made here.\nmkdir -p /mnt/server/RSDragonwilds/Saved/Config/LinuxServer\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Owner ID",
+      "description": "Required: your RuneScape: Dragonwilds Player ID (32 letters and digits, at the bottom of the game's Settings menu). The server does not start without it.",
+      "env_variable": "OWNER_ID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "alpha_num",
+        "size:32"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Name",
+      "description": "Shown as \"Created By\" in the in-game server list (up to 16 characters).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\r\\n]*$/",
+        "max:16"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "World Name",
+      "description": "The world made on the first start; players find the server by searching this exact name in the Public tab.",
+      "env_variable": "WORLD_NAME",
+      "default_value": "Octail World",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\r\\n]*$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Admin Password",
+      "description": "Required: opens Server Management in the game's pause menu (Settings) for whoever enters it.",
+      "env_variable": "ADMIN_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^\\S+$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "World Password",
+      "description": "Optional: players must enter it to join; replaces any password saved in the world. Empty = anyone can join (no spaces).",
+      "env_variable": "WORLD_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Max Players",
+      "description": "Up to 6 players; plan 2 GB of memory plus 1 GB per player.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "6",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,6"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "4019830",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:4019830"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "RuneScape: Dragonwilds",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

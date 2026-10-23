@@ -1,0 +1,277 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), built on games-steamcmd smalland_survive_the_wilds/egg-smalland--survive-the-wilds.json (pelican-eggs, MIT licence) and checked against the app's Steam data (app 808040: a Linux depot, start-server.sh). The server is the Linux binary with the world's options in its map URL and Epic Online Services (the server list) set up with the deployment and client values the game's own server ships with, as upstream passes them; it runs without Steam (-NOSTEAM), so there is no Steam query. Octail keeps upstream's options and adds: the password only when set (no spaces; upstream allowed spaces that broke the URL), names limited to characters the map URL takes, the fall damage modifier (upstream passed an unset variable), port readiness (UDP, x_octail.features.ready) besides the start line, install sandbox defaults and resource hints, the anonymous login only, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/smalland.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "Smalland: Survive the Wilds",
+  "author": "eggs@octail.net",
+  "uuid": "dfdd05ba-be77-4750-a7a0-bfa39896cbc7",
+  "description": "Survive at insect size in a vast, dangerous garden world: craft, build camps, and tame and ride creatures with your friends. The Linux dedicated server.",
+  "tags": [
+    "smalland",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./SMALLAND/Binaries/Linux/SMALLANDServer-Linux-Shipping SMALLAND /Game/Maps/WorldGame/WorldGame_Smalland?SERVERNAME=\\\"${SERVER_NAME}\\\"?WORLDNAME=\\\"${WORLD_NAME}\\\"$( [ -z \"${SERVER_PASSWORD}\" ] || printf '?PASSWORD=\"%s\"' \"${SERVER_PASSWORD}\" )$( [ \"${FRIENDLY_FIRE}\" = \"1\" ] && printf %s '?FRIENDLYFIRE' )$( [ \"${PEACEFUL_MODE}\" = \"1\" ] && printf %s '?PEACEFULMODE' )$( [ \"${KEEP_INVENTORY}\" = \"1\" ] && printf %s '?KEEPINVENTORY' )$( [ \"${DETERIORATION}\" = \"1\" ] || printf %s '?NODETERIORATION' )$( [ \"${PRIVATE}\" = \"1\" ] && printf %s '?PRIVATE' )?lengthofdayseconds={{DAY_LENGTH}}?lengthofseasonseconds={{SEASON_LENGTH}}?creaturehealthmodifier={{CREATURE_HEALTH}}?creaturedamagemodifier={{CREATURE_DAMAGE}}?nourishmentlossmodifier={{NOURISHMENT_LOSS}}?falldamagemodifier={{FALL_DAMAGE}} -ini:Engine:[EpicOnlineServices]:DeploymentId=50f2b148496e4cbbbdeefbecc2ccd6a3 -ini:Engine:[EpicOnlineServices]:DedicatedServerClientId=xyza78918KT08TkA6emolUay8yhvAAy2 -ini:Engine:[EpicOnlineServices]:DedicatedServerClientSecret=aN2GtVw7aHb6hx66HwohNM+qktFaO3vtrLSbGdTzZWk -ini:Engine:[EpicOnlineServices]:DedicatedServerPrivateKey= -port={{SERVER_PORT}} -NOSTEAM -log"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Session 'GameSession' is being set as 'listening'"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Linux build of the server.\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/SMALLAND/Binaries/Linux/SMALLANDServer-Linux-Shipping\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Smalland dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/SMALLAND/Binaries/Linux/SMALLANDServer-Linux-Shipping\"\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server browser (letters, digits, spaces and _ . , ' ! -).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Smalland Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9 _.,'!-]+$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "World Name",
+      "description": "The save the server loads; another name starts a new world (letters, digits, spaces and _ . , ' ! -).",
+      "env_variable": "WORLD_NAME",
+      "default_value": "World",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[A-Za-z0-9 _.,'!-]+$/",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password; otherwise 3 to 32 letters, digits, - and _.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([A-Za-z0-9_-]{3,32})?$/"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Private",
+      "description": "1 hides the server from the server browser.",
+      "env_variable": "PRIVATE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Friendly Fire",
+      "description": "1 lets players hurt each other.",
+      "env_variable": "FRIENDLY_FIRE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Peaceful Mode",
+      "description": "1 makes creatures leave players alone.",
+      "env_variable": "PEACEFUL_MODE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Keep Inventory",
+      "description": "1 keeps the inventory on death.",
+      "env_variable": "KEEP_INVENTORY",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Deterioration",
+      "description": "1: items and buildings wear out. 0 turns it off.",
+      "env_variable": "DETERIORATION",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Day Length",
+      "description": "Seconds in a day (1800 = 30 minutes).",
+      "env_variable": "DAY_LENGTH",
+      "default_value": "1800",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:60,86400"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Season Length",
+      "description": "Seconds in a season (10800 = 3 hours).",
+      "env_variable": "SEASON_LENGTH",
+      "default_value": "10800",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:60,604800"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Creature Health",
+      "description": "Creature health in percent (20 to 300).",
+      "env_variable": "CREATURE_HEALTH",
+      "default_value": "100",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:20,300"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Creature Damage",
+      "description": "Creature damage in percent (20 to 300).",
+      "env_variable": "CREATURE_DAMAGE",
+      "default_value": "100",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:20,300"
+      ]
+    },
+    {
+      "sort": 13,
+      "name": "Nourishment Loss",
+      "description": "How fast hunger and thirst grow, in percent (0 to 100).",
+      "env_variable": "NOURISHMENT_LOSS",
+      "default_value": "100",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:0,100"
+      ]
+    },
+    {
+      "sort": 14,
+      "name": "Fall Damage",
+      "description": "Fall damage in percent (0 to 100).",
+      "env_variable": "FALL_DAMAGE",
+      "default_value": "100",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:0,100"
+      ]
+    },
+    {
+      "sort": 15,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 16,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "808040",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:808040"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Smalland: Survive the Wilds",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 8192
+      }
+    }
+  }
+}

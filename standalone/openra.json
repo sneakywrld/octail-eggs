@@ -1,0 +1,110 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official OpenRA release-20250330 AppImage of the chosen mod (Red Alert, Tiberian Dawn or Dune 2000) from GitHub, checks it against a SHA-256 recorded in the script (the project publishes none), unpacks the self-contained engine from its SquashFS image with unsquashfs (the AppImage is never run), keeps support/ (settings, logs, replays, custom maps) on a reinstall, passes the mod, name, port, password, public listing and the account requirement as OpenRA.Server arguments (values come from the environment, never pasted into the command), runs on octail-yolks' Debian image with .NET's invariant globalisation and adds the Ctrl+C stop, the log-only console (the server reads no input), the TCP port start check, install sandbox defaults and resource hints. The dedicated server needs none of the original game files.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/openra.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "OpenRA",
+  "author": "eggs@octail.net",
+  "uuid": "98526945-bb00-4b82-abc9-ec379749a4a7",
+  "description": "OpenRA is a free, open-source real-time strategy engine that recreates and modernises the classic Command & Conquer games: Red Alert, Tiberian Dawn and Dune 2000. One server hosts one mod.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./openra/OpenRA.Server ] || { echo \"OpenRA is not installed: reinstall the server.\"; exit 1; }; [ -d \"./openra/mods/{{OPENRA_MOD}}\" ] || { echo \"The {{OPENRA_MOD}} mod is not installed: reinstall the server after changing the mod.\"; exit 1; }; export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1; S=\"$(pwd)/support\"; cd openra && exec ./OpenRA.Server Game.Mod={{OPENRA_MOD}} \"Engine.SupportDir=$S\" \"Server.Name={{SERVER_NAME}}\" Server.ListenPort={{SERVER_PORT}} Server.AdvertiseOnline=$([ \"{{PUBLIC_LIST}}\" = 1 ] && echo True || echo False) \"Server.Password={{SERVER_PASSWORD}}\" Server.RequireAuthentication=$([ \"{{REQUIRE_AUTH}}\" = 1 ] && echo True || echo False) Server.EnableSingleplayer=False",
+  "config": {
+    "files": "{}",
+    "startup": "{\n    \"done\": \"Starting dedicated server for mod: \"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# OpenRA installation script (Octail): the official release-20250330 AppImage of the chosen mod (Red Alert, Tiberian\n# Dawn or Dune 2000) from GitHub, checked against the SHA-256 recorded here, and the engine unpacked from it with\n# unsquashfs (the AppImage itself is never run). The dedicated server needs none of the original game files.\n# Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## OpenRA release-20250330, the current release. GitHub and openra.net publish no checksums for the AppImages, so\n## Octail recorded their SHA-256 (2026-10-23). A new release needs the tag and the three hashes updated here.\nTAG=release-20250330\nMOD=\"${OPENRA_MOD:-ra}\"\ncase \"$MOD\" in\n    ra)\n        FILE=OpenRA-Red-Alert-x86_64.AppImage\n        SHA256=3cb71c7428188c8526dd8916993fc16fa17ba5f28a35968a8267f3db9f2186fe\n        ;;\n    cnc)\n        FILE=OpenRA-Tiberian-Dawn-x86_64.AppImage\n        SHA256=b3d202d1bf701be5989c41c256d19bd2b1788694df01e343ade865cf1190706b\n        ;;\n    d2k)\n        FILE=OpenRA-Dune-2000-x86_64.AppImage\n        SHA256=7585986bf0cd488debaec3fadf853c1901003eff945dbad5de95b0b6bd781a67\n        ;;\n    *)\n        echo \"Installation failed: the mod must be ra (Red Alert), cnc (Tiberian Dawn) or d2k (Dune 2000), not ${MOD}.\"\n        exit 1\n        ;;\nesac\n\napt-get update -qq\napt-get install -y -qq curl squashfs-tools python3 ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: OpenRA publishes its Linux builds for x86_64 only (this node is $(uname -m)).\"\n    exit 1\nfi\n\ncd /mnt/server\nDL=/mnt/server/.openra-download.AppImage\nURL=\"https://github.com/OpenRA/OpenRA/releases/download/${TAG}/${FILE}\"\necho \"Downloading ${URL}\"\nif ! curl -fSL --connect-timeout 30 --max-time 1800 --retry 3 -o \"$DL\" \"$URL\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\nif ! echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match OpenRA ${TAG}'s checksum for ${FILE}.\"\n    exit 1\nfi\n\n## an AppImage is a small ELF runtime followed by a SquashFS image: the image starts where the ELF's section headers\n## end, which the ELF header says\nOFFSET=$(python3 -I -c 'import struct, sys\nh = open(sys.argv[1], \"rb\").read(64)\nshoff, = struct.unpack_from(\"<Q\", h, 0x28)\nshentsize, shnum = struct.unpack_from(\"<HH\", h, 0x3a)\nprint(shoff + shentsize * shnum)' \"$DL\")\nrm -rf /mnt/server/.openra-unpack\nif ! unsquashfs -q -n -o \"$OFFSET\" -d /mnt/server/.openra-unpack \"$DL\" usr/lib/openra > /dev/null; then\n    rm -rf /mnt/server/.openra-unpack \"$DL\"\n    echo \"Installation failed: ${FILE} couldn't be unpacked.\"\n    exit 1\nfi\nrm -f \"$DL\"\nE=/mnt/server/.openra-unpack/usr/lib/openra\nif [ ! -f \"$E/OpenRA.Server\" ] || [ ! -d \"$E/mods/${MOD}\" ]; then\n    rm -rf /mnt/server/.openra-unpack\n    echo \"Installation failed: the dedicated server is missing from ${FILE}.\"\n    exit 1\nfi\n\n## the engine is replaced; support/ (settings, logs, replays and your maps) stays\nrm -rf openra\nmv \"$E\" openra\nrm -rf /mnt/server/.openra-unpack\nchmod +x openra/OpenRA.Server\n## custom maps go into support/maps/<mod>/<release>/ (the folder OpenRA reads user maps from)\nmkdir -p \"support/maps/${MOD}/${TAG}\"\necho \"${TAG} ${MOD}\" > openra/.octail-installed\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: OpenRA ${TAG} (${MOD}).\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Mod",
+      "description": "ra (Red Alert), cnc (Tiberian Dawn) or d2k (Dune 2000). Reinstall after changing it: the install downloads that mod.",
+      "env_variable": "OPENRA_MOD",
+      "default_value": "ra",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:ra,cnc,d2k",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My OpenRA server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 advertises the server on the OpenRA master server (it checks that the port is reachable); 0 keeps it off the list (players join by address).",
+      "env_variable": "PUBLIC_LIST",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Require OpenRA Account",
+      "description": "1 lets only players signed in to an openra.net forum account join; 0 lets anyone join.",
+      "env_variable": "REQUIRE_AUTH",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "openra",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "OpenRA",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 1024
+      }
+    }
+  }
+}

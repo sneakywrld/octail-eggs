@@ -1,0 +1,96 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail: NanoLimbo, a tiny limbo server for Minecraft Java (1.7.2 to 26.x clients): players wait in an empty world, usually sent there by a Velocity or BungeeCord proxy when their server is down or full. The install takes NanoLimbo.jar from Nan1t/NanoLimbo's GitHub releases (latest or a version; pre-releases refused), checked against the SHA-256 digest GitHub lists (1.12.0 and newer have one; older releases are refused), and copies settings.yml out of the jar when there is none, so the panel sets bind.ip and bind.port before the first start (NanoLimbo's default binds localhost:65535). NanoLimbo 1.13 needs Java 21. Not tagged minecraft: NanoLimbo has no server.properties, plugins, mods or versions, so none of the Minecraft tools apply (the version changer would replace it with another server); it has no say command either, so no broadcast. No EULA (not a Mojang server).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/nanolimbo.json"
+  },
+  "uuid": "dcc517e1-45f9-46bf-94d8-f5b0ebbad6a3",
+  "name": "NanoLimbo",
+  "author": "octail@meowgafactory.com",
+  "description": "NanoLimbo is a lightweight limbo server for Minecraft: Java Edition: players wait in an empty world instead of being disconnected, for example while a proxy restarts their server. It takes a few dozen MB of memory and supports clients from 1.7.2 to the newest release.",
+  "tags": [
+    "limbo",
+    "nanolimbo",
+    "minecraft-java"
+  ],
+  "features": [
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -f {{SERVER_JARFILE}} ]; then echo 'The NanoLimbo jar is missing: reinstall the server (Settings, Reinstall).'; exit 1; fi; exec java -Xms32M -XX:MaxRAMPercentage=95.0 -jar {{SERVER_JARFILE}}"
+  },
+  "config": {
+    "files": {
+      "settings.yml": {
+        "parser": "yaml",
+        "find": {
+          "bind.ip": "0.0.0.0",
+          "bind.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": "Server started on "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# NanoLimbo installation (Octail): NanoLimbo.jar from Nan1t/NanoLimbo's GitHub releases (latest or a version),\n# checked against the SHA-256 digest GitHub lists for the asset; releases without one (1.8.1 and older) are\n# refused. settings.yml is taken from the jar when there is none, so the panel can set the bind address and port\n# before the first start; the owner's settings.yml stays on reinstall.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --connect-timeout 30 --max-time 60 --retry 3 \"$1\"; }\n\nVERSION=\"${LIMBO_VERSION:-latest}\"\nJAR=\"${SERVER_JARFILE:-nanolimbo.jar}\"\necho \"${VERSION}\" | grep -Eq '^(latest|v?[0-9]+\\.[0-9]+(\\.[0-9]+)?)$' ||\n\tfail \"the NanoLimbo version (${VERSION}) must be a version such as 1.13.0 or latest\"\necho \"${JAR}\" | grep -Eq '^[A-Za-z0-9._-]+\\.jar$' || fail \"the jar file name (${JAR}) must be a plain name ending in .jar\"\n\nRELEASES=https://api.github.com/repos/Nan1t/NanoLimbo/releases\nif [ \"${VERSION}\" = latest ]; then\n\tRELEASE=$(get \"${RELEASES}/latest\") || fail \"GitHub didn't list the latest NanoLimbo release\"\nelse\n\t# Tags are v1.13.0 from 1.8 on (1.7 and older have no v); both spellings are tried.\n\tRELEASE=$(get \"${RELEASES}/tags/v${VERSION#v}\") || RELEASE=$(get \"${RELEASES}/tags/${VERSION#v}\") ||\n\t\tfail \"NanoLimbo ${VERSION} isn't a release on GitHub\"\nfi\nTAG=$(echo \"${RELEASE}\" | jq -r '.tag_name // empty')\n[ -n \"${TAG}\" ] || fail \"GitHub's answer names no release\"\nif [ \"$(echo \"${RELEASE}\" | jq -r '.prerelease')\" = true ]; then\n\tfail \"${TAG} is a pre-release; pick a release version\"\nfi\nURL=$(echo \"${RELEASE}\" | jq -r '[.assets[] | select(.name == \"NanoLimbo.jar\")][0].browser_download_url // empty')\nSUM=$(echo \"${RELEASE}\" | jq -r '[.assets[] | select(.name == \"NanoLimbo.jar\")][0].digest // empty' |\n\tsed 's/^sha256://' | tr 'A-F' 'a-f')\n[ -n \"${URL}\" ] || fail \"release ${TAG} has no NanoLimbo.jar (1.12.0 and newer have one)\"\necho \"${SUM}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"GitHub lists no SHA-256 for NanoLimbo.jar of ${TAG}\"\n\nmkdir -p /mnt/server\ncd /mnt/server\necho \"Installing NanoLimbo ${TAG} as ${JAR}\"\nrm -f \"${JAR}.download\"\ncurl -fsSL --connect-timeout 30 --max-time 600 --retry 3 -o \"${JAR}.download\" \"${URL}\" ||\n\tfail \"the download of NanoLimbo ${TAG} failed\"\nif ! echo \"${SUM}  ${JAR}.download\" | sha256sum -c --quiet -; then\n\trm -f \"${JAR}.download\"\n\tfail \"NanoLimbo.jar of ${TAG} doesn't match its SHA-256 (${SUM})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\n# NanoLimbo's default settings.yml binds localhost:65535; the panel sets bind.ip and bind.port before every start,\n# so the first start needs the file already there.\nif [ ! -f settings.yml ]; then\n\tunzip -p \"${JAR}\" settings.yml >settings.yml.new || fail \"${JAR} carries no settings.yml\"\n\t[ -s settings.yml.new ] || fail \"${JAR} carries no settings.yml\"\n\tmv settings.yml.new settings.yml\nfi\n\necho \"NanoLimbo ${TAG} installed (SHA-256 ${SUM} checked). Its settings are in settings.yml.\"\necho \"Behind Velocity or BungeeCord, set infoForwarding there to match the proxy's forwarding.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "NanoLimbo Version",
+      "description": "The NanoLimbo release to install, such as 1.13.0, or latest for the newest release. 1.12.0 and newer only (older releases have no published checksum). Applied on the next reinstall.",
+      "env_variable": "LIMBO_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|v?[0-9]+\\.[0-9]+(\\.[0-9]+)?)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the NanoLimbo jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "nanolimbo.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "broadcast_command": false,
+      "player_log": "none",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 512
+      }
+    }
+  }
+}

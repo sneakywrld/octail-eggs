@@ -1,0 +1,4077 @@
+{
+  "schema": 1,
+  "repo": "sneakywrld/octail-eggs",
+  "date": "2026-10-23",
+  "eggs": 158,
+  "categories": [
+    {
+      "folder": "minecraft",
+      "title": "Minecraft",
+      "eggs": 23,
+      "pass": 11,
+      "fail": 0,
+      "blocked": 4,
+      "untested": 8
+    },
+    {
+      "folder": "source",
+      "title": "Source",
+      "eggs": 16,
+      "pass": 4,
+      "fail": 1,
+      "blocked": 0,
+      "untested": 11
+    },
+    {
+      "folder": "goldsrc",
+      "title": "GoldSrc",
+      "eggs": 7,
+      "pass": 7,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 0
+    },
+    {
+      "folder": "rust",
+      "title": "Rust",
+      "eggs": 1,
+      "pass": 1,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 0
+    },
+    {
+      "folder": "ark",
+      "title": "ARK",
+      "eggs": 2,
+      "pass": 1,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 1
+    },
+    {
+      "folder": "valheim",
+      "title": "Valheim",
+      "eggs": 2,
+      "pass": 1,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 1
+    },
+    {
+      "folder": "terraria",
+      "title": "Terraria",
+      "eggs": 3,
+      "pass": 3,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 0
+    },
+    {
+      "folder": "steam",
+      "title": "Steam games",
+      "eggs": 65,
+      "pass": 16,
+      "fail": 2,
+      "blocked": 8,
+      "untested": 39
+    },
+    {
+      "folder": "steamcmd",
+      "title": "SteamCMD",
+      "eggs": 1,
+      "pass": 0,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 1
+    },
+    {
+      "folder": "standalone",
+      "title": "Standalone games",
+      "eggs": 23,
+      "pass": 13,
+      "fail": 0,
+      "blocked": 3,
+      "untested": 7
+    },
+    {
+      "folder": "voice",
+      "title": "Voice servers",
+      "eggs": 2,
+      "pass": 1,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 1
+    },
+    {
+      "folder": "apps",
+      "title": "Apps",
+      "eggs": 12,
+      "pass": 0,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 12
+    },
+    {
+      "folder": "testing",
+      "title": "Testing",
+      "eggs": 1,
+      "pass": 0,
+      "fail": 0,
+      "blocked": 0,
+      "untested": 1
+    }
+  ],
+  "tested": {
+    "pass": 58,
+    "fail": 3,
+    "blocked": 15,
+    "untested": 82,
+    "runs": 61,
+    "pass_rate": 95.1,
+    "coverage": 38.6,
+    "last_run": "2026-10-16"
+  },
+  "images": [
+    {
+      "image": "steamcmd_debian",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 47,
+      "pass": 10
+    },
+    {
+      "image": "debian",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 29,
+      "pass": 12
+    },
+    {
+      "image": "java_21",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 22,
+      "pass": 11
+    },
+    {
+      "image": "source",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 21,
+      "pass": 10
+    },
+    {
+      "image": "java_25",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 20,
+      "pass": 8
+    },
+    {
+      "image": "java_17",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 18,
+      "pass": 10
+    },
+    {
+      "image": "wine",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 14,
+      "pass": 4
+    },
+    {
+      "image": "java_11",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 12,
+      "pass": 8
+    },
+    {
+      "image": "java_8",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 12,
+      "pass": 8
+    },
+    {
+      "image": "proton",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 6,
+      "pass": 3
+    },
+    {
+      "image": "wine_staging",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 4,
+      "pass": 2
+    },
+    {
+      "image": "dotnet_10",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 3,
+      "pass": 3
+    },
+    {
+      "image": "steamcmd_ubuntu",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 3,
+      "pass": 1
+    },
+    {
+      "image": "alpine",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 2,
+      "pass": 1
+    },
+    {
+      "image": "dotnet_8",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 2,
+      "pass": 2
+    },
+    {
+      "image": "nodejs_22",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 2,
+      "pass": 0
+    },
+    {
+      "image": "bun_1",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "deno_2",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "dotnet_9",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 1
+    },
+    {
+      "image": "go_1.23",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "go_1.26",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "go_1.27",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "nodejs_20",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "nodejs_24",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "python_3.12",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "python_3.13",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "python_3.14",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "rust",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 1
+    },
+    {
+      "image": "steamcmd_dotnet",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "steamcmd_sniper",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "installer_debian",
+      "kind": "installer",
+      "ours": true,
+      "eggs": 132,
+      "pass": 45
+    },
+    {
+      "image": "installer_alpine",
+      "kind": "installer",
+      "ours": true,
+      "eggs": 21,
+      "pass": 9
+    },
+    {
+      "image": "installer_java_21",
+      "kind": "installer",
+      "ours": true,
+      "eggs": 2,
+      "pass": 2
+    },
+    {
+      "image": "installer_java_11",
+      "kind": "installer",
+      "ours": true,
+      "eggs": 1,
+      "pass": 1
+    },
+    {
+      "image": "installer_java_25",
+      "kind": "installer",
+      "ours": true,
+      "eggs": 1,
+      "pass": 0
+    },
+    {
+      "image": "installer_java_8",
+      "kind": "installer",
+      "ours": true,
+      "eggs": 1,
+      "pass": 1
+    }
+  ],
+  "added": {
+    "days": 30,
+    "since": "2026-09-23",
+    "known": true,
+    "eggs": [
+      {
+        "name": "AssaultCube",
+        "path": "standalone/assaultcube.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Ballistic Overkill",
+        "path": "steam/ballistic-overkill.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Bun App",
+        "path": "apps/bun-app.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Chivalry: Medieval Warfare",
+        "path": "steam/chivalry-medieval-warfare.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Cuberite",
+        "path": "minecraft/cuberite.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Deno App",
+        "path": "apps/deno-app.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "ET: Legacy",
+        "path": "standalone/et-legacy.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "FOUNDRY",
+        "path": "steam/foundry.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Gate",
+        "path": "minecraft/gate.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Lavalink",
+        "path": "apps/lavalink.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "MariaDB",
+        "path": "apps/mariadb.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "NanoLimbo",
+        "path": "minecraft/nanolimbo.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Nightingale",
+        "path": "steam/nightingale.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "OpenRA",
+        "path": "standalone/openra.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Operation: Harsh Doorstop",
+        "path": "steam/operation-harsh-doorstop.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "PostgreSQL",
+        "path": "apps/postgresql.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Red-DiscordBot",
+        "path": "apps/red-discordbot.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "RuneScape: Dragonwilds",
+        "path": "steam/runescape-dragonwilds.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Smalland: Survive the Wilds",
+        "path": "steam/smalland.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "SuperTuxKart",
+        "path": "standalone/supertuxkart.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Teeworlds",
+        "path": "standalone/teeworlds.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "TES3MP (Morrowind multiplayer)",
+        "path": "standalone/tes3mp.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Unvanquished",
+        "path": "standalone/unvanquished.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Uptime Kuma",
+        "path": "apps/uptime-kuma.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Valkey (Redis-compatible)",
+        "path": "apps/valkey.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Vanilla Minecraft",
+        "path": "minecraft/vanilla.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "VEIN",
+        "path": "steam/vein.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Warfork",
+        "path": "steam/warfork.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Windrose",
+        "path": "steam/windrose.json",
+        "date": "2026-10-23"
+      },
+      {
+        "name": "Arclight",
+        "path": "minecraft/arclight.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Black Mesa: Deathmatch",
+        "path": "source/black-mesa.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Ground Branch",
+        "path": "steam/ground-branch.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Half-Life 2: Deathmatch",
+        "path": "source/half-life-2-deathmatch.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Hytale",
+        "path": "standalone/hytale.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Killing Floor",
+        "path": "steam/killing-floor.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Leaf",
+        "path": "minecraft/leaf.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Left 4 Dead",
+        "path": "source/left-4-dead.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Mohist",
+        "path": "minecraft/mohist.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Myth of Empires",
+        "path": "steam/myth-of-empires.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Natural Selection 2",
+        "path": "steam/natural-selection-2.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "OpenArena",
+        "path": "standalone/openarena.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "PixARK",
+        "path": "steam/pixark.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "PocketMine-MP",
+        "path": "minecraft/pocketmine.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "PowerNukkitX",
+        "path": "minecraft/powernukkitx.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Pufferfish",
+        "path": "minecraft/pufferfish.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Quake Live",
+        "path": "steam/quake-live.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Red Eclipse 2",
+        "path": "standalone/red-eclipse.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Rising World",
+        "path": "steam/rising-world.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Risk of Rain 2",
+        "path": "steam/risk-of-rain-2.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Squad 44",
+        "path": "steam/squad-44.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Team Fortress 2 Classified",
+        "path": "source/team-fortress-2-classified.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Unreal Tournament (1999)",
+        "path": "standalone/unreal-tournament-99.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Unreal Tournament 2004",
+        "path": "standalone/unreal-tournament-2004.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Urban Terror",
+        "path": "standalone/urban-terror.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Wurm Unlimited",
+        "path": "steam/wurm-unlimited.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "Zombie Panic! Source",
+        "path": "source/zombie-panic-source.json",
+        "date": "2026-10-13"
+      },
+      {
+        "name": "American Truck Simulator Dedicated Server",
+        "path": "steam/american-truck-simulator.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Arma 3",
+        "path": "steam/arma-3.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "ASKA",
+        "path": "steam/aska.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Assetto Corsa",
+        "path": "steam/assetto-corsa.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "BeamMP Server",
+        "path": "standalone/beammp.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "BungeeCord",
+        "path": "minecraft/bungeecord.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Counter-Strike 1.6",
+        "path": "goldsrc/counter-strike-16.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Counter-Strike: Condition Zero",
+        "path": "goldsrc/counter-strike-condition-zero.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Day of Defeat",
+        "path": "goldsrc/day-of-defeat.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Day of Infamy",
+        "path": "source/day-of-infamy.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "DayZ",
+        "path": "steam/dayz.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "DDraceNetwork (DDNet)",
+        "path": "standalone/ddnet.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Deathmatch Classic",
+        "path": "goldsrc/deathmatch-classic.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Empyrion - Galactic Survival",
+        "path": "steam/empyrion.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Fistful of Frags",
+        "path": "source/fistful-of-frags.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Folia",
+        "path": "minecraft/folia.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Geyser Standalone",
+        "path": "minecraft/geyser.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Go App",
+        "path": "apps/go-app.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Half-Life Deathmatch",
+        "path": "goldsrc/half-life-deathmatch.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Holdfast: Nations At War",
+        "path": "steam/holdfast.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Insurgency (2014)",
+        "path": "source/insurgency.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Java App (JAR)",
+        "path": "apps/java-jar.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Luanti",
+        "path": "standalone/luanti.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Mumble Server",
+        "path": "voice/mumble.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Night of the Dead",
+        "path": "steam/night-of-the-dead.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "No More Room in Hell",
+        "path": "source/no-more-room-in-hell.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Node.js App",
+        "path": "apps/nodejs-app.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "OpenRCT2",
+        "path": "standalone/openrct2.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Purpur",
+        "path": "minecraft/purpur.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Python App",
+        "path": "apps/python-app.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Quilt",
+        "path": "minecraft/quilt.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "SCP: Secret Laboratory",
+        "path": "steam/scp-secret-laboratory.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Space Station 14",
+        "path": "standalone/space-station-14.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Spigot",
+        "path": "minecraft/spigot.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "SpongeVanilla",
+        "path": "minecraft/sponge.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Starbound",
+        "path": "steam/starbound.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Stormworks: Build and Rescue",
+        "path": "steam/stormworks.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Sven Co-op",
+        "path": "goldsrc/sven-co-op.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Team Fortress Classic",
+        "path": "goldsrc/team-fortress-classic.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "TeamSpeak 3 Server",
+        "path": "voice/teamspeak.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Terraria TShock",
+        "path": "terraria/tshock.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "The Forest",
+        "path": "steam/the-forest.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "The Isle (Evrima)",
+        "path": "steam/the-isle.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "The Lord of the Rings: Return to Moria",
+        "path": "steam/return-to-moria.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Xonotic",
+        "path": "standalone/xonotic.json",
+        "date": "2026-10-12"
+      },
+      {
+        "name": "Abiotic Factor",
+        "path": "steam/abiotic-factor.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Astroneer",
+        "path": "steam/astroneer.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Conan Exiles Enhanced",
+        "path": "steam/conan-exiles.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Counter-Strike: Source",
+        "path": "source/counter-strike-source.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Craftopia",
+        "path": "steam/craftopia.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Day of Defeat: Source",
+        "path": "source/day-of-defeat-source.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Hurtworld",
+        "path": "steam/hurtworld.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Icarus",
+        "path": "steam/icarus.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Mindustry",
+        "path": "standalone/mindustry.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Necesse",
+        "path": "steam/necesse.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "OpenTTD",
+        "path": "standalone/openttd.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Pavlov VR",
+        "path": "steam/pavlov-vr.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Sons Of The Forest",
+        "path": "steam/sons-of-the-forest.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Soulmask",
+        "path": "steam/soulmask.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Space Engineers",
+        "path": "steam/space-engineers.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Stationeers",
+        "path": "steam/stationeers.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "The Front",
+        "path": "steam/the-front.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "Valheim",
+        "path": "valheim/valheim.json",
+        "date": "2026-10-09"
+      },
+      {
+        "name": "7 Days To Die",
+        "path": "steam/7-days-to-die.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "ARK: Survival Ascended",
+        "path": "ark/survival-ascended.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Ark: Survival Evolved",
+        "path": "ark/survival-evolved.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Arma Reforger",
+        "path": "steam/arma-reforger.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Avorion",
+        "path": "steam/avorion.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Barotrauma",
+        "path": "steam/barotrauma.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Core Keeper",
+        "path": "steam/core-keeper.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Counter-Strike 2",
+        "path": "source/counter-strike-2.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Don't Starve Together",
+        "path": "steam/dont-starve-together.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Eco",
+        "path": "steam/eco.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Enshrouded",
+        "path": "steam/enshrouded.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Euro Truck Simulator 2 Dedicated Server",
+        "path": "steam/euro-truck-simulator-2.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Factorio",
+        "path": "standalone/factorio.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Insurgency: Sandstorm",
+        "path": "steam/insurgency-sandstorm.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Killing Floor 2",
+        "path": "steam/killing-floor-2.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Left 4 Dead 2",
+        "path": "source/left-4-dead-2.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Mordhau",
+        "path": "steam/mordhau.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Palworld",
+        "path": "steam/palworld.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Project Zomboid",
+        "path": "steam/project-zomboid.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Squad",
+        "path": "steam/squad.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Team Fortress 2",
+        "path": "source/team-fortress-2.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Terraria Vanilla",
+        "path": "terraria/vanilla.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "tModloader",
+        "path": "terraria/tmodloader.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Unturned",
+        "path": "steam/unturned.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "V Rising BepInEx",
+        "path": "steam/v-rising.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Valheim BepINex",
+        "path": "valheim/bepinex.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Vintage Story",
+        "path": "standalone/vintage-story.json",
+        "date": "2026-10-08"
+      },
+      {
+        "name": "Fabric",
+        "path": "minecraft/fabric.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Forge",
+        "path": "minecraft/forge.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Garry's Mod",
+        "path": "source/garrysmod.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Generic SteamCMD game",
+        "path": "steamcmd/generic.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "NeoForge",
+        "path": "minecraft/neoforge.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Rust",
+        "path": "rust/rust.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Satisfactory",
+        "path": "steam/satisfactory.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Source Engine Game (SRCDS)",
+        "path": "source/generic.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Vanilla Bedrock",
+        "path": "minecraft/bedrock.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Velocity",
+        "path": "minecraft/velocity.json",
+        "date": "2026-10-07"
+      },
+      {
+        "name": "Octail Test Game",
+        "path": "testing/test-game.json",
+        "date": "2026-10-06"
+      },
+      {
+        "name": "Paper",
+        "path": "minecraft/paper.json",
+        "date": "2026-10-06"
+      }
+    ]
+  },
+  "games": [
+    {
+      "name": "7 Days To Die",
+      "path": "steam/7-days-to-die.json",
+      "file": "7-days-to-die.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "steamcmd_debian",
+        "ready_s": 21,
+        "peak_mib": 762,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Abiotic Factor",
+      "path": "steam/abiotic-factor.json",
+      "file": "abiotic-factor.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "proton"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "proton",
+        "ready_s": 18,
+        "peak_mib": 1589,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "American Truck Simulator Dedicated Server",
+      "path": "steam/american-truck-simulator.json",
+      "file": "american-truck-simulator.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Arclight",
+      "path": "minecraft/arclight.json",
+      "file": "minecraft-arclight.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_21",
+        "ready_s": 52,
+        "peak_mib": 773,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "ARK: Survival Ascended",
+      "path": "ark/survival-ascended.json",
+      "file": "ark-survival-ascended.json",
+      "folder": "ark",
+      "category": "ARK",
+      "images": [
+        "proton"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "proton",
+        "ready_s": 37,
+        "peak_mib": 8556,
+        "limit_mib": 8192,
+        "node": "node1",
+        "note": "needs ≥ 12 GB: killed at the 8 GB test cap after start"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Ark: Survival Evolved",
+      "path": "ark/survival-evolved.json",
+      "file": "ark-survival-evolved.json",
+      "folder": "ark",
+      "category": "ARK",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Arma 3",
+      "path": "steam/arma-3.json",
+      "file": "arma-3.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a logged-in Steam account (Arma 3 Server isn't anonymous)"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Arma Reforger",
+      "path": "steam/arma-reforger.json",
+      "file": "arma-reforger.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "ASKA",
+      "path": "steam/aska.json",
+      "file": "aska.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "AssaultCube",
+      "path": "standalone/assaultcube.json",
+      "file": "assaultcube.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Assetto Corsa",
+      "path": "steam/assetto-corsa.json",
+      "file": "assetto-corsa.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a Steam account that owns Assetto Corsa"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Astroneer",
+      "path": "steam/astroneer.json",
+      "file": "astroneer.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "proton"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "fail",
+        "date": "2026-10-10",
+        "image": "proton",
+        "limit_mib": 8192,
+        "node": "node1",
+        "note": "no start line in 900 s under Proton 10-34; that run came before the egg also counted the open game port as started (2026-10-12): needs a re-run"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Avorion",
+      "path": "steam/avorion.json",
+      "file": "avorion.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Ballistic Overkill",
+      "path": "steam/ballistic-overkill.json",
+      "file": "ballistic-overkill.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Barotrauma",
+      "path": "steam/barotrauma.json",
+      "file": "barotrauma.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "steamcmd_debian",
+        "ready_s": 10,
+        "peak_mib": 268,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "BeamMP Server",
+      "path": "standalone/beammp.json",
+      "file": "beammp.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs an AuthKey"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Black Mesa: Deathmatch",
+      "path": "source/black-mesa.json",
+      "file": "black-mesa.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Source); not yet run on a node"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Bun App",
+      "path": "apps/bun-app.json",
+      "file": "bun-app.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "bun_1"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "BungeeCord",
+      "path": "minecraft/bungeecord.json",
+      "file": "minecraft-bungeecord.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "java_25",
+        "ready_s": 7,
+        "peak_mib": 155,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Chivalry: Medieval Warfare",
+      "path": "steam/chivalry-medieval-warfare.json",
+      "file": "chivalry-medieval-warfare.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Conan Exiles Enhanced",
+      "path": "steam/conan-exiles.json",
+      "file": "conan-exiles.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Core Keeper",
+      "path": "steam/core-keeper.json",
+      "file": "core-keeper.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "steamcmd_debian",
+        "ready_s": 91,
+        "peak_mib": 1704,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Counter-Strike 1.6",
+      "path": "goldsrc/counter-strike-16.json",
+      "file": "counter-strike-16.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 16,
+        "peak_mib": 90,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Counter-Strike 2",
+      "path": "source/counter-strike-2.json",
+      "file": "counter-strike-2.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "steamcmd_sniper"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "the game server token is optional since 2026-10-23 (it was blocked on needing one); not yet run"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Counter-Strike: Condition Zero",
+      "path": "goldsrc/counter-strike-condition-zero.json",
+      "file": "counter-strike-condition-zero.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 11,
+        "peak_mib": 86,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Counter-Strike: Source",
+      "path": "source/counter-strike-source.json",
+      "file": "counter-strike-source.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "steamcmd_debian",
+        "ready_s": 16,
+        "peak_mib": 87,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Craftopia",
+      "path": "steam/craftopia.json",
+      "file": "craftopia.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "fail",
+        "date": "2026-10-10",
+        "image": "steamcmd_debian",
+        "limit_mib": 8192,
+        "node": "node1",
+        "note": "runs (~4.5 GB) but never prints its ready line; that run came before the egg also counted the open game port as started (2026-10-12): needs a re-run"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Cuberite",
+      "path": "minecraft/cuberite.json",
+      "file": "minecraft-cuberite.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Day of Defeat",
+      "path": "goldsrc/day-of-defeat.json",
+      "file": "day-of-defeat.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 10,
+        "peak_mib": 95,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Day of Defeat: Source",
+      "path": "source/day-of-defeat-source.json",
+      "file": "day-of-defeat-source.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Day of Infamy",
+      "path": "source/day-of-infamy.json",
+      "file": "day-of-infamy.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Source); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "DayZ",
+      "path": "steam/dayz.json",
+      "file": "dayz.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a Steam account that owns the game"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "DDraceNetwork (DDNet)",
+      "path": "standalone/ddnet.json",
+      "file": "ddnet.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 51,
+        "limit_mib": 512,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Deathmatch Classic",
+      "path": "goldsrc/deathmatch-classic.json",
+      "file": "deathmatch-classic.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 10,
+        "peak_mib": 39,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Deno App",
+      "path": "apps/deno-app.json",
+      "file": "deno-app.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "deno_2"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Don't Starve Together",
+      "path": "steam/dont-starve-together.json",
+      "file": "dont-starve-together.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a Klei cluster token (accounts.klei.com)"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Eco",
+      "path": "steam/eco.json",
+      "file": "eco.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_dotnet"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Empyrion - Galactic Survival",
+      "path": "steam/empyrion.json",
+      "file": "empyrion.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine",
+        "wine_staging"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Enshrouded",
+      "path": "steam/enshrouded.json",
+      "file": "enshrouded.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "proton"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "proton",
+        "ready_s": 29,
+        "peak_mib": 914,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "ET: Legacy",
+      "path": "standalone/et-legacy.json",
+      "file": "et-legacy.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Euro Truck Simulator 2 Dedicated Server",
+      "path": "steam/euro-truck-simulator-2.json",
+      "file": "euro-truck-simulator-2.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Fabric",
+      "path": "minecraft/fabric.json",
+      "file": "minecraft-fabric.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_java_11",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_25",
+        "ready_s": 13,
+        "peak_mib": 455,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Factorio",
+      "path": "standalone/factorio.json",
+      "file": "factorio.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "debian",
+        "ready_s": 2,
+        "peak_mib": 327,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Fistful of Frags",
+      "path": "source/fistful-of-frags.json",
+      "file": "fistful-of-frags.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Source); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Folia",
+      "path": "minecraft/folia.json",
+      "file": "minecraft-folia.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "blocked",
+        "note": "needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt)"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Forge",
+      "path": "minecraft/forge.json",
+      "file": "minecraft-forge.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_java_8",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_25",
+        "ready_s": 17,
+        "peak_mib": 504,
+        "limit_mib": 4096,
+        "disk_mib": 192,
+        "node": "node1"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "FOUNDRY",
+      "path": "steam/foundry.json",
+      "file": "foundry.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Garry's Mod",
+      "path": "source/garrysmod.json",
+      "file": "garrysmod.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Gate",
+      "path": "minecraft/gate.json",
+      "file": "minecraft-gate.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Generic SteamCMD game",
+      "path": "steamcmd/generic.json",
+      "file": "steamcmd-generic.json",
+      "folder": "steamcmd",
+      "category": "SteamCMD",
+      "images": [
+        "steamcmd_debian",
+        "proton"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Geyser Standalone",
+      "path": "minecraft/geyser.json",
+      "file": "minecraft-geyser.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Go App",
+      "path": "apps/go-app.json",
+      "file": "go-app.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "go_1.27",
+        "go_1.26",
+        "go_1.23"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Ground Branch",
+      "path": "steam/ground-branch.json",
+      "file": "ground-branch.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine_staging",
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "wine_staging",
+        "ready_s": 32,
+        "peak_mib": 998,
+        "limit_mib": 4096,
+        "disk_mib": 2045,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Half-Life 2: Deathmatch",
+      "path": "source/half-life-2-deathmatch.json",
+      "file": "half-life-2-deathmatch.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "source",
+        "ready_s": 10,
+        "peak_mib": 90,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Half-Life Deathmatch",
+      "path": "goldsrc/half-life-deathmatch.json",
+      "file": "half-life-deathmatch.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 11,
+        "peak_mib": 45,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Holdfast: Nations At War",
+      "path": "steam/holdfast.json",
+      "file": "holdfast.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Hurtworld",
+      "path": "steam/hurtworld.json",
+      "file": "hurtworld.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Hytale",
+      "path": "standalone/hytale.json",
+      "file": "hytale.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "java_25"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a Hytale account that owns the game: the owner signs in with /auth login device in the console on the first start, then /update download fetches the game files (about 3.5 GB); not yet run on a node"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Icarus",
+      "path": "steam/icarus.json",
+      "file": "icarus.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "wine",
+        "ready_s": 69,
+        "peak_mib": 1119,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Insurgency (2014)",
+      "path": "source/insurgency.json",
+      "file": "insurgency.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Source); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Insurgency: Sandstorm",
+      "path": "steam/insurgency-sandstorm.json",
+      "file": "insurgency-sandstorm.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_ubuntu"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Java App (JAR)",
+      "path": "apps/java-jar.json",
+      "file": "java-jar.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "java_21",
+        "java_25",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Killing Floor",
+      "path": "steam/killing-floor.json",
+      "file": "killing-floor.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a logged-in Steam account (the Killing Floor server isn't anonymous)"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Killing Floor 2",
+      "path": "steam/killing-floor-2.json",
+      "file": "killing-floor-2.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Lavalink",
+      "path": "apps/lavalink.json",
+      "file": "lavalink.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "java_21",
+        "java_25",
+        "java_17"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Leaf",
+      "path": "minecraft/leaf.json",
+      "file": "minecraft-leaf.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_25",
+        "ready_s": 30,
+        "peak_mib": 1310,
+        "limit_mib": 4096,
+        "disk_mib": 304,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Left 4 Dead",
+      "path": "source/left-4-dead.json",
+      "file": "left-4-dead.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "source",
+        "ready_s": 14,
+        "peak_mib": 104,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Left 4 Dead 2",
+      "path": "source/left-4-dead-2.json",
+      "file": "left-4-dead-2.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Luanti",
+      "path": "standalone/luanti.json",
+      "file": "luanti.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "alpine"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "alpine",
+        "ready_s": 2,
+        "peak_mib": 18,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "MariaDB",
+      "path": "apps/mariadb.json",
+      "file": "mariadb.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Mindustry",
+      "path": "standalone/mindustry.json",
+      "file": "mindustry.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "java_21",
+        "java_17"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "java_21",
+        "ready_s": 4,
+        "peak_mib": 174,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Mohist",
+      "path": "minecraft/mohist.json",
+      "file": "minecraft-mohist.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_21",
+        "ready_s": 91,
+        "peak_mib": 1726,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Mordhau",
+      "path": "steam/mordhau.json",
+      "file": "mordhau.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Mumble Server",
+      "path": "voice/mumble.json",
+      "file": "mumble.json",
+      "folder": "voice",
+      "category": "Voice servers",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "debian",
+        "ready_s": 2,
+        "peak_mib": 6,
+        "limit_mib": 256,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Myth of Empires",
+      "path": "steam/myth-of-empires.json",
+      "file": "myth-of-empires.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "NanoLimbo",
+      "path": "minecraft/nanolimbo.json",
+      "file": "minecraft-nanolimbo.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Natural Selection 2",
+      "path": "steam/natural-selection-2.json",
+      "file": "natural-selection-2.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "steamcmd_debian",
+        "ready_s": 31,
+        "peak_mib": 643,
+        "limit_mib": 3072,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Necesse",
+      "path": "steam/necesse.json",
+      "file": "necesse.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "NeoForge",
+      "path": "minecraft/neoforge.json",
+      "file": "minecraft-neoforge.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_java_21",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_25",
+        "ready_s": 15,
+        "peak_mib": 472,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Night of the Dead",
+      "path": "steam/night-of-the-dead.json",
+      "file": "night-of-the-dead.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Nightingale",
+      "path": "steam/nightingale.json",
+      "file": "nightingale.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "No More Room in Hell",
+      "path": "source/no-more-room-in-hell.json",
+      "file": "no-more-room-in-hell.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Source); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Node.js App",
+      "path": "apps/nodejs-app.json",
+      "file": "nodejs-app.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "nodejs_24",
+        "nodejs_22",
+        "nodejs_20"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Octail Test Game",
+      "path": "testing/test-game.json",
+      "file": "test-game.json",
+      "folder": "testing",
+      "category": "Testing",
+      "images": [
+        "alpine"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-06"
+    },
+    {
+      "name": "OpenArena",
+      "path": "standalone/openarena.json",
+      "file": "openarena.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 22,
+        "limit_mib": 512,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "OpenRA",
+      "path": "standalone/openra.json",
+      "file": "openra.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "OpenRCT2",
+      "path": "standalone/openrct2.json",
+      "file": "openrct2.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs the original RollerCoaster Tycoon 2 data files, which the operator uploads to rct2/ (or sets RCT2_DATA_URL)"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "OpenTTD",
+      "path": "standalone/openttd.json",
+      "file": "openttd.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "debian",
+        "ready_s": 12,
+        "peak_mib": 10,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Operation: Harsh Doorstop",
+      "path": "steam/operation-harsh-doorstop.json",
+      "file": "operation-harsh-doorstop.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Palworld",
+      "path": "steam/palworld.json",
+      "file": "palworld.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Paper",
+      "path": "minecraft/paper.json",
+      "file": "minecraft-paper.yaml",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "java_25",
+        "ready_s": 79,
+        "peak_mib": 960,
+        "limit_mib": 896,
+        "node": "tentacle",
+        "note": "peak 960 MiB of an 896 MiB cap"
+      },
+      "added": "2026-10-06"
+    },
+    {
+      "name": "Pavlov VR",
+      "path": "steam/pavlov-vr.json",
+      "file": "pavlov-vr.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_ubuntu"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs node ports in pairs: the main port and the main port + 400, e.g. 7777 and 8177 (Allocations, Pair with +400)"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "PixARK",
+      "path": "steam/pixark.json",
+      "file": "pixark.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "PocketMine-MP",
+      "path": "minecraft/pocketmine.json",
+      "file": "minecraft-pocketmine.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "debian",
+        "ready_s": 3,
+        "peak_mib": 623,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "PostgreSQL",
+      "path": "apps/postgresql.json",
+      "file": "postgresql.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "PowerNukkitX",
+      "path": "minecraft/powernukkitx.json",
+      "file": "minecraft-powernukkitx.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_21",
+        "java_25"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested",
+        "note": "the start command now gives Java at least 4 CPUs (-XX:ActiveProcessorCount), the workaround for 3.0.5's start crash with one CPU (NPE in ItemPotion.buildName, upstream #3070); not yet re-run"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Project Zomboid",
+      "path": "steam/project-zomboid.json",
+      "file": "project-zomboid.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Pufferfish",
+      "path": "minecraft/pufferfish.json",
+      "file": "minecraft-pufferfish.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "blocked",
+        "note": "needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt)"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Purpur",
+      "path": "minecraft/purpur.json",
+      "file": "minecraft-purpur.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_25",
+        "ready_s": 22,
+        "peak_mib": 823,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Python App",
+      "path": "apps/python-app.json",
+      "file": "python-app.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "python_3.14",
+        "python_3.13",
+        "python_3.12"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Quake Live",
+      "path": "steam/quake-live.json",
+      "file": "quake-live.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "steamcmd_debian",
+        "ready_s": 6,
+        "peak_mib": 77,
+        "limit_mib": 1024,
+        "disk_mib": 1317,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Quilt",
+      "path": "minecraft/quilt.json",
+      "file": "minecraft-quilt.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_java_21",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "java_25",
+        "ready_s": 18,
+        "peak_mib": 703,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Red Eclipse 2",
+      "path": "standalone/red-eclipse.json",
+      "file": "red-eclipse.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 2,
+        "limit_mib": 512,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Red-DiscordBot",
+      "path": "apps/red-discordbot.json",
+      "file": "red-discordbot.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Rising World",
+      "path": "steam/rising-world.json",
+      "file": "rising-world.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "steamcmd_debian",
+        "ready_s": 10,
+        "peak_mib": 717,
+        "limit_mib": 4096,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Risk of Rain 2",
+      "path": "steam/risk-of-rain-2.json",
+      "file": "risk-of-rain-2.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "Steam's public branch of app 1180760 (the dedicated server) has carried an empty depot since 2025-11: SteamCMD reports it installed and leaves no files; nothing on a server can fix that, and the egg says so when it happens. The last real run (2026-10-13) failed for this reason."
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "RuneScape: Dragonwilds",
+      "path": "steam/runescape-dragonwilds.json",
+      "file": "runescape-dragonwilds.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Rust",
+      "path": "rust/rust.json",
+      "file": "rust.json",
+      "folder": "rust",
+      "category": "Rust",
+      "images": [
+        "rust"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "rust",
+        "ready_s": 165,
+        "peak_mib": 4372,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Satisfactory",
+      "path": "steam/satisfactory.json",
+      "file": "satisfactory.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "SCP: Secret Laboratory",
+      "path": "steam/scp-secret-laboratory.json",
+      "file": "scp-secret-laboratory.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Smalland: Survive the Wilds",
+      "path": "steam/smalland.json",
+      "file": "smalland.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Sons Of The Forest",
+      "path": "steam/sons-of-the-forest.json",
+      "file": "sons-of-the-forest.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "wine",
+        "ready_s": 83,
+        "peak_mib": 6448,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Soulmask",
+      "path": "steam/soulmask.json",
+      "file": "soulmask.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Source Engine Game (SRCDS)",
+      "path": "source/generic.json",
+      "file": "source-engine.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Space Engineers",
+      "path": "steam/space-engineers.json",
+      "file": "space-engineers.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "wine",
+        "ready_s": 116,
+        "peak_mib": 2343,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Space Station 14",
+      "path": "standalone/space-station-14.json",
+      "file": "space-station-14.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "dotnet_10"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "dotnet_10",
+        "ready_s": 11,
+        "peak_mib": 505,
+        "limit_mib": 4096,
+        "disk_mib": 142,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Spigot",
+      "path": "minecraft/spigot.json",
+      "file": "minecraft-spigot.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_java_25",
+      "tested": {
+        "result": "blocked",
+        "note": "needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt)"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "SpongeVanilla",
+      "path": "minecraft/sponge.json",
+      "file": "minecraft-sponge.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "blocked",
+        "note": "needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt)"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Squad",
+      "path": "steam/squad.json",
+      "file": "squad.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "steamcmd_debian",
+        "ready_s": 16,
+        "peak_mib": 4328,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Squad 44",
+      "path": "steam/squad-44.json",
+      "file": "squad-44.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Starbound",
+      "path": "steam/starbound.json",
+      "file": "starbound.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "blocked",
+        "note": "needs a Steam account that owns the game"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Stationeers",
+      "path": "steam/stationeers.json",
+      "file": "stationeers.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_ubuntu"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "steamcmd_ubuntu",
+        "ready_s": 43,
+        "peak_mib": 7727,
+        "limit_mib": 8192,
+        "node": "node1",
+        "note": "uses ~7.5 GB"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Stormworks: Build and Rescue",
+      "path": "steam/stormworks.json",
+      "file": "stormworks.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine",
+        "wine_staging"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "SuperTuxKart",
+      "path": "standalone/supertuxkart.json",
+      "file": "supertuxkart.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Sven Co-op",
+      "path": "goldsrc/sven-co-op.json",
+      "file": "sven-co-op.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 8,
+        "peak_mib": 105,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Team Fortress 2",
+      "path": "source/team-fortress-2.json",
+      "file": "team-fortress-2.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Team Fortress 2 Classified",
+      "path": "source/team-fortress-2-classified.json",
+      "file": "team-fortress-2-classified.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "fail",
+        "date": "2026-10-13",
+        "image": "source",
+        "limit_mib": 3072,
+        "node": "node1",
+        "note": "install install_failed after 442 s: UpdateUI: skip show logo / [----] !!! Fatal Error: Steamcmd needs 250MB of free disk space to update. / SteamCMD did not fi…"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Team Fortress Classic",
+      "path": "goldsrc/team-fortress-classic.json",
+      "file": "team-fortress-classic.json",
+      "folder": "goldsrc",
+      "category": "GoldSrc",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "source",
+        "ready_s": 10,
+        "peak_mib": 57,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "TeamSpeak 3 Server",
+      "path": "voice/teamspeak.json",
+      "file": "teamspeak.json",
+      "folder": "voice",
+      "category": "Voice servers",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Teeworlds",
+      "path": "standalone/teeworlds.json",
+      "file": "teeworlds.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Terraria TShock",
+      "path": "terraria/tshock.json",
+      "file": "terraria-tshock.json",
+      "folder": "terraria",
+      "category": "Terraria",
+      "images": [
+        "dotnet_9",
+        "dotnet_10"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "dotnet_9",
+        "ready_s": 85,
+        "peak_mib": 347,
+        "limit_mib": 2048,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Terraria Vanilla",
+      "path": "terraria/vanilla.json",
+      "file": "terraria-vanilla.json",
+      "folder": "terraria",
+      "category": "Terraria",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "debian",
+        "ready_s": 14,
+        "peak_mib": 608,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "TES3MP (Morrowind multiplayer)",
+      "path": "standalone/tes3mp.json",
+      "file": "tes3mp.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "The Forest",
+      "path": "steam/the-forest.json",
+      "file": "the-forest.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "The Front",
+      "path": "steam/the-front.json",
+      "file": "the-front.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "The Isle (Evrima)",
+      "path": "steam/the-isle.json",
+      "file": "the-isle.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "The Lord of the Rings: Return to Moria",
+      "path": "steam/return-to-moria.json",
+      "file": "return-to-moria.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Wine); not yet run on a node"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "tModloader",
+      "path": "terraria/tmodloader.json",
+      "file": "terraria-tmodloader.json",
+      "folder": "terraria",
+      "category": "Terraria",
+      "images": [
+        "dotnet_8"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "dotnet_8",
+        "ready_s": 41,
+        "peak_mib": 806,
+        "limit_mib": 3072,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Unreal Tournament (1999)",
+      "path": "standalone/unreal-tournament-99.json",
+      "file": "unreal-tournament-99.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-16",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 31,
+        "limit_mib": 512,
+        "disk_mib": 818,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Unreal Tournament 2004",
+      "path": "standalone/unreal-tournament-2004.json",
+      "file": "unreal-tournament-2004.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-16",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 87,
+        "limit_mib": 1024,
+        "disk_mib": 5938,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Unturned",
+      "path": "steam/unturned.json",
+      "file": "unturned.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "starts in LAN mode without a game server token since 2026-10-23; not yet run"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Unvanquished",
+      "path": "standalone/unvanquished.json",
+      "file": "unvanquished.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Uptime Kuma",
+      "path": "apps/uptime-kuma.json",
+      "file": "uptime-kuma.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "nodejs_22"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Urban Terror",
+      "path": "standalone/urban-terror.json",
+      "file": "urban-terror.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 94,
+        "limit_mib": 512,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "V Rising BepInEx",
+      "path": "steam/v-rising.json",
+      "file": "v-rising.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "wine_staging"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "wine_staging",
+        "ready_s": 73,
+        "peak_mib": 1881,
+        "limit_mib": 8192,
+        "node": "node1",
+        "note": "BepInEx load not visible on the console"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Valheim",
+      "path": "valheim/valheim.json",
+      "file": "valheim.json",
+      "folder": "valheim",
+      "category": "Valheim",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-10",
+        "image": "steamcmd_debian",
+        "ready_s": 21,
+        "peak_mib": 1374,
+        "limit_mib": 8192,
+        "node": "node1"
+      },
+      "added": "2026-10-09"
+    },
+    {
+      "name": "Valheim BepINex",
+      "path": "valheim/bepinex.json",
+      "file": "valheim-bepinex.yaml",
+      "folder": "valheim",
+      "category": "Valheim",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Valkey (Redis-compatible)",
+      "path": "apps/valkey.json",
+      "file": "valkey.json",
+      "folder": "apps",
+      "category": "Apps",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Vanilla Bedrock",
+      "path": "minecraft/bedrock.json",
+      "file": "minecraft-bedrock.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "no EULA prompt (Bedrock's server has no eula.txt; its download is covered by the Minecraft EULA); install rewritten on 2026-10-23; not yet run on a node"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Vanilla Minecraft",
+      "path": "minecraft/vanilla.json",
+      "file": "minecraft-vanilla.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17",
+        "java_11",
+        "java_8"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "VEIN",
+      "path": "steam/vein.json",
+      "file": "vein.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg; not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Velocity",
+      "path": "minecraft/velocity.json",
+      "file": "minecraft-velocity.json",
+      "folder": "minecraft",
+      "category": "Minecraft",
+      "images": [
+        "java_25",
+        "java_21",
+        "java_17"
+      ],
+      "installer": "installer_alpine",
+      "tested": {
+        "result": "untested",
+        "note": "install rewritten on 2026-10-23 (Fill API with SHA-256, the Velocity Version variable used, --port); not yet re-run"
+      },
+      "added": "2026-10-07"
+    },
+    {
+      "name": "Vintage Story",
+      "path": "standalone/vintage-story.json",
+      "file": "vintage-story.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "dotnet_10",
+        "dotnet_8"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "dotnet_10",
+        "ready_s": 33,
+        "peak_mib": 1182,
+        "limit_mib": 3072,
+        "node": "node1"
+      },
+      "added": "2026-10-08"
+    },
+    {
+      "name": "Warfork",
+      "path": "steam/warfork.json",
+      "file": "warfork.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Windrose",
+      "path": "steam/windrose.json",
+      "file": "windrose.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "proton"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "untested",
+        "note": "new egg (Proton); not yet run on a node"
+      },
+      "added": "2026-10-23"
+    },
+    {
+      "name": "Wurm Unlimited",
+      "path": "steam/wurm-unlimited.json",
+      "file": "wurm-unlimited.json",
+      "folder": "steam",
+      "category": "Steam games",
+      "images": [
+        "steamcmd_debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-13",
+        "image": "steamcmd_debian",
+        "ready_s": 11,
+        "peak_mib": 513,
+        "limit_mib": 4096,
+        "disk_mib": 1052,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    },
+    {
+      "name": "Xonotic",
+      "path": "standalone/xonotic.json",
+      "file": "xonotic.json",
+      "folder": "standalone",
+      "category": "Standalone games",
+      "images": [
+        "debian"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-12",
+        "image": "debian",
+        "ready_s": 1,
+        "peak_mib": 386,
+        "limit_mib": 1024,
+        "node": "node1"
+      },
+      "added": "2026-10-12"
+    },
+    {
+      "name": "Zombie Panic! Source",
+      "path": "source/zombie-panic-source.json",
+      "file": "zombie-panic-source.json",
+      "folder": "source",
+      "category": "Source",
+      "images": [
+        "source"
+      ],
+      "installer": "installer_debian",
+      "tested": {
+        "result": "pass",
+        "date": "2026-10-16",
+        "image": "source",
+        "ready_s": 13,
+        "peak_mib": 145,
+        "limit_mib": 2048,
+        "disk_mib": 8007,
+        "node": "node1"
+      },
+      "added": "2026-10-13"
+    }
+  ]
+}

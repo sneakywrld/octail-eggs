@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd custom-source-engine/egg-custom-source-engine-game.yaml (pelican-eggs, MIT licence). Octail adds Source RCON on the game port (generated password) and drops the Steam login variables (anonymous SteamCMD; logged-in accounts come with plan §6.7), and generic UDP idle sleep (off until staff enable it per server). SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd custom-source-engine/egg-custom-source-engine-game.yaml (pelican-eggs, MIT licence). Octail adds Source RCON on the game port (generated password) and drops the Steam login variables (anonymous SteamCMD; logged-in accounts come with plan §6.7), generic UDP idle sleep (off until staff enable it per server), start detection by the Steam ID line or the Steam connection line with the UDP game port as a fallback (ready after 60 s), the say broadcast, and makes the install fail when SteamCMD didn't download srcds_run and the game folder. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The SteamCMD download times out and retries instead of hanging the install.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/source/generic.json"
@@ -25,14 +25,17 @@
   "config": {
     "files": {},
     "startup": {
-      "done": "gameserver Steam ID"
+      "done": [
+        "gameserver Steam ID",
+        "Connection to Steam servers successful"
+      ]
     },
     "logs": {},
     "stop": "quit"
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n\n##\n#\n# Variables\n# STEAM_USER, STEAM_PASS, STEAM_AUTH - Steam user setup. If a user has 2fa enabled it will most likely fail due to timeout. Leave blank for anon install.\n# WINDOWS_INSTALL - if it's a windows server you want to install set to 1\n# SRCDS_APPID - steam app id ffound here - https://developer.valvesoftware.com/wiki/Dedicated_Servers_List\n# EXTRA_FLAGS - when a server has extra glas for things like beta installs or updates.\n#\n##\n\n\n## just in case someone removed the defaults.\nif [ \"${STEAM_USER}\" == \"\" ]; then\n    echo -e \"steam user is not set.\n\"\n    echo -e \"Using anonymous user.\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## other flags may be needed depending on install. looking at you cs 1.6\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} ${EXTRA_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so",
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n\n##\n#\n# Variables\n# STEAM_USER, STEAM_PASS, STEAM_AUTH - Steam user setup. If a user has 2fa enabled it will most likely fail due to timeout. Leave blank for anon install.\n# WINDOWS_INSTALL - if it's a windows server you want to install set to 1\n# SRCDS_APPID - steam app id ffound here - https://developer.valvesoftware.com/wiki/Dedicated_Servers_List\n# EXTRA_FLAGS - when a server has extra glas for things like beta installs or updates.\n#\n##\n\n\n## just in case someone removed the defaults.\nif [ \"${STEAM_USER}\" == \"\" ]; then\n    echo -e \"steam user is not set.\n\"\n    echo -e \"Using anonymous user.\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\n## Octail: time out and retry instead of hanging the install when the download stalls\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Could not download SteamCMD; try reinstalling.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## other flags may be needed depending on install. looking at you cs 1.6\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} ${EXTRA_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/srcds_run\" || ! -d \"/mnt/server/${SRCDS_GAME}\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the dedicated server (srcds_run or the ${SRCDS_GAME} folder is missing); check the app id and game folder, then reinstall.\"\n    exit 1\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
       "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
       "entrypoint": "bash"
     }
@@ -107,9 +110,15 @@
         "port_var": "SERVER_PORT",
         "password_var": "RCON_PASS"
       },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 60
+      },
       "sleep": {
         "mode": "udp"
-      }
+      },
+      "broadcast_command": "say {message}"
     }
   }
 }

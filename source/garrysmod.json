@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4, §9.23 steam.workshop). Based on games-steamcmd gmod/egg-garrys-mod (pelican-eggs, MIT licence). Octail adds the Steam Workshop tool (feature steam_workshop: garrysmod), Source RCON on the game port (generated password), drops the Steam login variables (anonymous SteamCMD; logged-in accounts come with plan §6.7), keeps workshop.lua and server.cfg on reinstall, and generic UDP idle sleep (off until staff enable it per server). SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "_comment": "Octail curated egg (plan §6.4, §9.23 steam.workshop). Based on games-steamcmd gmod/egg-garrys-mod (pelican-eggs, MIT licence). Octail adds the Steam Workshop tool (feature steam_workshop: garrysmod), Source RCON on the game port (generated password), drops the Steam login variables (anonymous SteamCMD; logged-in accounts come with plan §6.7), keeps workshop.lua and server.cfg on reinstall, passes the Game Server Login Token only when one is set (upstream passed an empty +sv_setsteamaccount), start detection by the Steam ID line or the Steam connection line with the UDP game port as a fallback (ready after 60 s), generic UDP idle sleep (off until staff enable it per server), the say broadcast, install sandbox defaults and resource hints, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The SteamCMD download times out and retries instead of hanging the install.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/source/garrysmod.json"
@@ -21,19 +21,22 @@
   },
   "file_denylist": [],
   "startup_commands": {
-    "Default": "./srcds_run -game garrysmod -console -port {{SERVER_PORT}} +ip 0.0.0.0 +host_workshop_collection {{WORKSHOP_ID}} +map {{SRCDS_MAP}} +gamemode {{GAMEMODE}} -strictportbind -norestart +sv_setsteamaccount {{STEAM_ACC}} +maxplayers {{MAX_PLAYERS}} -tickrate {{TICKRATE}} +rcon_password \"{{RCON_PASS}}\" $( [ \"$LUA_REFRESH\" == \"1\" ] || printf %s '-disableluarefresh' )"
+    "Default": "./srcds_run -game garrysmod -console -port {{SERVER_PORT}} +ip 0.0.0.0 +host_workshop_collection {{WORKSHOP_ID}} +map {{SRCDS_MAP}} +gamemode {{GAMEMODE}} -strictportbind -norestart $( [ -z \"${STEAM_ACC}\" ] || printf %s \"+sv_setsteamaccount ${STEAM_ACC}\" ) +maxplayers {{MAX_PLAYERS}} -tickrate {{TICKRATE}} +rcon_password \"{{RCON_PASS}}\" $( [ \"$LUA_REFRESH\" == \"1\" ] || printf %s '-disableluarefresh' )"
   },
   "config": {
     "files": {},
     "startup": {
-      "done": "gameserver Steam ID"
+      "done": [
+        "gameserver Steam ID",
+        "Connection to Steam servers successful"
+      ]
     },
     "logs": {},
     "stop": "quit"
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [ \"${STEAM_USER}\" == \"\" ]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} ${EXTRA_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n# Creating needed default files for the game\nmkdir -p /mnt/server/garrysmod/lua/autorun/server\ncd /mnt/server/garrysmod/lua/autorun/server\nif [ ! -f workshop.lua ]; then\necho '\n-- Docs: https://wiki.facepunch.com/gmod/resource.AddWorkshop\n-- Place the ID of the workshop addon you want to be downloaded to people who join your server, not the collection ID\n-- On Octail, the Steam Workshop tab writes this file for you.\n\n-- resource.AddWorkshop( \"\" )' > workshop.lua\nfi\n\ncd /mnt/server/garrysmod/cfg\nif [ ! -f server.cfg ]; then\necho '\n// Please do not set RCon in here, use the startup parameters.\n\nhostname\t\t\"New Gmod Server\"\nsv_password\t\t\"\"\nsv_loadingurl   \"\"\nsv_downloadurl  \"\"\n\n// Steam Server List Settings\n// sv_location \"eu\"\nsv_region \"255\"\nsv_lan \"0\"\nsv_max_queries_sec_global \"30000\"\nsv_max_queries_window \"45\"\nsv_max_queries_sec \"5\"\n\n// Server Limits\nsbox_maxprops\t\t100\nsbox_maxragdolls\t5\nsbox_maxnpcs\t\t10\nsbox_maxballoons\t10\nsbox_maxeffects\t\t10\nsbox_maxdynamite\t10\nsbox_maxlamps\t\t10\nsbox_maxthrusters\t10\nsbox_maxwheels\t\t10\nsbox_maxhoverballs\t10\nsbox_maxvehicles\t20\nsbox_maxbuttons\t\t10\nsbox_maxsents\t\t20\nsbox_maxemitters\t5\nsbox_godmode\t\t0\nsbox_noclip\t\t    0\n\n// Network Settings - Please keep these set to default.\n\nsv_minrate\t\t75000\nsv_maxrate\t\t0\ngmod_physiterations\t2\nnet_splitpacket_maxrate\t45000\ndecalfrequency\t\t12 \n\n// Execute Ban Files - Please do not edit\nexec banned_ip.cfg \nexec banned_user.cfg \n\n// Add custom lines under here\n' > server.cfg\nfi\n\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n\n## just in case someone removed the defaults.\nif [ \"${STEAM_USER}\" == \"\" ]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\n## Octail: time out and retry instead of hanging the install when the download stalls\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Could not download SteamCMD; try reinstalling.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} ${EXTRA_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/srcds_run\" || ! -d \"/mnt/server/garrysmod\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Garry's Mod dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n# Creating needed default files for the game\nmkdir -p /mnt/server/garrysmod/lua/autorun/server\ncd /mnt/server/garrysmod/lua/autorun/server\nif [ ! -f workshop.lua ]; then\necho '\n-- Docs: https://wiki.facepunch.com/gmod/resource.AddWorkshop\n-- Place the ID of the workshop addon you want to be downloaded to people who join your server, not the collection ID\n-- On Octail, the Steam Workshop tab writes this file for you.\n\n-- resource.AddWorkshop( \"\" )' > workshop.lua\nfi\n\ncd /mnt/server/garrysmod/cfg\nif [ ! -f server.cfg ]; then\necho '\n// Please do not set RCon in here, use the startup parameters.\n\nhostname\t\t\"New Gmod Server\"\nsv_password\t\t\"\"\nsv_loadingurl   \"\"\nsv_downloadurl  \"\"\n\n// Steam Server List Settings\n// sv_location \"eu\"\nsv_region \"255\"\nsv_lan \"0\"\nsv_max_queries_sec_global \"30000\"\nsv_max_queries_window \"45\"\nsv_max_queries_sec \"5\"\n\n// Server Limits\nsbox_maxprops\t\t100\nsbox_maxragdolls\t5\nsbox_maxnpcs\t\t10\nsbox_maxballoons\t10\nsbox_maxeffects\t\t10\nsbox_maxdynamite\t10\nsbox_maxlamps\t\t10\nsbox_maxthrusters\t10\nsbox_maxwheels\t\t10\nsbox_maxhoverballs\t10\nsbox_maxvehicles\t20\nsbox_maxbuttons\t\t10\nsbox_maxsents\t\t20\nsbox_maxemitters\t5\nsbox_godmode\t\t0\nsbox_noclip\t\t    0\n\n// Network Settings - Please keep these set to default.\n\nsv_minrate\t\t75000\nsv_maxrate\t\t0\ngmod_physiterations\t2\nnet_splitpacket_maxrate\t45000\ndecalfrequency\t\t12 \n\n// Execute Ban Files - Please do not edit\nexec banned_ip.cfg \nexec banned_user.cfg \n\n// Add custom lines under here\n' > server.cfg\nfi\n\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
       "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
       "entrypoint": "bash"
     }
@@ -176,8 +179,22 @@
         "port_var": "SERVER_PORT",
         "password_var": "RCON_PASS"
       },
+      "ready": {
+        "port": "primary",
+        "proto": "udp",
+        "after_s": 60
+      },
       "sleep": {
         "mode": "udp"
+      },
+      "broadcast_command": "say {message}",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 10240
       }
     },
     "variables": {

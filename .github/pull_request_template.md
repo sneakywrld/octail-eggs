@@ -12,7 +12,9 @@ pull request will be closed rather than merged.
 
 - [ ] No file was moved or renamed (paths are every panel's update address)
 - [ ] Images are `ghcr.io/sneakywrld/octail-yolks:<tag>` only
-- [ ] `node tools/validate.mjs --forbid-upstream-images` passes
+- [ ] `node tools/validate.mjs --forbid-upstream-images` passes (new lint warnings are explained below)
+- [ ] `node tools/format.mjs --check` passes
+- [ ] A bumped version comes with its new checksum
 - [ ] Imported on an Octail panel, installed and started a server with it
 
 ## How it was tested

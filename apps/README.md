@@ -2,15 +2,23 @@
 
 # Apps
 
-Generic Node.js, Python, Java and Go apps such as Discord bots: 4 eggs.
+Generic Node.js, Bun, Deno, Python, Java and Go apps such as Discord bots: 12 eggs.
 Back to [all eggs](../README.md#apps).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Go App | [go-app.json](go-app.json) | [`go_1.23`](https://github.com/sneakywrld/octail-yolks#go_1.23) | – | [—](../TESTED.md#apps-go-app) | start detected by port |
+| Bun App | [bun-app.json](bun-app.json) | [`bun_1`](https://github.com/sneakywrld/octail-yolks#bun_1) | – | [—](../TESTED.md#apps-bun-app) | start detected by port |
+| Deno App | [deno-app.json](deno-app.json) | [`deno_2`](https://github.com/sneakywrld/octail-yolks#deno_2) | – | [—](../TESTED.md#apps-deno-app) | start detected by port |
+| Go App | [go-app.json](go-app.json) | [`go_1.27`](https://github.com/sneakywrld/octail-yolks#go_1.27) [`go_1.26`](https://github.com/sneakywrld/octail-yolks#go_1.26) [`go_1.23`](https://github.com/sneakywrld/octail-yolks#go_1.23) | – | [—](../TESTED.md#apps-go-app) | start detected by port |
 | Java App (JAR) | [java-jar.json](java-jar.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [—](../TESTED.md#apps-java-jar) | start detected by port |
-| Node.js App | [nodejs-app.json](nodejs-app.json) | [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | – | [—](../TESTED.md#apps-nodejs-app) | start detected by port |
-| Python App | [python-app.json](python-app.json) | [`python_3.12`](https://github.com/sneakywrld/octail-yolks#python_3.12) | – | [—](../TESTED.md#apps-python-app) | start detected by port |
+| Lavalink | [lavalink.json](lavalink.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [—](../TESTED.md#apps-lavalink) | no console input, start detected by port |
+| MariaDB | [mariadb.json](mariadb.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#apps-mariadb) | no console input, start detected by port |
+| Node.js App | [nodejs-app.json](nodejs-app.json) | [`nodejs_24`](https://github.com/sneakywrld/octail-yolks#nodejs_24) [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | – | [—](../TESTED.md#apps-nodejs-app) | start detected by port |
+| PostgreSQL | [postgresql.json](postgresql.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#apps-postgresql) | no console input, start detected by port |
+| Python App | [python-app.json](python-app.json) | [`python_3.14`](https://github.com/sneakywrld/octail-yolks#python_3.14) [`python_3.13`](https://github.com/sneakywrld/octail-yolks#python_3.13) [`python_3.12`](https://github.com/sneakywrld/octail-yolks#python_3.12) | – | [—](../TESTED.md#apps-python-app) | start detected by port |
+| Red-DiscordBot | [red-discordbot.json](red-discordbot.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#apps-red-discordbot) | no console input |
+| Uptime Kuma | [uptime-kuma.json](uptime-kuma.json) | [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) | – | [—](../TESTED.md#apps-uptime-kuma) | no console input, start detected by port |
+| Valkey (Redis-compatible) | [valkey.json](valkey.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](../TESTED.md#apps-valkey) | no console input, start detected by port |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail's own egg (plan §6.4): a Python app such as a Discord bot, from a git repository or uploaded. The install only fetches the code; at start a virtual environment in .venv (in the server folder) gets requirements.txt with pip, as the server's own user. Nothing is pulled unless the owner sets a repository and turns Auto Update on; a private repository's token travels as an HTTP header in git's environment.",
+  "_comment": "Octail's own egg (plan §6.4): a Python app such as a Discord bot, from a git repository or uploaded. The install only fetches the code; at start a virtual environment in .venv (in the server folder) gets requirements.txt with pip, as the server's own user; picking another Python version on the Startup tab rebuilds .venv at the next start. Nothing is pulled unless the owner sets a repository and turns Auto Update on; a private repository's token travels as an HTTP header in git's environment.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/python-app.json"
@@ -15,11 +15,13 @@
   ],
   "features": [],
   "docker_images": {
+    "Python 3.14": "ghcr.io/sneakywrld/octail-yolks:python_3.14",
+    "Python 3.13": "ghcr.io/sneakywrld/octail-yolks:python_3.13",
     "Python 3.12": "ghcr.io/sneakywrld/octail-yolks:python_3.12"
   },
   "file_denylist": [],
   "startup_commands": {
-    "Default": "if [ -n \"${GIT_REPO}\" ] && [ \"${AUTO_UPDATE}\" = 1 ] && [ -d .git ]; then echo '[Octail] Auto Update: pulling the latest code'; GIT_TERMINAL_PROMPT=0 GIT_CONFIG_COUNT=${GIT_TOKEN:+1} GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0=\"Authorization: Basic $(printf '%s:%s' \"${GIT_USERNAME:-x-access-token}\" \"$GIT_TOKEN\" | base64 -w0)\" git pull -q --ff-only || echo '[Octail] git pull failed: starting the code that is already here'; fi; if [ ! -x .venv/bin/python ]; then echo '[Octail] Creating the virtual environment in .venv'; python -m venv .venv || exit 1; fi; if [ -f \"${REQUIREMENTS_FILE}\" ] && { [ \"${PIP_INSTALL}\" = always ] || { [ \"${PIP_INSTALL}\" = auto ] && { [ ! -f .venv/.octail-installed ] || [ \"${REQUIREMENTS_FILE}\" -nt .venv/.octail-installed ]; }; }; }; then echo '[Octail] Installing requirements'; .venv/bin/pip install --no-cache-dir -r \"${REQUIREMENTS_FILE}\" || exit 1; touch .venv/.octail-installed; fi; if [ ! -f \"${MAIN_FILE}\" ]; then echo \"[Octail] ${MAIN_FILE} wasn't found: upload the app, or set Git Repository and reinstall\"; exit 1; fi; octail_app() { .venv/bin/python ${PYTHON_ARGS} \"${MAIN_FILE}\" ${APP_ARGS}; }; if [ -z \"${READY_TEXT}\" ]; then printf '[Octail] App is %s\\n' running; octail_app; else set -o pipefail; octail_app 2>&1 | { while IFS= read -r l || [ -n \"$l\" ]; do printf '%s\\n' \"$l\"; case \"$l\" in *\"${READY_TEXT}\"*) printf '[Octail] App is %s\\n' running; break;; esac; done; exec cat; }; fi"
+    "Default": "if [ -n \"${GIT_REPO}\" ] && [ \"${AUTO_UPDATE}\" = 1 ] && [ -d .git ]; then echo '[Octail] Auto Update: pulling the latest code'; GIT_TERMINAL_PROMPT=0 GIT_CONFIG_COUNT=${GIT_TOKEN:+1} GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0=\"Authorization: Basic $(printf '%s:%s' \"${GIT_USERNAME:-x-access-token}\" \"$GIT_TOKEN\" | base64 -w0)\" git pull -q --ff-only || echo '[Octail] git pull failed: starting the code that is already here'; fi; PYV=$(python -c 'import sys; print(\"%d.%d\" % sys.version_info[:2])'); if [ ! -x .venv/bin/python ] || [ \"$(sed -n 's/^version[a-z_]* *= *\\([0-9]*\\.[0-9]*\\).*/\\1/p' .venv/pyvenv.cfg 2>/dev/null)\" != \"$PYV\" ]; then echo \"[Octail] Creating the virtual environment in .venv (Python $PYV)\"; python -m venv --clear .venv || exit 1; fi; if [ -f \"${REQUIREMENTS_FILE}\" ] && { [ \"${PIP_INSTALL}\" = always ] || { [ \"${PIP_INSTALL}\" = auto ] && { [ ! -f .venv/.octail-installed ] || [ \"${REQUIREMENTS_FILE}\" -nt .venv/.octail-installed ]; }; }; }; then echo '[Octail] Installing requirements'; .venv/bin/pip install --no-cache-dir -r \"${REQUIREMENTS_FILE}\" || exit 1; touch .venv/.octail-installed; fi; if [ ! -f \"${MAIN_FILE}\" ]; then echo \"[Octail] ${MAIN_FILE} wasn't found: upload the app, or set Git Repository and reinstall\"; exit 1; fi; octail_app() { .venv/bin/python ${PYTHON_ARGS} \"${MAIN_FILE}\" ${APP_ARGS}; }; if [ -z \"${READY_TEXT}\" ]; then printf '[Octail] App is %s\\n' running; octail_app; else set -o pipefail; octail_app 2>&1 | { while IFS= read -r l || [ -n \"$l\" ]; do printf '%s\\n' \"$l\"; case \"$l\" in *\"${READY_TEXT}\"*) printf '[Octail] App is %s\\n' running; break;; esac; done; exec cat; }; fi"
   },
   "config": {
     "files": {},
@@ -144,7 +146,7 @@
     },
     {
       "name": "Install Requirements",
-      "description": "auto: pip install -r when the requirements file changed. always: at every start. never: you manage .venv.",
+      "description": "auto: pip install -r when the requirements file changed or .venv was rebuilt for another Python version. always: at every start. never: you manage .venv.",
       "env_variable": "PIP_INSTALL",
       "default_value": "auto",
       "user_viewable": true,

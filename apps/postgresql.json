@@ -1,0 +1,80 @@
+{
+  "_comment": "Octail's own egg (no upstream file). A PostgreSQL database server for customers who want their own: Debian 12's signed postgresql-15 package and the libraries it needs, downloaded with apt-get download and unpacked into postgresql/ (the Mumble egg's method; glibc comes from the image; LLVM is left out and the server runs with jit=off). The first start runs initdb as the server's own user into data/ (PostgreSQL refuses root) with the postgres user's password (from the Startup tab, or a random one saved in postgres-password.txt) and SCRAM authentication, and allows password logins over the network in pg_hba.conf. data/postgresql.conf is the owner's; listen address, port, socket folder and jit are passed at every start. postgres reads no console input; Ctrl+C is its fast shutdown. The start is its 'ready to accept connections' line or the TCP port once bound.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/postgresql.json"
+  },
+  "uuid": "c8ec0aa1-ea2c-4cd5-a045-059f18beecc9",
+  "name": "PostgreSQL",
+  "author": "eggs@octail.net",
+  "description": "PostgreSQL 15: your own PostgreSQL database server (Debian 12 packages). Connect as the postgres user with the password from the Startup tab, or the generated one in postgres-password.txt.",
+  "tags": [
+    "app",
+    "database",
+    "postgresql"
+  ],
+  "features": [],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "P=\"$(pwd)/postgresql/usr/lib/postgresql/15/bin\"; export LD_LIBRARY_PATH=\"$(pwd)/postgresql/usr/lib/$(uname -m)-linux-gnu\"; if [ ! -x \"${P}/postgres\" ]; then echo '[Octail] postgresql/ is missing: reinstall the server.'; exit 1; fi; mkdir -p run; if [ ! -s data/PG_VERSION ]; then echo '[Octail] Creating the database cluster in data/ (first start)'; PW=\"${POSTGRES_PASSWORD}\"; if [ -z \"${PW}\" ]; then PW=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32); (umask 077; printf '%s\\n' \"${PW}\" > postgres-password.txt); echo '[Octail] Generated a password for the postgres user: it is in postgres-password.txt'; fi; (umask 077; printf '%s\\n' \"${PW}\" > run/pwfile); \"${P}/initdb\" -D data -U postgres --pwfile=run/pwfile --auth=scram-sha-256 --encoding=UTF8 --locale=C.UTF-8; RC=$?; rm -f run/pwfile; [ \"${RC}\" = 0 ] || { echo '[Octail] Creating the database cluster failed.'; exit 1; }; printf '\\n# Octail: password logins over the network (the server is only reachable on its port)\\nhost all all 0.0.0.0/0 scram-sha-256\\nhost all all ::/0 scram-sha-256\\n' >> data/pg_hba.conf; fi; exec \"${P}/postgres\" -D data -c listen_addresses=0.0.0.0 -c port={{SERVER_PORT}} -c unix_socket_directories=\"$(pwd)/run\" -c jit=off"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "database system is ready to accept connections"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# PostgreSQL installation script (Octail's own): Debian 12's signed postgresql-15 package (PostgreSQL 15 with Debian's\n# security fixes) and the libraries it needs, downloaded with apt (which checks every package against Debian's signed\n# archive) and unpacked into /mnt/server/postgresql, since the server's container can't install packages. The runtime\n# image is Debian 12 too, so the libraries match; glibc is never copied (the image's own is used). LLVM (only used by\n# the JIT compiler, which this server runs with jit=off) is left out. The database cluster itself is created at the\n# first start, as the server's own user (PostgreSQL refuses to run as root). Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\nPG_MAJOR=15\ncd /mnt/server\nexport DEBIAN_FRONTEND=noninteractive\nif ! apt-get update -qq; then\n    echo \"Installation failed: apt couldn't read Debian's package lists.\"\n    exit 1\nfi\nVERSION=$(apt-cache policy \"postgresql-${PG_MAJOR}\" | awk '$1 == \"Candidate:\" { print $2 }')\nif [ -z \"$VERSION\" ] || [ \"$VERSION\" = \"(none)\" ]; then\n    echo \"Installation failed: Debian has no postgresql-${PG_MAJOR} package for this architecture.\"\n    exit 1\nfi\n\n## the server and every library it needs, following library dependencies only (no postgresql-common, debconf,\n## systemd); the C library and its loader always come from the image\nPKGS=\" \"\nQUEUE=(\"postgresql-${PG_MAJOR}\")\nwhile [ \"${#QUEUE[@]}\" -gt 0 ]; do\n    PKG=\"${QUEUE[0]}\"\n    QUEUE=(\"${QUEUE[@]:1}\")\n    case \"$PKGS\" in *\" $PKG \"*) continue ;; esac\n    PKGS=\"$PKGS$PKG \"\n    for DEP in $(apt-cache depends --no-recommends --no-suggests --no-conflicts --no-breaks --no-replaces --no-enhances \"$PKG\" |\n        awk '$1 ~ /^\\|?(Pre)?Depends:$/ && $2 !~ /^</ { print $2 }'); do\n        DEP=\"${DEP%%:*}\"\n        case \"$DEP\" in\n            libc6 | libc-bin | libc-l10n | libc6-* | libpam* | libllvm* | *-data | *-common | *-perl) ;;\n            lib* | zlib1g) QUEUE+=(\"$DEP\") ;;\n        esac\n    done\ndone\n\necho \"Installing PostgreSQL (postgresql-${PG_MAJOR} ${VERSION}) and its libraries:${PKGS% }\"\nTMP=$(mktemp -d)\nchmod 755 \"$TMP\"\n## apt checks each download against the signed package lists\n# shellcheck disable=SC2086\nif ! (cd \"$TMP\" && apt-get download -qq $PKGS); then\n    rm -rf \"$TMP\"\n    echo \"Installation failed: the packages couldn't be downloaded from Debian.\"\n    exit 1\nfi\n\n## the program and its libraries only: the database cluster in data/ stays on a reinstall\nrm -rf /mnt/server/postgresql\nmkdir -p /mnt/server/postgresql\nfor DEB in \"$TMP\"/*.deb; do\n    dpkg-deb -x \"$DEB\" /mnt/server/postgresql\ndone\nrm -rf \"$TMP\"\nrm -rf /mnt/server/postgresql/usr/share/doc /mnt/server/postgresql/usr/share/man \\\n    \"/mnt/server/postgresql/usr/lib/postgresql/${PG_MAJOR}/lib/bitcode\" \"/mnt/server/postgresql/usr/lib/postgresql/${PG_MAJOR}/lib/llvmjit.so\"\n\nfor BIN in postgres initdb pg_ctl; do\n    if [ ! -x \"/mnt/server/postgresql/usr/lib/postgresql/${PG_MAJOR}/bin/$BIN\" ]; then\n        echo \"Installation failed: $BIN is missing after unpacking postgresql-${PG_MAJOR}.\"\n        exit 1\n    fi\ndone\nif [ -f data/PG_VERSION ] && [ \"$(cat data/PG_VERSION)\" != \"$PG_MAJOR\" ]; then\n    echo \"Warning: data/ holds a PostgreSQL $(cat data/PG_VERSION) cluster; PostgreSQL ${PG_MAJOR} can't start it.\"\nfi\nmkdir -p run\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: PostgreSQL ${VERSION}.\"\necho \"The first start creates the cluster in data/ and the postgres password (Startup tab, or postgres-password.txt).\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Postgres Password",
+      "description": "Optional: the postgres user's password, set when the database cluster is created at the first start (12-64 letters, digits and _ . @ # % + -). Empty: a random one, saved in postgres-password.txt. Changing it later has no effect: change it with ALTER USER instead. Never shown again once set.",
+      "env_variable": "POSTGRES_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@#%+-]{12,64}$/"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 4096
+      }
+    },
+    "variables": {
+      "POSTGRES_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail on the pattern of the Purpur egg: Mojang's own server jar from the version manifest (piston-meta, v2), the version file and the jar checked against Mojang's SHA-1s, latest (the newest release) by default and snapshots only when asked for, a version without a server jar fails the install, the eula flag (the panel asks the owner on the first start, nothing is pre-accepted), Java 25 to 8 images (newest first), Minecraft Java idle sleep, install sandbox defaults and resource hints.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/vanilla.json"
+  },
+  "uuid": "7d75d633-fcb9-4616-abcb-9de65fecaede",
+  "name": "Vanilla Minecraft",
+  "author": "octail@meowgafactory.com",
+  "description": "Mojang's own Minecraft Java server, without plugins or mods (data packs only). Downloaded from Mojang and checked against the SHA-1 Mojang publishes.",
+  "tags": [
+    "minecraft",
+    "vanilla"
+  ],
+  "features": [
+    "eula",
+    "java_version",
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Java 25": "ghcr.io/sneakywrld/octail-yolks:java_25",
+    "Java 21": "ghcr.io/sneakywrld/octail-yolks:java_21",
+    "Java 17": "ghcr.io/sneakywrld/octail-yolks:java_17",
+    "Java 11": "ghcr.io/sneakywrld/octail-yolks:java_11",
+    "Java 8": "ghcr.io/sneakywrld/octail-yolks:java_8"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "java -Xms128M -XX:MaxRAMPercentage=95.0 -Dterminal.jline=false -Dterminal.ansi=true -jar {{SERVER_JARFILE}} nogui"
+  },
+  "config": {
+    "files": {
+      "server.properties": {
+        "parser": "properties",
+        "find": {
+          "server-ip": "",
+          "server-port": "{{server.allocations.default.port}}",
+          "query.port": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": ")! For help, type "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/ash\n# Vanilla Minecraft installation (Octail): Mojang's own server jar from Mojang's version manifest (piston-meta,\n# version_manifest_v2.json). The version file is checked against the SHA-1 the manifest lists for it, and the jar\n# against the SHA-1 the version file lists. \"latest\" is the newest release, \"snapshot\" the newest snapshot (or the\n# newest release when that is newer). A version Mojang doesn't list, or one without a server jar (the old alpha and\n# beta versions), fails the install instead of installing another one.\n#\n# Server files: /mnt/server\nset -eu\n\nMANIFEST_URL=https://piston-meta.mojang.com/mc/game/version_manifest_v2.json\nJAR=\"${SERVER_JARFILE:-server.jar}\"\nVERSION=\"${MINECRAFT_VERSION:-latest}\"\n\nfail() {\n\techo \"Install failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --retry 3 --connect-timeout 20 \"$1\"; }\nfetch() { curl -fsSL --retry 3 --connect-timeout 20 -o \"$2\" \"$1\"; }\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nMANIFEST=$(get \"${MANIFEST_URL}\") || fail \"can't reach Mojang's version manifest (${MANIFEST_URL})\"\ncase \"${VERSION}\" in\n\"\" | latest) VERSION=$(echo \"${MANIFEST}\" | jq -r '.latest.release // empty') ;;\nsnapshot) VERSION=$(echo \"${MANIFEST}\" | jq -r '.latest.snapshot // empty') ;;\nesac\n[ -n \"${VERSION}\" ] || fail \"Mojang's version manifest named no latest version\"\nENTRY=$(echo \"${MANIFEST}\" | jq -c --arg v \"${VERSION}\" '.versions | map(select(.id == $v)) | .[0] // empty')\n[ -n \"${ENTRY}\" ] || fail \"Mojang has no Minecraft ${VERSION}. The versions are listed in ${MANIFEST_URL}\"\nTYPE=$(echo \"${ENTRY}\" | jq -r '.type // empty')\nDOC_URL=$(echo \"${ENTRY}\" | jq -r '.url // empty')\nDOC_SHA1=$(echo \"${ENTRY}\" | jq -r '.sha1 // empty' | tr 'A-F' 'a-f')\ncase \"${DOC_URL}\" in\nhttps://*.mojang.com/*) ;;\n*) fail \"Mojang's version manifest gave an unexpected address for the file of ${VERSION}\" ;;\nesac\necho \"${DOC_SHA1}\" | grep -Eq '^[0-9a-f]{40}$' || fail \"Mojang's version manifest gave no SHA-1 for the file of ${VERSION}\"\n\n# The version file: its SHA-1 is checked on the file as downloaded (a shell variable would drop its last newline).\nrm -f version.json.download\nfetch \"${DOC_URL}\" version.json.download || fail \"can't download Mojang's file for ${VERSION}\"\nGOT=$(sha1sum version.json.download | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${DOC_SHA1}\" ]; then\n\trm -f version.json.download\n\tfail \"SHA-1 mismatch for Mojang's file for ${VERSION} (expected ${DOC_SHA1}, got ${GOT})\"\nfi\nSERVER_URL=$(jq -r '.downloads.server.url // empty' version.json.download)\nSERVER_SHA1=$(jq -r '.downloads.server.sha1 // empty' version.json.download | tr 'A-F' 'a-f')\nJAVA=$(jq -r '.javaVersion.majorVersion // empty' version.json.download)\nrm -f version.json.download\n[ -n \"${SERVER_URL}\" ] || fail \"Minecraft ${VERSION} has no server jar (Mojang published none for the old alpha and beta versions)\"\ncase \"${SERVER_URL}\" in\nhttps://*.mojang.com/*) ;;\n*) fail \"Mojang gave an unexpected download address for the Minecraft ${VERSION} server\" ;;\nesac\necho \"${SERVER_SHA1}\" | grep -Eq '^[0-9a-f]{40}$' || fail \"Mojang lists no SHA-1 for the Minecraft ${VERSION} server\"\n\necho \"Installing the Minecraft ${VERSION} server (${TYPE}) as ${JAR}\"\nrm -f \"${JAR}.download\"\nfetch \"${SERVER_URL}\" \"${JAR}.download\" || fail \"the download of the Minecraft ${VERSION} server failed\"\nGOT=$(sha1sum \"${JAR}.download\" | cut -d ' ' -f 1)\nif [ \"${GOT}\" != \"${SERVER_SHA1}\" ]; then\n\trm -f \"${JAR}.download\"\n\tfail \"SHA-1 mismatch for the Minecraft ${VERSION} server (expected ${SERVER_SHA1}, got ${GOT})\"\nfi\nif [ -f \"${JAR}\" ]; then\n\tmv -f \"${JAR}\" \"${JAR}.old\"\nfi\nmv \"${JAR}.download\" \"${JAR}\"\n\necho \"Minecraft ${VERSION} server installed (SHA-1 ${SERVER_SHA1} checked).\"\nif [ \"${TYPE}\" != \"release\" ]; then\n\techo \"Note: Minecraft ${VERSION} is a ${TYPE}, not a release. Back up the world first: a snapshot can change or break it, and a world opened in a snapshot may not load in a release again.\"\nfi\ncase \"${JAVA}\" in\n'') ;;\n8) echo \"Minecraft ${VERSION} runs on Java 8: pick the Java 8 (or Java 11) image on the Startup tab.\" ;;\n1[0-7]) echo \"Minecraft ${VERSION} needs Java ${JAVA}: pick the Java 17 image on the Startup tab (Java 21 works too).\" ;;\n1[89] | 2[01]) echo \"Minecraft ${VERSION} needs Java ${JAVA}: pick the Java 21 (or Java 25) image on the Startup tab.\" ;;\n2[2-5]) echo \"Minecraft ${VERSION} needs Java ${JAVA}: pick the Java 25 image on the Startup tab (the default).\" ;;\n*) echo \"Minecraft ${VERSION} needs Java ${JAVA}, newer than this egg's images: ask your host for a newer Java image.\" ;;\nesac\necho \"Accepting the Minecraft EULA (https://aka.ms/MinecraftEULA) is the server owner's decision: the panel asks on the first start.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "ash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Minecraft Version",
+      "description": "The Minecraft version to install, such as 1.21.11: latest for the newest release, snapshot for the newest snapshot (back up the world first), or a snapshot by its name. A version Mojang does not have fails the install.\n\nThe Startup image must fit it: Java 25 for the newest releases, Java 21 for 1.20.5 to 1.21.x, Java 17 for 1.17 to 1.20.4, Java 8 or 11 before that. The install log names the Java version the Minecraft version needs.",
+      "env_variable": "MINECRAFT_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:40",
+        "regex:/^(latest|snapshot|[0-9A-Za-z][0-9A-Za-z._-]*)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Server Jar File",
+      "description": "The name of the server jar file.",
+      "env_variable": "SERVER_JARFILE",
+      "default_value": "server.jar",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^([\\w\\d._-]+)(\\.jar)$/"
+      ],
+      "sort": 2
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "sleep": {
+        "mode": "minecraft_java"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 4096,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

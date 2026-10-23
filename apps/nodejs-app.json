@@ -15,8 +15,9 @@
   ],
   "features": [],
   "docker_images": {
-    "Node.js 22": "ghcr.io/sneakywrld/octail-yolks:nodejs_22",
-    "Node.js 20": "ghcr.io/sneakywrld/octail-yolks:nodejs_20"
+    "Node.js 24 (LTS)": "ghcr.io/sneakywrld/octail-yolks:nodejs_24",
+    "Node.js 22 (LTS)": "ghcr.io/sneakywrld/octail-yolks:nodejs_22",
+    "Node.js 20 (end of life)": "ghcr.io/sneakywrld/octail-yolks:nodejs_20"
   },
   "file_denylist": [],
   "startup_commands": {

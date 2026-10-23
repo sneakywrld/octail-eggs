@@ -1,0 +1,179 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), built on games-steamcmd vein/egg-v-e-i-n.json (pelican-eggs, MIT licence) and checked against the app's Steam data (app 2131400: a Linux depot, VeinServer.sh starting Vein/Binaries/Linux/VeinServer-Linux-Test). Octail runs the Linux binary itself with the game and query ports, sets the name, password, player limit, server list switch, bind address and query port in Vein/Saved/Config/LinuxServer/Game.ini with the ini parser (sections as the game's sample Game.ini has them; the parser adds a missing file, section or key) instead of upstream's line edits of a file downloaded from a paste site, makes the password optional (upstream required one), gives the query port its own automatic port (port_vars) with the Steam query (A2S) for player counts, port readiness (UDP, x_octail.features.ready) besides the start line, install sandbox defaults and resource hints, the anonymous login only, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/vein.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "VEIN",
+  "author": "eggs@octail.net",
+  "uuid": "7968fc68-cbd5-47f0-b904-ecc27aa4b147",
+  "description": "Survive the end of the world in a large, detailed open world: scavenge, build a base, farm and fight off zombies alone or with friends. The Linux dedicated server.",
+  "tags": [
+    "vein",
+    "steamcmd"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "./Vein/Binaries/Linux/VeinServer-Linux-Test -Port={{SERVER_PORT}} -QueryPort={{QUERY_PORT}} -log"
+  },
+  "config": {
+    "files": {
+      "Vein/Saved/Config/LinuxServer/Game.ini": {
+        "parser": "ini",
+        "find": {
+          "[/Script/Engine.GameSession].MaxPlayers": "{{server.environment.MAX_PLAYERS}}",
+          "[/Script/Vein.VeinGameSession].ServerName": "{{server.environment.SERVER_NAME}}",
+          "[/Script/Vein.VeinGameSession].Password": "{{server.environment.SERVER_PASSWORD}}",
+          "[/Script/Vein.VeinGameSession].bPublic": "{{server.environment.PUBLIC_SERVER}}",
+          "[/Script/Vein.VeinGameSession].BindAddr": "0.0.0.0",
+          "[OnlineSubsystemSteam].GameServerQueryPort": "{{server.environment.QUERY_PORT}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Created session GameSession."
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Linux build of the server.\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/Vein/Binaries/Linux/VeinServer-Linux-Test\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the VEIN dedicated server; try reinstalling.\"\n    exit 1\nfi\nchmod +x \"/mnt/server/Vein/Binaries/Linux/VeinServer-Linux-Test\"\n\n## Game.ini is written by the panel before every start (ini parser); the folder is made here.\nmkdir -p /mnt/server/Vein/Saved/Config/LinuxServer\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the server browser (no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail VEIN Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join (case-sensitive). Empty = no password; otherwise 4 to 32 letters, digits, - and _.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([A-Za-z0-9_-]{4,32})?$/"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Max Players",
+      "description": "How many players can be online at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,64"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Public Server",
+      "description": "True lists the server in the in-game server browser; False hides it (players join by address).",
+      "env_variable": "PUBLIC_SERVER",
+      "default_value": "True",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:True,False"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27015",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "2131400",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:2131400"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "VEIN",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 6144,
+        "disk_mb": 16384
+      }
+    }
+  }
+}

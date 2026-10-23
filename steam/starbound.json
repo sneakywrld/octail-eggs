@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd starbound egg, which downloads the whole game (211820), was read as a reference only). App 533830 (Starbound Dedicated Server) is not available to anonymous SteamCMD logins and needs an account that owns Starbound, so the egg uses Octail's steam_login feature (required): the Steam account picked on the Startup tab logs in, Steam Guard codes are asked for in the console and the login is cached for start-time updates. The Linux depot is downloaded, SteamCMD is retried up to 3 times and the install fails when linux/starbound_server is missing. storage/starbound_server.config is written by the install when missing (with the game's configurationVersion, without which the server resets the file); the json parser sets the port, IPv4 binds, name, slots, anonymous joins, the A2S query server on the game port and Source RCON (its own port, generated password) before every start. Console commands go over RCON; the start is its listening line or the TCP game port once bound; Ctrl+C stops it cleanly.",
+  "_comment": "Octail's own egg (pelican-eggs' games-steamcmd starbound egg, which downloads the whole game (211820), was read as a reference only). App 533830 (Starbound Dedicated Server) is not available to anonymous SteamCMD logins and needs an account that owns Starbound, so the egg uses Octail's steam_login feature (required): the Steam account picked on the Startup tab logs in, Steam Guard codes are asked for in the console and the login is cached for start-time updates. The Linux depot is downloaded, SteamCMD is retried up to 3 times and the install fails when linux/starbound_server is missing. storage/starbound_server.config is written by the install when missing (with the game's configurationVersion, without which the server resets the file); the json parser sets the port, IPv4 binds, name, slots, anonymous joins, the A2S query server on the game port and Source RCON (its own port, generated password) before every start. Console commands go over RCON; the start is its listening line or the TCP game port once bound; Ctrl+C stops it cleanly. The Players tab can kick and ban (by name, both ip and uuid) over that same RCON connection.",
   "meta": {
     "version": "PTDL_v2",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/starbound.json"
@@ -130,7 +130,9 @@
       "broadcast_command": "say {message}",
       "player_query": "a2s",
       "players": {
-        "list": "a2s"
+        "list": "a2s",
+        "kick": "kick \"{name}\"",
+        "ban": "ban \"{name}\" both"
       },
       "ready": {
         "port": "primary",

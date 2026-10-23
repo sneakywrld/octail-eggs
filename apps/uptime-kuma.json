@@ -1,0 +1,91 @@
+{
+  "_comment": "Octail's own egg (no upstream file). Uptime Kuma, the self-hosted uptime monitor: the install downloads the source of a pinned release from GitHub, checked against the SHA-256 recorded in the script (GitHub publishes none for source archives; staff can set one for another version in the hidden KUMA_SHA256), and the release's prebuilt web interface (dist.tar.gz), checked against the SHA-256 digest the GitHub API lists, into app/; data/ (the SQLite database) stays on a reinstall. The start installs the production dependencies with npm ci when the Node.js version or package-lock.json changed, then runs server/server.js on the main port with SQLite (UPTIME_KUMA_DB_TYPE=sqlite skips the database setup page). It reads no console input and stops on Ctrl+C. The start is its 'Listening on' line or the TCP port once bound.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/uptime-kuma.json"
+  },
+  "uuid": "6d98c09d-6d70-46d8-a977-e471e4c4c45e",
+  "name": "Uptime Kuma",
+  "author": "eggs@octail.net",
+  "description": "Uptime Kuma: a self-hosted monitoring tool with a web interface. Checks websites, ports, game servers and more, with status pages and notifications (Discord, Telegram, email, ...). Pinned, checksum-checked release; open the web address after the first start to create the admin account.",
+  "tags": [
+    "app",
+    "nodejs",
+    "monitoring",
+    "uptime-kuma"
+  ],
+  "features": [],
+  "docker_images": {
+    "Node.js 22": "ghcr.io/sneakywrld/octail-yolks:nodejs_22"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export DATA_DIR=\"$(pwd)/data/\" UPTIME_KUMA_DB_TYPE=sqlite; if [ ! -f app/server/server.js ]; then echo '[Octail] app/ is missing: reinstall the server.'; exit 1; fi; mkdir -p data; cd app || exit 1; STAMP=\"$(node -v) $(sha256sum package-lock.json | cut -c1-16)\"; if [ \"$(cat node_modules/.octail-installed 2>/dev/null)\" != \"${STAMP}\" ]; then echo '[Octail] Installing the Node.js dependencies (npm ci; a few minutes on the first start)'; npm ci --omit=dev --no-audit --no-fund || exit 1; printf '%s\\n' \"${STAMP}\" > node_modules/.octail-installed; fi; exec node server/server.js --port={{SERVER_PORT}} --host=0.0.0.0"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Listening on"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Uptime Kuma installation script (Octail's own): the source of a pinned release from GitHub, checked against the\n# SHA-256 recorded below (GitHub publishes none for source archives), and the release's prebuilt web interface\n# (dist.tar.gz), checked against the SHA-256 digest the GitHub API lists. The program goes into app/ and is replaced on\n# a reinstall; the monitors, settings and history in data/ stay. The Node.js dependencies are installed at the next\n# start (npm ci, in the runtime image). Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\nVERSION=\"${KUMA_VERSION:-2.5.7}\"\n## SHA-256 of github.com/louislam/uptime-kuma/archive/refs/tags/<version>.tar.gz, recorded by Octail on 2026-10-23\ncase \"$VERSION\" in\n    2.5.7) SUM=501371f8f3a39bced0a8063119ec5a4d9afacf46a338f61cab66a518798de8ae ;;\n    2.5.6) SUM=a7b5f425f6b8b7e541e79f6ff71642af45f25bd3f5d97574441a2b9b6c78e408 ;;\n    2.5.5) SUM=ce47ce2d70049fa4ee2da67303fd3f35a3a68522bba17f046b29bcfe38d8d0c0 ;;\n    *) SUM=\"${KUMA_SHA256:-}\" ;;\nesac\nif [ -z \"$SUM\" ]; then\n    echo \"Installation failed: Octail has no recorded checksum for Uptime Kuma ${VERSION} (2.5.5 to 2.5.7 are known).\"\n    echo \"Staff can check the release's source archive and set its SHA-256 in Uptime Kuma Source SHA-256.\"\n    exit 1\nfi\n\nTMP=$(mktemp -d)\ntrap 'rm -rf \"$TMP\"' EXIT\nSRC=\"https://github.com/louislam/uptime-kuma/archive/refs/tags/${VERSION}.tar.gz\"\necho \"Downloading Uptime Kuma ${VERSION} from ${SRC}\"\nif ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o \"$TMP/source.tar.gz\" \"$SRC\"; then\n    echo \"Installation failed: Uptime Kuma ${VERSION} couldn't be downloaded (check the version).\"\n    exit 1\nfi\nif ! echo \"${SUM}  $TMP/source.tar.gz\" | sha256sum -c --quiet -; then\n    echo \"Installation failed: the source archive doesn't match its recorded SHA-256.\"\n    exit 1\nfi\necho \"Source checksum OK.\"\n\nif ! RELEASE=$(curl -fsSL --proto '=https' \"https://api.github.com/repos/louislam/uptime-kuma/releases/tags/${VERSION}\"); then\n    echo \"Installation failed: GitHub has no release ${VERSION} of Uptime Kuma.\"\n    exit 1\nfi\nDIST_URL=$(echo \"$RELEASE\" | jq -r '.assets[] | select(.name == \"dist.tar.gz\") | .browser_download_url')\nDIST_DIGEST=$(echo \"$RELEASE\" | jq -r '.assets[] | select(.name == \"dist.tar.gz\") | .digest // empty')\ncase \"$DIST_URL\" in\n    https://github.com/louislam/uptime-kuma/releases/download/*) ;;\n    *)\n        echo \"Installation failed: release ${VERSION} has no dist.tar.gz.\"\n        exit 1\n        ;;\nesac\ncase \"$DIST_DIGEST\" in\n    sha256:*) ;;\n    *)\n        echo \"Installation failed: GitHub lists no SHA-256 for release ${VERSION}'s dist.tar.gz.\"\n        exit 1\n        ;;\nesac\nif ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o \"$TMP/dist.tar.gz\" \"$DIST_URL\"; then\n    echo \"Installation failed: the web interface (dist.tar.gz) couldn't be downloaded.\"\n    exit 1\nfi\nif ! echo \"${DIST_DIGEST#sha256:}  $TMP/dist.tar.gz\" | sha256sum -c --quiet -; then\n    echo \"Installation failed: dist.tar.gz doesn't match the SHA-256 GitHub lists.\"\n    exit 1\nfi\necho \"Web interface checksum OK (SHA-256 from GitHub).\"\n\nmkdir \"$TMP/app\"\ntar -xzf \"$TMP/source.tar.gz\" --strip-components=1 -C \"$TMP/app\"\ntar -xzf \"$TMP/dist.tar.gz\" -C \"$TMP/app\"\nif [ ! -f \"$TMP/app/server/server.js\" ] || [ ! -f \"$TMP/app/dist/index.html\" ] || [ ! -f \"$TMP/app/package-lock.json\" ]; then\n    echo \"Installation failed: the release is missing server/server.js, dist/index.html or package-lock.json.\"\n    exit 1\nfi\n\n## the program only: data/ (the SQLite database, uploads, settings) stays\ncd /mnt/server\nrm -rf app\nmv \"$TMP/app\" app\nmkdir -p data\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Uptime Kuma ${VERSION}.\"\necho \"The first start installs the Node.js dependencies; then open the web address to create the admin account.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Uptime Kuma Version",
+      "description": "The release to install, such as 2.5.7. Versions 2.5.5 to 2.5.7 have a checksum in the install script; others need staff to set one. Reinstall to switch; monitors and history stay.",
+      "env_variable": "KUMA_VERSION",
+      "default_value": "2.5.7",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^[0-9]+\\.[0-9]+\\.[0-9]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Uptime Kuma Source SHA-256",
+      "description": "Uptime Kuma publishes no checksum for its source archives. The install script carries the SHA-256 of the 2.5.5 to 2.5.7 archives Octail checked; for another version, download https://github.com/louislam/uptime-kuma/archive/refs/tags/<version>.tar.gz, check it, and put its SHA-256 here. Empty: only the recorded versions install.",
+      "env_variable": "KUMA_SHA256",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([0-9a-fA-F]{64})?$/"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 900
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

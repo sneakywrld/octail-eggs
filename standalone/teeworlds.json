@@ -1,0 +1,137 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official Teeworlds 0.7.5 Linux release from GitHub, checks it against a SHA-256 recorded in the script (the project publishes none), unpacks the dedicated server and its data/ (not the game client), writes a storage.cfg that puts the server folder first (settings, uploaded maps and logs where the file manager shows them) and an autoexec.cfg once, which Teeworlds runs at every start and a reinstall keeps, edited with the file parser before every start (port, name, password, map, game type, public listing, slots, rcon password); runs on octail-yolks' Debian image and adds the Ctrl+C stop, the log-only console (Teeworlds reads no standard input), the UDP port start check, install sandbox defaults and resource hints. DDNet, the Teeworlds-based race mod, has its own egg (ddnet.json).",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/teeworlds.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "Teeworlds",
+  "author": "eggs@octail.net",
+  "uuid": "735d9e1b-da1e-4973-9a9d-80aae34631eb",
+  "description": "Teeworlds is a free, open-source 2D multiplayer shooter: cute round characters, grappling hooks and fast deathmatch, team deathmatch, capture the flag and last man standing rounds.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./teeworlds_srv ] || { echo \"Teeworlds is not installed: reinstall the server.\"; exit 1; }; exec ./teeworlds_srv",
+  "config": {
+    "files": "{\n    \"autoexec.cfg\": {\n        \"parser\": \"file\",\n        \"find\": {\n            \"sv_port \": \"sv_port {{server.allocations.default.port}}\",\n            \"sv_name \": \"sv_name \\\"{{server.environment.SERVER_NAME}}\\\"\",\n            \"password \": \"password \\\"{{server.environment.SERVER_PASSWORD}}\\\"\",\n            \"sv_map \": \"sv_map \\\"{{server.environment.MAP}}\\\"\",\n            \"sv_gametype \": \"sv_gametype \\\"{{server.environment.GAME_TYPE}}\\\"\",\n            \"sv_register \": \"sv_register {{server.environment.SERVER_REGISTER}}\",\n            \"sv_max_clients \": \"sv_max_clients {{server.environment.MAX_CLIENTS}}\",\n            \"sv_rcon_password \": \"sv_rcon_password \\\"{{server.environment.RCON_PASSWORD}}\\\"\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"server name is '\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Teeworlds installation script (Octail): the official 0.7.5 Linux release from GitHub, checked against the SHA-256\n# recorded here, with the dedicated server and its data/ unpacked (not the game client). Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## Teeworlds 0.7.5, the current release (2020). GitHub and teeworlds.com publish no checksum for it, so Octail\n## recorded the archive's SHA-256 (2026-10-23). A new release needs it updated here.\nVERSION=0.7.5\nFILE=teeworlds-0.7.5-linux_x86_64.tar.gz\nSHA256=20ff9664cb6de612278e697cfac6a9426ec4065a4f0a3fefaa5185df03e58b4c\n\napt-get update -qq\napt-get install -y -qq curl tar gzip ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs Teeworlds' Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\ncd /mnt/server\nDL=/mnt/server/.teeworlds-download.tar.gz\nURL=\"https://github.com/teeworlds/teeworlds/releases/download/${VERSION}/${FILE}\"\necho \"Downloading ${URL}\"\nif ! curl -fSL --connect-timeout 30 --max-time 1800 --retry 3 -o \"$DL\" \"$URL\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\nif ! echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match Teeworlds ${VERSION}'s checksum.\"\n    exit 1\nfi\n\n## the release's own files (the server and data/); autoexec.cfg, your maps and other files stay\nrm -rf data\ntar -xzf \"$DL\" --strip-components=1 --exclude='*/teeworlds' --exclude='*/storage.cfg' -C /mnt/server\nrm -f \"$DL\"\nif [ ! -x /mnt/server/teeworlds_srv ] || [ ! -d /mnt/server/data/maps ]; then\n    echo \"Installation failed: teeworlds_srv is missing after unpacking ${FILE}.\"\n    exit 1\nfi\n\n## the server folder itself first: settings, uploaded maps and logs are where the file manager shows them (the\n## release's storage.cfg would put them in ~/.teeworlds first)\n# shellcheck disable=SC2016\nprintf '%s\\n' '# Octail: the server folder first (where settings, maps and logs go), then the release data/.' \\\n    'add_path $CURRENTDIR' 'add_path $DATADIR' > storage.cfg\nmkdir -p maps\n\n## your settings file, only when there is none: Teeworlds runs it at every start, and Octail sets the lines below\n## before every start (Startup tab)\nif [ ! -f autoexec.cfg ]; then\n    cat > autoexec.cfg <<'EOF'\n# Your Teeworlds server settings (run at every start). Octail sets the lines below before every start (Startup\n# tab); add your own settings under them (sv_scorelimit, sv_timelimit, sv_maprotation, sv_motd, ...).\nsv_port 8303\nsv_name \"My Teeworlds server\"\npassword \"\"\nsv_map \"dm1\"\nsv_gametype \"dm\"\nsv_register 1\nsv_max_clients 12\nsv_rcon_password \"\"\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Teeworlds ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the server browser (up to 64 characters, no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "My Teeworlds server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\"\\\\\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password. No double quotes or backslashes.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\"\\\\\\r\\n]*$/|max:32",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Map",
+      "description": "The map loaded at start, without .map: dm1, dm2, dm3, dm6, dm7, dm8, dm9, ctf1 to ctf8, lms1, or a map you upload into maps/.",
+      "env_variable": "MAP",
+      "default_value": "dm1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[A-Za-z0-9_.()-]+$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Game Type",
+      "description": "dm (deathmatch), tdm (team deathmatch), ctf (capture the flag, use a ctf map), lms (last man standing) or lts (last team standing).",
+      "env_variable": "GAME_TYPE",
+      "default_value": "dm",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:dm,tdm,ctf,lms,lts",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "1 registers the server with the Teeworlds master servers; 0 keeps it off the list (players join by address).",
+      "env_variable": "SERVER_REGISTER",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|in:0,1",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (1-16).",
+      "env_variable": "MAX_CLIENTS",
+      "default_value": "12",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,16",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "RCON Password",
+      "description": "Optional: the admin password for the in-game remote console (F2). Empty = Teeworlds makes a random one at every start and prints it in the console. 8-32 characters, no spaces, quotes, backslashes or semicolons. Hidden once saved.",
+      "env_variable": "RCON_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\;]{8,32}$/",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "teeworlds",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "Teeworlds",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 1024
+      }
+    },
+    "variables": {
+      "RCON_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

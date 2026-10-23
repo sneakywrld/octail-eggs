@@ -1,0 +1,124 @@
+{
+  "_comment": "Octail's own egg (no upstream file). Valkey, the open-source Redis fork (Redis-compatible): the official Linux build from download.valkey.io (the Ubuntu 22.04 jammy build, which needs glibc 2.35, OpenSSL 3 and libsystemd, all in the Debian 12 image), checked against the SHA-256 file Valkey publishes next to it, into valkey/. valkey.conf is written once and is the owner's; port, bind address, protected mode, data folder (data/), password, maxmemory (a share of the server's memory, so writes are refused or keys evicted before the container runs out) and the eviction policy are passed at every start. The password comes from the Startup tab, or a random one saved in valkey-password.txt; it applies at every start. Valkey reads no console input; it stops on Ctrl+C (saving its data). The start is its 'Ready to accept connections' line or the TCP port once bound.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/valkey.json"
+  },
+  "uuid": "c3bd70b6-2a56-4110-b265-4ad2a8121e6d",
+  "name": "Valkey (Redis-compatible)",
+  "author": "eggs@octail.net",
+  "description": "Valkey: an open-source, Redis-compatible in-memory key-value store, for caches, queues and bot data. Official build, checksum checked; connect with any Redis client and the password from the Startup tab, or the generated one in valkey-password.txt.",
+  "tags": [
+    "app",
+    "database",
+    "valkey",
+    "redis"
+  ],
+  "features": [],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -x valkey/bin/valkey-server ]; then echo '[Octail] valkey/ is missing: reinstall the server.'; exit 1; fi; mkdir -p data; [ -f valkey.conf ] || : > valkey.conf; PW=\"${VALKEY_PASSWORD}\"; if [ -z \"${PW}\" ]; then if [ ! -s valkey-password.txt ]; then (umask 077; head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 32 > valkey-password.txt); echo '[Octail] Generated a password: it is in valkey-password.txt'; fi; PW=$(cat valkey-password.txt); fi; MEM=0; if [ \"{{SERVER_MEMORY}}\" -gt 0 ] 2>/dev/null; then MEM=\"$(( {{SERVER_MEMORY}} * {{MAXMEMORY_PERCENT}} / 100 ))mb\"; fi; exec ./valkey/bin/valkey-server valkey.conf --port {{SERVER_PORT}} --bind 0.0.0.0 --protected-mode no --dir \"$(pwd)/data\" --requirepass \"${PW}\" --maxmemory \"${MEM}\" --maxmemory-policy \"{{MAXMEMORY_POLICY}}\""
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "Ready to accept connections"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Valkey installation script (Octail's own): the official Linux build from download.valkey.io (the Ubuntu 22.04\n# \"jammy\" build: glibc 2.35, OpenSSL 3, which the Debian 12 runtime image has), checked against the SHA-256 file Valkey\n# publishes next to it. The program goes into valkey/ and is replaced on a reinstall; valkey.conf and the data in data/\n# stay. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\nVERSION=\"${VALKEY_VERSION:-9.1.2}\"\ncase \"$(uname -m)\" in\n    x86_64) ARCH=x86_64 ;;\n    aarch64) ARCH=arm64 ;;\n    *)\n        echo \"Installation failed: Valkey builds Linux servers for x86_64 and arm64 only, not $(uname -m).\"\n        exit 1\n        ;;\nesac\nNAME=\"valkey-${VERSION}-jammy-${ARCH}\"\nURL=\"https://download.valkey.io/releases/${NAME}.tar.gz\"\n\nTMP=$(mktemp -d)\ntrap 'rm -rf \"$TMP\"' EXIT\necho \"Downloading Valkey ${VERSION} from ${URL}\"\nif ! curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 -o \"$TMP/valkey.tar.gz\" \"$URL\"; then\n    echo \"Installation failed: Valkey ${VERSION} couldn't be downloaded (check the version).\"\n    exit 1\nfi\nif ! SUM=$(curl -fsSL --proto '=https' --proto-redir '=https' --retry 3 \"${URL}.sha256\" | awk '{ print $1 }'); then\n    echo \"Installation failed: the checksum file ${URL}.sha256 couldn't be read.\"\n    exit 1\nfi\nif ! [[ \"$SUM\" =~ ^[0-9a-f]{64}$ ]]; then\n    echo \"Installation failed: ${URL}.sha256 holds no SHA-256.\"\n    exit 1\nfi\nif ! echo \"${SUM}  $TMP/valkey.tar.gz\" | sha256sum -c --quiet -; then\n    echo \"Installation failed: the download doesn't match the SHA-256 Valkey publishes.\"\n    exit 1\nfi\necho \"Checksum OK (SHA-256 from download.valkey.io).\"\ntar -xzf \"$TMP/valkey.tar.gz\" -C \"$TMP\"\nif [ ! -x \"$TMP/${NAME}/bin/valkey-server\" ]; then\n    echo \"Installation failed: valkey-server is missing from the download.\"\n    exit 1\nfi\n\n## the program only: valkey.conf and data/ stay\ncd /mnt/server\nrm -rf valkey\nmv \"$TMP/${NAME}\" valkey\nmkdir -p data\n\n## valkey.conf, only when there is none; Octail sets the network, password, data folder and memory at every start\nif [ ! -f valkey.conf ]; then\n    cat > valkey.conf <<'EOF'\n# Valkey settings for this server: https://valkey.io/topics/valkey.conf/\n# Octail sets port, bind, protected-mode, dir (data/), requirepass, maxmemory and maxmemory-policy at every start (they\n# override this file); the other settings are yours. Stop the server before editing.\n\n# Persistence: the append-only file (every write, synced each second) and RDB snapshots.\nappendonly yes\nappendfsync everysec\nsave 3600 1 300 100 60 10000\nEOF\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: Valkey ${VERSION}.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Valkey Password",
+      "description": "Optional: the password clients log in with (requirepass; 12-64 letters, digits and _ . @ # % + -), set at every start. Empty: a random one, saved in valkey-password.txt. Never shown again once set.",
+      "env_variable": "VALKEY_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9_.@#%+-]{12,64}$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Valkey Version",
+      "description": "The Valkey release to install, such as 9.1.2 or 8.1.4. Reinstall to switch; the data stays.",
+      "env_variable": "VALKEY_VERSION",
+      "default_value": "9.1.2",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^[0-9]+\\.[0-9]+\\.[0-9]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Memory Share",
+      "description": "The share of the server's memory Valkey may fill with data (maxmemory), in percent; the rest is left for Valkey itself and its saves.",
+      "env_variable": "MAXMEMORY_PERCENT",
+      "default_value": "75",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:25,95"
+      ],
+      "sort": null
+    },
+    {
+      "name": "When Full",
+      "description": "What happens when the memory share is full (maxmemory-policy): noeviction refuses writes (keeps every key, for data); allkeys-lru drops the least recently used keys (for a cache). See valkey.io for the others.",
+      "env_variable": "MAXMEMORY_POLICY",
+      "default_value": "noeviction",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:noeviction,allkeys-lru,allkeys-lfu,allkeys-random,volatile-lru,volatile-lfu,volatile-random,volatile-ttl"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "tcp"
+      },
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 900
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 1024
+      }
+    },
+    "variables": {
+      "VALKEY_PASSWORD": {
+        "secret": true
+      }
+    }
+  }
+}

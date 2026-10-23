@@ -1,0 +1,86 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail: Cuberite, a Minecraft Java server written in C++ with Lua plugins, for 1.8 to 1.12.2 clients. Cuberite publishes no releases or signatures, only Jenkins builds (builds.cuberite.org, what download.cuberite.org points at) with a SHA-1 file on the same server, and the last build is from 2025-08-07: the script pins linux-x86_64 #445 and linux-aarch64 #135 with the SHA-256 Octail recorded on 2026-10-23, checks the SHA-1 file as well, refuses any other build unless staff set its SHA-256 (CUBERITE_SHA256, hidden), and refuses archives with paths outside the server folder. It runs on the debian image (glibc 2.28 and libstdc++). --port gives it the panel's port at every start (it overrides settings.ini); the web admin (port 8080 inside the container, not published) starts switched off. Not tagged minecraft: its plugins are Lua, not Bukkit or mods, and the version changer would replace it with a Java server, so none of the Minecraft tools apply. say is the broadcast; no EULA (not a Mojang server).",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/cuberite.json"
+  },
+  "uuid": "3cdc3073-fc71-467c-aaa8-ad024a926627",
+  "name": "Cuberite",
+  "author": "octail@meowgafactory.com",
+  "description": "Cuberite is a Minecraft: Java Edition server written in C++, light on memory and CPU, with plugins in Lua. It supports clients from 1.8 to 1.12.2.",
+  "tags": [
+    "cuberite",
+    "minecraft-java"
+  ],
+  "features": [
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -x ./Cuberite ]; then echo 'The Cuberite binary is missing: reinstall the server (Settings, Reinstall).'; exit 1; fi; exec ./Cuberite --no-output-buffering --port {{SERVER_PORT}}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": "Startup complete, took "
+    },
+    "logs": {},
+    "stop": "stop"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Cuberite installation (Octail): Cuberite.tar.gz from Cuberite's Jenkins (builds.cuberite.org, the file\n# download.cuberite.org points at), linux-x86_64 or linux-aarch64. Cuberite publishes no release or signature, only\n# a SHA-1 file next to each build on the same server, so the script pins a build per architecture with the SHA-256\n# Octail recorded on 2026-10-23 (x86_64 #445, aarch64 #135, both built 2025-08-07 from master), checks that one\n# and the SHA-1 file too, and refuses any other build unless staff set its SHA-256 in CUBERITE_SHA256.\n# Worlds, settings.ini, webadmin.ini, the player lists and plugins you added stay on reinstall; the bundled\n# plugins (Core, ...) are replaced with the build's.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\n\ncase \"$(uname -m)\" in\nx86_64 | amd64)\n\tJOB=linux-x86_64\n\tPINNED_BUILD=445\n\tPINNED_SHA256=929293822b419c631493d7502b31f3fa04ba82deef82c79c83dea3316d1e2aae\n\t;;\naarch64 | arm64)\n\tJOB=linux-aarch64\n\tPINNED_BUILD=135\n\tPINNED_SHA256=0e390df1eb3c70fa58280d6bbd6a2dbb9bf27e151b07a622423984819d5431db\n\t;;\n*) fail \"Cuberite builds Linux servers for x86_64 and aarch64 here; this node is $(uname -m)\" ;;\nesac\n\nBUILD=\"${CUBERITE_BUILD:-pinned}\"\nWANT=$(printf '%s' \"${CUBERITE_SHA256:-}\" | tr 'A-F' 'a-f')\nif [ -z \"${BUILD}\" ] || [ \"${BUILD}\" = pinned ]; then\n\tBUILD=\"${PINNED_BUILD}\"\nfi\ncase \"${BUILD}\" in\n*[!0-9]*) fail \"the Cuberite build (${BUILD}) must be a number or pinned\" ;;\nesac\nif [ -z \"${WANT}\" ]; then\n\t[ \"${BUILD}\" = \"${PINNED_BUILD}\" ] ||\n\t\tfail \"build ${BUILD} has no checked SHA-256: staff set Cuberite SHA-256 for it, or use the pinned build ${PINNED_BUILD}\"\n\tWANT=\"${PINNED_SHA256}\"\nfi\necho \"${WANT}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"Cuberite SHA-256 must be 64 hex characters\"\n\nBASE=\"https://builds.cuberite.org/job/${JOB}/${BUILD}/artifact\"\nWORK=$(mktemp -d)\ntrap 'rm -rf \"${WORK}\"' EXIT\n\necho \"Downloading Cuberite ${JOB} build ${BUILD}\"\ncurl -fsSL --connect-timeout 30 --max-time 900 --retry 3 -o \"${WORK}/Cuberite.tar.gz\" \"${BASE}/Cuberite.tar.gz\" ||\n\tfail \"the download of Cuberite ${JOB} build ${BUILD} failed\"\nGOT=$(sha256sum \"${WORK}/Cuberite.tar.gz\" | cut -d ' ' -f 1)\n[ \"${GOT}\" = \"${WANT}\" ] || fail \"Cuberite ${JOB} build ${BUILD} doesn't match its SHA-256 (expected ${WANT}, got ${GOT})\"\nSHA1=$(curl -fsSL --connect-timeout 30 --max-time 60 --retry 3 \"${BASE}/Cuberite.tar.gz.sha1\" | cut -d ' ' -f 1) ||\n\tfail \"Cuberite's Jenkins has no SHA-1 file for build ${BUILD}\"\n[ \"$(sha1sum \"${WORK}/Cuberite.tar.gz\" | cut -d ' ' -f 1)\" = \"${SHA1}\" ] ||\n\tfail \"Cuberite ${JOB} build ${BUILD} doesn't match the SHA-1 file next to it\"\nLIST=$(tar -tzf \"${WORK}/Cuberite.tar.gz\") || fail \"Cuberite.tar.gz is damaged\"\ngrep -qx Cuberite <<<\"${LIST}\" || fail \"Cuberite.tar.gz holds no Cuberite binary\"\nif grep -Eq '(^/|(^|/)\\.\\.(/|$))' <<<\"${LIST}\"; then\n\tfail \"Cuberite.tar.gz has paths outside the server folder\"\nfi\n\nmkdir -p /mnt/server\ncd /mnt/server\ntar -xzf \"${WORK}/Cuberite.tar.gz\" -C /mnt/server\nchmod 0755 Cuberite\n\n# The web admin listens on 8080 inside the container, which the panel doesn't publish; it starts switched off.\n# Set Enabled=1, a [User:name] with a Password and a port the server owns to use it.\nif [ ! -f webadmin.ini ]; then\n\tprintf '[WebAdmin]\\nPorts=8080\\nEnabled=0\\n' >webadmin.ini\nfi\n\necho \"Cuberite ${JOB} build ${BUILD} installed (SHA-256 ${GOT} checked). Minecraft Java 1.8 to 1.12.2 clients can join.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Cuberite Build",
+      "description": "The Jenkins build to install: pinned for the build Octail checked (x86_64 #445, aarch64 #135), or a build number together with its SHA-256 below. Applied on the next reinstall.",
+      "env_variable": "CUBERITE_BUILD",
+      "default_value": "pinned",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "max:10",
+        "regex:/^(pinned|[0-9]+)$/"
+      ],
+      "sort": 1
+    },
+    {
+      "name": "Cuberite SHA-256",
+      "description": "The SHA-256 of Cuberite.tar.gz for a build other than the pinned one, as you checked it yourself (Cuberite's Jenkins lists only a SHA-1 next to the file). Empty for the pinned build.",
+      "env_variable": "CUBERITE_SHA256",
+      "default_value": "",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[0-9A-Fa-f]{64}$/"
+      ],
+      "sort": 2
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "broadcast_command": "say {message}",
+      "sleep": "minecraft_java",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 1024,
+        "disk_mb": 2048
+      }
+    }
+  }
+}

@@ -1,3 +1,10 @@
+# Validates every egg on each push and pull request (see CONTRIBUTING.md, "Checking an egg"):
+#   tools/validate.mjs   the egg format the Octail panel imports with, this repository's policy (octail-yolks images
+#                        only, HTTPS downloads, SteamCMD retries, …) and the lint rules of tools/egg-lint.mjs; errors
+#                        fail the run, lint warnings show as annotations on the files
+#   tools/format.mjs     every egg formatted the way the generator writes it (2-space JSON, final newline)
+# Plain Node, no dependencies, nothing downloaded. Every action is pinned to a commit SHA.
+# Generated from the Octail monorepo (octail/scripts/eggs/repo-files/): change it there.
 name: Validate eggs
 
 on:
@@ -5,15 +12,27 @@ on:
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # no step pushes to git
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
-      - run: node tools/validate.mjs --forbid-upstream-images
+
+      - name: Validate every egg (format, policy, lint)
+        run: node tools/validate.mjs --forbid-upstream-images --github
+
+      - name: Formatting
+        run: node tools/format.mjs --check

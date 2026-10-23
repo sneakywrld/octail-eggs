@@ -6,32 +6,36 @@ The last real run of each egg on one of Octail's nodes, with the runtime image i
 its ready line (or its bound game port, for eggs that detect the start that way), sent a console command, stopped.
 A run is limited like a customer server (the memory limit below).
 
-63 of 129 eggs have a run on the current images: 59 passed, 4 failed.
-17 couldn't be run yet and 49 haven't been tried on these images.
+61 of 158 eggs have a run on the current images: 58 passed, 3 failed.
+15 couldn't be run yet and 82 haven't been tried on these images.
 
 | Egg | Result | Date | Image | Ready | Memory peak / limit | Node | Earlier | Note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | <a name="minecraft-arclight"></a>[minecraft/arclight.json](minecraft/arclight.json) | ✓ passed | 2026-10-13 | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) | 52 s | 773 / 4096 MiB | node1 | – | – |
-| <a name="minecraft-bedrock"></a>[minecraft/bedrock.json](minecraft/bedrock.json) | not tested yet | – | – | – | – | – | – | no EULA prompt (Bedrock's server has no eula.txt; its download is covered by the Minecraft EULA); not yet run on a node |
+| <a name="minecraft-bedrock"></a>[minecraft/bedrock.json](minecraft/bedrock.json) | not tested yet | – | – | – | – | – | – | no EULA prompt (Bedrock's server has no eula.txt; its download is covered by the Minecraft EULA); install rewritten on 2026-10-23; not yet run on a node |
 | <a name="minecraft-bungeecord"></a>[minecraft/bungeecord.json](minecraft/bungeecord.json) | ✓ passed | 2026-10-12 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 7 s | 155 / 1024 MiB | node1 | – | – |
+| <a name="minecraft-cuberite"></a>[minecraft/cuberite.json](minecraft/cuberite.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="minecraft-fabric"></a>[minecraft/fabric.json](minecraft/fabric.json) | ✓ passed | 2026-10-13 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 13 s | 455 / 4096 MiB | node1 | – | – |
 | <a name="minecraft-folia"></a>[minecraft/folia.json](minecraft/folia.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-forge"></a>[minecraft/forge.json](minecraft/forge.json) | ✓ passed | 2026-10-13 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 17 s | 504 / 4096 MiB | node1 | – | – |
+| <a name="minecraft-gate"></a>[minecraft/gate.json](minecraft/gate.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="minecraft-geyser"></a>[minecraft/geyser.json](minecraft/geyser.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="minecraft-leaf"></a>[minecraft/leaf.json](minecraft/leaf.json) | ✓ passed | 2026-10-13 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 30 s | 1310 / 4096 MiB | node1 | – | – |
 | <a name="minecraft-mohist"></a>[minecraft/mohist.json](minecraft/mohist.json) | ✓ passed | 2026-10-13 | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) | 91 s | 1726 / 4096 MiB | node1 | – | – |
+| <a name="minecraft-nanolimbo"></a>[minecraft/nanolimbo.json](minecraft/nanolimbo.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="minecraft-neoforge"></a>[minecraft/neoforge.json](minecraft/neoforge.json) | ✓ passed | 2026-10-13 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 15 s | 472 / 4096 MiB | node1 | – | – |
 | <a name="minecraft-paper"></a>[minecraft/paper.json](minecraft/paper.json) | ✓ passed | 2026-10-12 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 79 s | 960 / 896 MiB | tentacle | – | peak 960 MiB of an 896 MiB cap |
 | <a name="minecraft-pocketmine"></a>[minecraft/pocketmine.json](minecraft/pocketmine.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 3 s | 623 / 1024 MiB | node1 | – | – |
-| <a name="minecraft-powernukkitx"></a>[minecraft/powernukkitx.json](minecraft/powernukkitx.json) | ✗ failed | 2026-10-13 | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) | – | 268 / 2048 MiB | node1 | – | PowerNukkitX 3.0.5 crashes at start (NPE in ItemPotion.buildName): an upstream race in every release, fixed only on beta (#3093) |
+| <a name="minecraft-powernukkitx"></a>[minecraft/powernukkitx.json](minecraft/powernukkitx.json) | not tested yet | – | – | – | – | – | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:java_21) | the start command now gives Java at least 4 CPUs (-XX:ActiveProcessorCount), the workaround for 3.0.5's start crash with one CPU (NPE in ItemPotion.buildName, upstream #3070); not yet re-run |
 | <a name="minecraft-pufferfish"></a>[minecraft/pufferfish.json](minecraft/pufferfish.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-purpur"></a>[minecraft/purpur.json](minecraft/purpur.json) | ✓ passed | 2026-10-13 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 22 s | 823 / 4096 MiB | node1 | – | – |
 | <a name="minecraft-quilt"></a>[minecraft/quilt.json](minecraft/quilt.json) | ✓ passed | 2026-10-13 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 18 s | 703 / 4096 MiB | node1 | – | – |
 | <a name="minecraft-spigot"></a>[minecraft/spigot.json](minecraft/spigot.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
 | <a name="minecraft-sponge"></a>[minecraft/sponge.json](minecraft/sponge.json) | not run | – | – | – | – | – | – | needs the EULA accepted (Settings: auto-accept EULA, or the customer's prompt) |
-| <a name="minecraft-velocity"></a>[minecraft/velocity.json](minecraft/velocity.json) | ✓ passed | 2026-10-12 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 6 s | 221 / 896 MiB | tentacle | – | – |
+| <a name="minecraft-vanilla"></a>[minecraft/vanilla.json](minecraft/vanilla.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="minecraft-velocity"></a>[minecraft/velocity.json](minecraft/velocity.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-12 (ghcr.io/sneakywrld/octail-yolks:java_25) | install rewritten on 2026-10-23 (Fill API with SHA-256, the Velocity Version variable used, --port); not yet re-run |
 | <a name="source-black-mesa"></a>[source/black-mesa.json](source/black-mesa.json) | not tested yet | – | – | – | – | – | – | new egg (Source); not yet run on a node |
-| <a name="source-counter-strike-2"></a>[source/counter-strike-2.json](source/counter-strike-2.json) | not run | – | – | – | – | – | – | needs a game server token |
+| <a name="source-counter-strike-2"></a>[source/counter-strike-2.json](source/counter-strike-2.json) | not tested yet | – | – | – | – | – | – | the game server token is optional since 2026-10-23 (it was blocked on needing one); not yet run |
 | <a name="source-counter-strike-source"></a>[source/counter-strike-source.json](source/counter-strike-source.json) | ✓ passed | 2026-10-10 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 16 s | 87 / 8192 MiB | node1 | – | – |
 | <a name="source-day-of-defeat-source"></a>[source/day-of-defeat-source.json](source/day-of-defeat-source.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="source-day-of-infamy"></a>[source/day-of-infamy.json](source/day-of-infamy.json) | not tested yet | – | – | – | – | – | – | new egg (Source); not yet run on a node |
@@ -68,18 +72,21 @@ A run is limited like a customer server (the memory limit below).
 | <a name="steam-arma-reforger"></a>[steam/arma-reforger.json](steam/arma-reforger.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-aska"></a>[steam/aska.json](steam/aska.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-assetto-corsa"></a>[steam/assetto-corsa.json](steam/assetto-corsa.json) | not run | – | – | – | – | – | – | needs a Steam account that owns Assetto Corsa |
-| <a name="steam-astroneer"></a>[steam/astroneer.json](steam/astroneer.json) | ✗ failed | 2026-10-10 | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | ? / 8192 MiB | node1 | – | no start line in 900 s under Proton 10-34; being investigated |
+| <a name="steam-astroneer"></a>[steam/astroneer.json](steam/astroneer.json) | ✗ failed | 2026-10-10 | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | ? / 8192 MiB | node1 | – | no start line in 900 s under Proton 10-34; that run came before the egg also counted the open game port as started (2026-10-12): needs a re-run |
 | <a name="steam-avorion"></a>[steam/avorion.json](steam/avorion.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
+| <a name="steam-ballistic-overkill"></a>[steam/ballistic-overkill.json](steam/ballistic-overkill.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="steam-barotrauma"></a>[steam/barotrauma.json](steam/barotrauma.json) | ✓ passed | 2026-10-12 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 10 s | 268 / 2048 MiB | node1 | ✓ 2026-10-09 (upstream) | – |
+| <a name="steam-chivalry-medieval-warfare"></a>[steam/chivalry-medieval-warfare.json](steam/chivalry-medieval-warfare.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="steam-conan-exiles"></a>[steam/conan-exiles.json](steam/conan-exiles.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-core-keeper"></a>[steam/core-keeper.json](steam/core-keeper.json) | ✓ passed | 2026-10-12 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 91 s | 1704 / 2048 MiB | node1 | ✓ 2026-10-09 (upstream) | – |
-| <a name="steam-craftopia"></a>[steam/craftopia.json](steam/craftopia.json) | ✗ failed | 2026-10-10 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | ? / 8192 MiB | node1 | – | runs (~4.5 GB) but never prints its ready line; being investigated |
+| <a name="steam-craftopia"></a>[steam/craftopia.json](steam/craftopia.json) | ✗ failed | 2026-10-10 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | ? / 8192 MiB | node1 | – | runs (~4.5 GB) but never prints its ready line; that run came before the egg also counted the open game port as started (2026-10-12): needs a re-run |
 | <a name="steam-dayz"></a>[steam/dayz.json](steam/dayz.json) | not run | – | – | – | – | – | – | needs a Steam account that owns the game |
-| <a name="steam-dont-starve-together"></a>[steam/dont-starve-together.json](steam/dont-starve-together.json) | not run | – | – | – | – | – | – | needs a game server token |
+| <a name="steam-dont-starve-together"></a>[steam/dont-starve-together.json](steam/dont-starve-together.json) | not run | – | – | – | – | – | – | needs a Klei cluster token (accounts.klei.com) |
 | <a name="steam-eco"></a>[steam/eco.json](steam/eco.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-empyrion"></a>[steam/empyrion.json](steam/empyrion.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-enshrouded"></a>[steam/enshrouded.json](steam/enshrouded.json) | ✓ passed | 2026-10-10 | [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | 29 s | 914 / 8192 MiB | node1 | – | – |
 | <a name="steam-euro-truck-simulator-2"></a>[steam/euro-truck-simulator-2.json](steam/euro-truck-simulator-2.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
+| <a name="steam-foundry"></a>[steam/foundry.json](steam/foundry.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-ground-branch"></a>[steam/ground-branch.json](steam/ground-branch.json) | ✓ passed | 2026-10-13 | [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | 32 s | 998 / 4096 MiB | node1 | – | – |
 | <a name="steam-holdfast"></a>[steam/holdfast.json](steam/holdfast.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="steam-hurtworld"></a>[steam/hurtworld.json](steam/hurtworld.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
@@ -92,16 +99,20 @@ A run is limited like a customer server (the memory limit below).
 | <a name="steam-natural-selection-2"></a>[steam/natural-selection-2.json](steam/natural-selection-2.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 31 s | 643 / 3072 MiB | node1 | – | – |
 | <a name="steam-necesse"></a>[steam/necesse.json](steam/necesse.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-night-of-the-dead"></a>[steam/night-of-the-dead.json](steam/night-of-the-dead.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
+| <a name="steam-nightingale"></a>[steam/nightingale.json](steam/nightingale.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="steam-operation-harsh-doorstop"></a>[steam/operation-harsh-doorstop.json](steam/operation-harsh-doorstop.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="steam-palworld"></a>[steam/palworld.json](steam/palworld.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
-| <a name="steam-pavlov-vr"></a>[steam/pavlov-vr.json](steam/pavlov-vr.json) | not run | – | – | – | – | – | ✓ 2026-10-09 (upstream) | needs a port pair main+400 on the node |
+| <a name="steam-pavlov-vr"></a>[steam/pavlov-vr.json](steam/pavlov-vr.json) | not run | – | – | – | – | – | ✓ 2026-10-09 (upstream) | needs node ports in pairs: the main port and the main port + 400, e.g. 7777 and 8177 (Allocations, Pair with +400) |
 | <a name="steam-pixark"></a>[steam/pixark.json](steam/pixark.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-project-zomboid"></a>[steam/project-zomboid.json](steam/project-zomboid.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="steam-quake-live"></a>[steam/quake-live.json](steam/quake-live.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 6 s | 77 / 1024 MiB | node1 | – | – |
 | <a name="steam-return-to-moria"></a>[steam/return-to-moria.json](steam/return-to-moria.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-rising-world"></a>[steam/rising-world.json](steam/rising-world.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 10 s | 717 / 4096 MiB | node1 | – | – |
 | <a name="steam-risk-of-rain-2"></a>[steam/risk-of-rain-2.json](steam/risk-of-rain-2.json) | not run | – | – | – | – | – | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:wine) | Steam's public branch of app 1180760 (the dedicated server) has carried an empty depot since 2025-11: SteamCMD reports it installed and leaves no files; nothing on a server can fix that, and the egg says so when it happens. The last real run (2026-10-13) failed for this reason. |
+| <a name="steam-runescape-dragonwilds"></a>[steam/runescape-dragonwilds.json](steam/runescape-dragonwilds.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="steam-satisfactory"></a>[steam/satisfactory.json](steam/satisfactory.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-scp-secret-laboratory"></a>[steam/scp-secret-laboratory.json](steam/scp-secret-laboratory.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="steam-smalland"></a>[steam/smalland.json](steam/smalland.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="steam-sons-of-the-forest"></a>[steam/sons-of-the-forest.json](steam/sons-of-the-forest.json) | ✓ passed | 2026-10-10 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | 83 s | 6448 / 8192 MiB | node1 | – | – |
 | <a name="steam-soulmask"></a>[steam/soulmask.json](steam/soulmask.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-space-engineers"></a>[steam/space-engineers.json](steam/space-engineers.json) | ✓ passed | 2026-10-10 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | 116 s | 2343 / 8192 MiB | node1 | – | – |
@@ -113,32 +124,50 @@ A run is limited like a customer server (the memory limit below).
 | <a name="steam-the-forest"></a>[steam/the-forest.json](steam/the-forest.json) | not tested yet | – | – | – | – | – | – | new egg (Wine); not yet run on a node |
 | <a name="steam-the-front"></a>[steam/the-front.json](steam/the-front.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
 | <a name="steam-the-isle"></a>[steam/the-isle.json](steam/the-isle.json) | not tested yet | – | – | – | – | – | – | – |
-| <a name="steam-unturned"></a>[steam/unturned.json](steam/unturned.json) | not run | – | – | – | – | – | – | needs a game server token |
+| <a name="steam-unturned"></a>[steam/unturned.json](steam/unturned.json) | not tested yet | – | – | – | – | – | – | starts in LAN mode without a game server token since 2026-10-23; not yet run |
 | <a name="steam-v-rising"></a>[steam/v-rising.json](steam/v-rising.json) | ✓ passed | 2026-10-10 | [`wine_staging`](https://github.com/sneakywrld/octail-yolks#wine_staging) | 73 s | 1881 / 8192 MiB | node1 | – | BepInEx load not visible on the console |
+| <a name="steam-vein"></a>[steam/vein.json](steam/vein.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="steam-warfork"></a>[steam/warfork.json](steam/warfork.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="steam-windrose"></a>[steam/windrose.json](steam/windrose.json) | not tested yet | – | – | – | – | – | – | new egg (Proton); not yet run on a node |
 | <a name="steam-wurm-unlimited"></a>[steam/wurm-unlimited.json](steam/wurm-unlimited.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 11 s | 513 / 4096 MiB | node1 | – | – |
 | <a name="steamcmd-generic"></a>[steamcmd/generic.json](steamcmd/generic.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="standalone-assaultcube"></a>[standalone/assaultcube.json](standalone/assaultcube.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="standalone-beammp"></a>[standalone/beammp.json](standalone/beammp.json) | not run | – | – | – | – | – | – | needs an AuthKey |
 | <a name="standalone-ddnet"></a>[standalone/ddnet.json](standalone/ddnet.json) | ✓ passed | 2026-10-12 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 51 / 512 MiB | node1 | – | – |
+| <a name="standalone-et-legacy"></a>[standalone/et-legacy.json](standalone/et-legacy.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="standalone-factorio"></a>[standalone/factorio.json](standalone/factorio.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 2 s | 327 / 2048 MiB | node1 | ✓ 2026-10-08 (upstream) | – |
 | <a name="standalone-hytale"></a>[standalone/hytale.json](standalone/hytale.json) | not run | – | – | – | – | – | – | needs a Hytale account that owns the game: the owner signs in with /auth login device in the console on the first start, then /update download fetches the game files (about 3.5 GB); not yet run on a node |
 | <a name="standalone-luanti"></a>[standalone/luanti.json](standalone/luanti.json) | ✓ passed | 2026-10-12 | [`alpine`](https://github.com/sneakywrld/octail-yolks#alpine) | 2 s | 18 / 1024 MiB | node1 | – | – |
 | <a name="standalone-mindustry"></a>[standalone/mindustry.json](standalone/mindustry.json) | ✓ passed | 2026-10-12 | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) | 4 s | 174 / 2048 MiB | node1 | ✓ 2026-10-09 (upstream) | – |
 | <a name="standalone-openarena"></a>[standalone/openarena.json](standalone/openarena.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 22 / 512 MiB | node1 | – | – |
+| <a name="standalone-openra"></a>[standalone/openra.json](standalone/openra.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="standalone-openrct2"></a>[standalone/openrct2.json](standalone/openrct2.json) | not run | – | – | – | – | – | – | needs the original RollerCoaster Tycoon 2 data files, which the operator uploads to rct2/ (or sets RCT2_DATA_URL) |
 | <a name="standalone-openttd"></a>[standalone/openttd.json](standalone/openttd.json) | ✓ passed | 2026-10-10 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 12 s | 10 / 8192 MiB | node1 | – | – |
 | <a name="standalone-red-eclipse"></a>[standalone/red-eclipse.json](standalone/red-eclipse.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 2 / 512 MiB | node1 | – | – |
 | <a name="standalone-space-station-14"></a>[standalone/space-station-14.json](standalone/space-station-14.json) | ✓ passed | 2026-10-13 | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | 11 s | 505 / 4096 MiB | node1 | ✗ 2026-10-12 (ghcr.io/sneakywrld/octail-yolks:dotnet_10) | – |
+| <a name="standalone-supertuxkart"></a>[standalone/supertuxkart.json](standalone/supertuxkart.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="standalone-teeworlds"></a>[standalone/teeworlds.json](standalone/teeworlds.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="standalone-tes3mp"></a>[standalone/tes3mp.json](standalone/tes3mp.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="standalone-unreal-tournament-2004"></a>[standalone/unreal-tournament-2004.json](standalone/unreal-tournament-2004.json) | ✓ passed | 2026-10-16 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 87 / 1024 MiB | node1 | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:debian) | – |
 | <a name="standalone-unreal-tournament-99"></a>[standalone/unreal-tournament-99.json](standalone/unreal-tournament-99.json) | ✓ passed | 2026-10-16 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 31 / 512 MiB | node1 | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:debian) | – |
+| <a name="standalone-unvanquished"></a>[standalone/unvanquished.json](standalone/unvanquished.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="standalone-urban-terror"></a>[standalone/urban-terror.json](standalone/urban-terror.json) | ✓ passed | 2026-10-13 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 94 / 512 MiB | node1 | – | – |
 | <a name="standalone-vintage-story"></a>[standalone/vintage-story.json](standalone/vintage-story.json) | ✓ passed | 2026-10-12 | [`dotnet_10`](https://github.com/sneakywrld/octail-yolks#dotnet_10) | 33 s | 1182 / 3072 MiB | node1 | ✓ 2026-10-08 (upstream) | – |
 | <a name="standalone-xonotic"></a>[standalone/xonotic.json](standalone/xonotic.json) | ✓ passed | 2026-10-12 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 1 s | 386 / 1024 MiB | node1 | – | – |
 | <a name="voice-mumble"></a>[voice/mumble.json](voice/mumble.json) | ✓ passed | 2026-10-12 | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | 2 s | 6 / 256 MiB | node1 | – | – |
 | <a name="voice-teamspeak"></a>[voice/teamspeak.json](voice/teamspeak.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="apps-bun-app"></a>[apps/bun-app.json](apps/bun-app.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="apps-deno-app"></a>[apps/deno-app.json](apps/deno-app.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="apps-go-app"></a>[apps/go-app.json](apps/go-app.json) | not tested yet | – | – | – | – | – | – | – |
 | <a name="apps-java-jar"></a>[apps/java-jar.json](apps/java-jar.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="apps-lavalink"></a>[apps/lavalink.json](apps/lavalink.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="apps-mariadb"></a>[apps/mariadb.json](apps/mariadb.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="apps-nodejs-app"></a>[apps/nodejs-app.json](apps/nodejs-app.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="apps-postgresql"></a>[apps/postgresql.json](apps/postgresql.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="apps-python-app"></a>[apps/python-app.json](apps/python-app.json) | not tested yet | – | – | – | – | – | – | – |
+| <a name="apps-red-discordbot"></a>[apps/red-discordbot.json](apps/red-discordbot.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="apps-uptime-kuma"></a>[apps/uptime-kuma.json](apps/uptime-kuma.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
+| <a name="apps-valkey"></a>[apps/valkey.json](apps/valkey.json) | not tested yet | – | – | – | – | – | – | new egg; not yet run on a node |
 | <a name="testing-test-game"></a>[testing/test-game.json](testing/test-game.json) | not tested yet | – | – | – | – | – | – | – |
 
 Something wrong with an egg on your node? [Open an issue](https://github.com/sneakywrld/octail-eggs/issues/new/choose).

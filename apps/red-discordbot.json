@@ -1,0 +1,136 @@
+{
+  "_comment": "Octail's own egg (no upstream file). Red-DiscordBot, the self-hosted modular Discord bot: the install creates a Python virtual environment in .venv and installs the pinned Red-DiscordBot release from PyPI into it (pip checks each download against PyPI's hash). Red 3.5 needs Python 3.8-3.11, so the egg runs on the debian image with Debian 12's Python 3.11 (the installer uses the same Debian Python, so the environment matches); python_3.12 can't run it. The first start creates the instance octail (JSON storage in data/, settings in .config/) with redbot-setup --no-prompt. The bot token is write-only (secret) and reaches Red in its own RED_TOKEN environment variable, never on the command line or in a file; the start refuses to run without one. Red's console takes no input after the start (--no-prompt); it stops on Ctrl+C. The start is the 'Loaded N cogs with N commands' line Red prints once it is connected.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/apps/red-discordbot.json"
+  },
+  "uuid": "99205f67-8df8-4376-b9a3-dc176529e4ee",
+  "name": "Red-DiscordBot",
+  "author": "eggs@octail.net",
+  "description": "Red-DiscordBot: a self-hosted, modular Discord bot (moderation, music through Lavalink, custom commands, hundreds of community cogs). The pinned release from PyPI in a virtual environment; set the bot token from Discord's Developer Portal on the Startup tab.",
+  "tags": [
+    "app",
+    "python",
+    "discord-bot",
+    "red-discordbot"
+  ],
+  "features": [],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export PYTHONUNBUFFERED=1 XDG_CONFIG_HOME=\"$(pwd)/.config\"; if [ -z \"${RED_TOKEN}\" ]; then echo '[Octail] Set Bot Token on the Startup tab (Discord Developer Portal: your application, Bot, Reset Token), then start again.'; exit 1; fi; if [ ! -x .venv/bin/python ]; then echo '[Octail] .venv is missing: reinstall the server.'; exit 1; fi; if ! grep -qs '\"octail\"' .config/Red-DiscordBot/config.json; then echo '[Octail] Creating the Red instance octail in data/ (first start)'; .venv/bin/python -m redbot.setup --no-prompt --instance-name octail --data-path \"$(pwd)/data\" --backend json || exit 1; fi; exec .venv/bin/python -m redbot octail --no-prompt --prefix \"${BOT_PREFIX}\" $([ -n \"${OWNER_ID}\" ] && printf -- '--owner %s' \"${OWNER_ID}\") ${RED_ARGS}"
+  },
+  "config": {
+    "files": {},
+    "startup": {
+      "done": [
+        "cogs with"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Red-DiscordBot installation script (Octail's own): a fresh Python virtual environment in .venv with the pinned\n# Red-DiscordBot release from PyPI (pip checks each download against the hash PyPI lists, over HTTPS). Red 3.5 needs\n# Python 3.8 to 3.11, so this uses Debian 12's Python 3.11, the same one the runtime image (debian) runs. The bot's data\n# (data/) and its instance settings (.config/) stay on a reinstall; cogs reinstall their own requirements into data/.\n# Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\nVERSION=\"${RED_VERSION:-3.5.24}\"\nexport DEBIAN_FRONTEND=noninteractive\nif ! apt-get update -qq; then\n    echo \"Installation failed: apt couldn't read Debian's package lists.\"\n    exit 1\nfi\nif ! apt-get install -y -qq --no-install-recommends python3 python3-venv > /dev/null; then\n    echo \"Installation failed: Debian's python3-venv couldn't be installed.\"\n    exit 1\nfi\nPYTHON_VERSION=$(python3 -c 'import sys; print(\"%d.%d\" % sys.version_info[:2])')\nif [ \"$PYTHON_VERSION\" != \"3.11\" ]; then\n    echo \"Installation failed: the installer has Python ${PYTHON_VERSION}, the runtime image runs Debian 12's Python 3.11.\"\n    exit 1\nfi\n\ncd /mnt/server\n## a new environment every time: no packages left over from another version\nrm -rf .venv\npython3 -m venv .venv\necho \"Installing Red-DiscordBot ${VERSION} from PyPI\"\nif ! .venv/bin/python -m pip install --no-cache-dir --disable-pip-version-check --root-user-action=ignore -q \"Red-DiscordBot==${VERSION}\"; then\n    echo \"Installation failed: Red-DiscordBot ${VERSION} couldn't be installed (check the version).\"\n    exit 1\nfi\nif ! INSTALLED=$(.venv/bin/python -m redbot --version); then\n    echo \"Installation failed: Red-DiscordBot doesn't start.\"\n    exit 1\nfi\nmkdir -p data\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: ${INSTALLED}.\"\necho \"Set Bot Token on the Startup tab before the first start.\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Bot Token",
+      "description": "Your bot's token (Discord Developer Portal: your application, Bot, Reset Token). Required before the first start; never shown again once set, and never written to the server folder.",
+      "env_variable": "RED_TOKEN",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[A-Za-z0-9._-]{50,100}$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Prefix",
+      "description": "The command prefix (such as ! or red.); commands are then !help and so on. No spaces or quotes.",
+      "env_variable": "BOT_PREFIX",
+      "default_value": "!",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:10",
+        "regex:/^[^\\s\"'\\\\`$]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Owner ID",
+      "description": "Optional: the Discord user ID of the bot's owner. Empty: the owner of the bot's application in the Developer Portal. The owner can run every command, including ones that read the server's files: only the person hosting the bot.",
+      "env_variable": "OWNER_ID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^[0-9]{15,21}$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Red Version",
+      "description": "The Red-DiscordBot release from PyPI, such as 3.5.24. Reinstall to switch; the bot keeps its data.",
+      "env_variable": "RED_VERSION",
+      "default_value": "3.5.24",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:16",
+        "regex:/^3\\.[0-9]+\\.[0-9]+$/"
+      ],
+      "sort": null
+    },
+    {
+      "name": "Extra Arguments",
+      "description": "Extra redbot flags, such as --team-members-are-owners or --mentionable.",
+      "env_variable": "RED_ARGS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "max:256",
+        "regex:/^[A-Za-z0-9 _.,=:-]*$/"
+      ],
+      "sort": null
+    }
+  ],
+  "x_octail": {
+    "category": "Apps",
+    "features": {
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 2048
+      }
+    },
+    "variables": {
+      "RED_TOKEN": {
+        "secret": true
+      }
+    }
+  }
+}

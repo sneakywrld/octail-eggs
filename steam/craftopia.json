@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd craftopia/egg-craftopia.yaml (pelican-eggs, MIT licence), converted to JSON. Octail fixes the image name (upstream: pelican-egggs), downloads ServerSetting.ini from the pinned commit instead of refs/heads/main (a failed download fails the install), and adds the craftopia tag, max players and difficulty written to ServerSetting.ini (ini parser), an optional password (a PIN of up to 8 digits; usePassword follows it), install sandbox defaults and resource hints, drops the update URL (pinned), starts the server with -batchmode -showlogs (as LinuxGSM does; without -showlogs the game's own log, which has the \"World is loaded!\" start line, does not reach the console), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The start also counts once the game port (UDP) is bound (x_octail.features.ready): the game draws a full-screen console and \"World is loaded!\" often never shows.",
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd craftopia/egg-craftopia.yaml (pelican-eggs, MIT licence), converted to JSON. Octail fixes the image name (upstream: pelican-egggs), downloads ServerSetting.ini from the pinned commit instead of refs/heads/main (a failed download fails the install), and adds the craftopia tag, max players and difficulty written to ServerSetting.ini (ini parser), an optional password (a PIN of up to 8 digits; usePassword follows it), install sandbox defaults and resource hints, drops the update URL (pinned), starts the server with -batchmode -showlogs (as LinuxGSM does; without -showlogs the game's own log, which has the \"World is loaded!\" start line, does not reach the console), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The start also counts once the game port is bound, UDP or TCP (x_octail.features.ready, proto any: hosts open 6587 for both and the game does not document which it uses): the game draws a full-screen console and \"World is loaded!\" often never shows.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/craftopia.json"
@@ -146,7 +146,7 @@
       },
       "ready": {
         "port": "primary",
-        "proto": "udp"
+        "proto": "any"
       }
     }
   }

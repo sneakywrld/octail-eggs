@@ -1,0 +1,82 @@
+{
+  "_comment": "Octail curated egg (plan §6.4), written for Octail: Gate (minekube/gate), a Minecraft Java proxy written in Go, an alternative to Velocity and BungeeCord in one small binary. The install takes gate_<version>_linux_<amd64|arm64> from minekube/gate's GitHub releases (latest or a version; pre-releases refused), checked against the SHA-256 digest GitHub lists, and writes a first config.yml with one backend server when there is none; the panel sets config.bind to the allocation before every start. It runs on the debian image (a static Go binary needs nothing else). Gate reads no console commands, so the console box is off (no_console_input) and Ctrl+C (SIGINT) stops it. Not tagged minecraft: Gate takes no Java plugins and has no server.properties or versions, so none of the Minecraft tools apply; no broadcast command, no EULA.",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/gate.json"
+  },
+  "uuid": "dd630190-e4dc-45b9-9011-41c1be5ea814",
+  "name": "Gate",
+  "author": "octail@meowgafactory.com",
+  "description": "Gate is a fast, light Minecraft: Java Edition proxy by Minekube, written in Go: like Velocity or BungeeCord it links several Minecraft servers into one network, in a single small binary.",
+  "tags": [
+    "gate",
+    "minekube",
+    "minecraft-java"
+  ],
+  "features": [
+    "pid_limit"
+  ],
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "if [ ! -x ./gate ]; then echo 'The gate binary is missing: reinstall the server (Settings, Reinstall).'; exit 1; fi; exec ./gate --config config.yml"
+  },
+  "config": {
+    "files": {
+      "config.yml": {
+        "parser": "yaml",
+        "find": {
+          "config.bind": "0.0.0.0:{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": "listening for connections"
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# Gate installation (Octail): the gate binary for Linux (amd64 or arm64, glibc build) from minekube/gate's GitHub\n# releases (latest or a version), checked against the SHA-256 digest GitHub lists for the asset. Gate is a single\n# Go binary; it runs on the debian image. A first config.yml with one backend server is written when there is\n# none, so the panel can set config.bind before the first start; the owner's config.yml stays on reinstall.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\nget() { curl -fsSL --connect-timeout 30 --max-time 60 --retry 3 \"$1\"; }\n\nVERSION=\"${GATE_VERSION:-latest}\"\necho \"${VERSION}\" | grep -Eq '^(latest|v?[0-9]+\\.[0-9]+\\.[0-9]+)$' ||\n\tfail \"the Gate version (${VERSION}) must be a version such as 0.74.52 or latest\"\ncase \"$(uname -m)\" in\nx86_64 | amd64) ARCH=amd64 ;;\naarch64 | arm64) ARCH=arm64 ;;\n*) fail \"Gate publishes Linux builds for amd64 and arm64; this node is $(uname -m)\" ;;\nesac\n\nRELEASES=https://api.github.com/repos/minekube/gate/releases\nif [ \"${VERSION}\" = latest ]; then\n\tRELEASE=$(get \"${RELEASES}/latest\") || fail \"GitHub didn't list the latest Gate release\"\nelse\n\tRELEASE=$(get \"${RELEASES}/tags/v${VERSION#v}\") || fail \"Gate ${VERSION} isn't a release on GitHub\"\nfi\nTAG=$(echo \"${RELEASE}\" | jq -r '.tag_name // empty')\n[ -n \"${TAG}\" ] || fail \"GitHub's answer names no release\"\nif [ \"$(echo \"${RELEASE}\" | jq -r '.prerelease')\" = true ]; then\n\tfail \"${TAG} is a pre-release; pick a release version\"\nfi\nASSET=\"gate_${TAG#v}_linux_${ARCH}\"\nURL=$(echo \"${RELEASE}\" | jq -r --arg a \"${ASSET}\" '[.assets[] | select(.name == $a)][0].browser_download_url // empty')\nSUM=$(echo \"${RELEASE}\" | jq -r --arg a \"${ASSET}\" '[.assets[] | select(.name == $a)][0].digest // empty' |\n\tsed 's/^sha256://' | tr 'A-F' 'a-f')\n[ -n \"${URL}\" ] || fail \"release ${TAG} has no ${ASSET}\"\necho \"${SUM}\" | grep -Eq '^[0-9a-f]{64}$' || fail \"GitHub lists no SHA-256 for ${ASSET}\"\n\nmkdir -p /mnt/server\ncd /mnt/server\necho \"Installing Gate ${TAG} (${ASSET})\"\nrm -f gate.download\ncurl -fsSL --connect-timeout 30 --max-time 900 --retry 3 -o gate.download \"${URL}\" ||\n\tfail \"the download of Gate ${TAG} failed\"\nif ! echo \"${SUM}  gate.download\" | sha256sum -c --quiet -; then\n\trm -f gate.download\n\tfail \"${ASSET} doesn't match its SHA-256 (${SUM})\"\nfi\nchmod 0755 gate.download\nif [ -f gate ]; then\n\tmv -f gate gate.old\nfi\nmv gate.download gate\n\n# A first config.yml: Gate fills in every other setting with its defaults. The panel sets config.bind to the\n# server's port before every start.\nif [ ! -f config.yml ]; then\n\tcat >config.yml <<'OCTAIL_EOF'\n# Gate configuration: every setting is described at https://gate.minekube.com/guide/config/\n# The panel sets config.bind to this server's port before every start.\nconfig:\n  bind: 0.0.0.0:25565\n  onlineMode: true\n  # Your Minecraft servers (name: address:port) and the ones players join first, in order.\n  servers:\n    lobby: localhost:25566\n  try:\n    - lobby\nOCTAIL_EOF\nfi\n\necho \"Gate ${TAG} installed (SHA-256 ${SUM} checked). Add your servers under config.servers in config.yml.\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_alpine",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Gate Version",
+      "description": "The Gate release to install, such as 0.74.52, or latest for the newest release. Applied on the next reinstall.",
+      "env_variable": "GATE_VERSION",
+      "default_value": "latest",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "max:20",
+        "regex:/^(latest|v?[0-9]+\\.[0-9]+\\.[0-9]+)$/"
+      ],
+      "sort": 1
+    }
+  ],
+  "x_octail": {
+    "category": "Minecraft",
+    "features": {
+      "no_console_input": true,
+      "strip_ansi": true,
+      "broadcast_command": false,
+      "player_log": "none",
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 512
+      }
+    }
+  }
+}

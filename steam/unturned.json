@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd unturned/egg-unturned.json (pelican-eggs, MIT licence); picked over Assetto Corsa, whose egg needs a logged-in Steam account. Octail adds the unturned tag, a reserved query port (game port + 1), generic UDP idle sleep (off until staff enable it per server), a broadcast command, install sandbox defaults and resource hints. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd unturned/egg-unturned.json (pelican-eggs, MIT licence); picked over Assetto Corsa, whose egg needs a logged-in Steam account. Octail adds the unturned tag, a reserved query port (game port + 1), generic UDP idle sleep (off until staff enable it per server), a broadcast command, install sandbox defaults and resource hints. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\". The token is optional and write-only: without one (or with Server Listing = LAN) the server starts as a LAN server instead of an Internet one; `-GSLT` and `-Password` are passed only when set, an optional max players goes into Commands.dat before every start; **install script fixed**: fails when SteamCMD didn't download the server, links made idempotent.",
   "meta": {
     "version": "PTDL_v2",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/unturned.json"
@@ -20,7 +20,7 @@
     "SteamCMD (Debian)": "ghcr.io/sneakywrld/octail-yolks:steamcmd_debian"
   },
   "file_denylist": [],
-  "startup": "./Unturned_Headless.x86_64 -batchmode -nographics -bind 0.0.0.0 -port {{SERVER_PORT}} -GSLT {{GSLT}} -Name \"{{SRV_NAME}}\" -Password {{SRV_PW}} +InternetServer/{{SRV_ID}}",
+  "startup": "if [ \"${SERVER_LISTING}\" = LAN ]; then UT_MODE=LanServer; elif [ -z \"${GSLT}\" ]; then UT_MODE=LanServer; echo \"Octail: no Game Server Login Token is set, so the server starts in LAN mode (not on the Internet server list). Create a token for app 304930 at https://steamcommunity.com/dev/managegameservers and put it in Game Server Login Token on the Startup tab.\"; else UT_MODE=InternetServer; fi; UT_CMDS=\"Servers/${SRV_ID}/Server/Commands.dat\"; if [ -n \"${MAX_PLAYERS}\" ]; then mkdir -p \"Servers/${SRV_ID}/Server\"; if [ -f \"${UT_CMDS}\" ] && grep -qi '^maxplayers ' \"${UT_CMDS}\"; then sed -i -E \"s/^[Mm][Aa][Xx][Pp][Ll][Aa][Yy][Ee][Rr][Ss] .*/MaxPlayers ${MAX_PLAYERS}/\" \"${UT_CMDS}\"; else echo \"MaxPlayers ${MAX_PLAYERS}\" >> \"${UT_CMDS}\"; fi; fi; ./Unturned_Headless.x86_64 -batchmode -nographics -bind 0.0.0.0 -port {{SERVER_PORT}} $( [ -z \"${GSLT}\" ] || printf -- '-GSLT %s' \"${GSLT}\" ) -Name \"{{SRV_NAME}}\" $( [ -z \"${SRV_PW}\" ] || printf -- '-Password %s' \"${SRV_PW}\" ) +${UT_MODE}/{{SRV_ID}}",
   "config": {
     "files": "{}",
     "startup": "{\r\n    \"done\": \"Loading level: 100%\"\r\n}",
@@ -29,7 +29,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\r\n# steamcmd Base Installation Script\r\n#\r\n# Server Files: /mnt/server\r\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\r\n\r\n\r\n## just in case someone removed the defaults.\r\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\r\n    echo -e \"steam user is not set.\\n\"\r\n    echo -e \"Using anonymous user.\\n\"\r\n    STEAM_USER=anonymous\r\n    STEAM_PASS=\"\"\r\n    STEAM_AUTH=\"\"\r\nelse\r\n    echo -e \"user set to ${STEAM_USER}\"\r\nfi\r\n\r\n## download and install steamcmd\r\ncd /tmp\r\nmkdir -p /mnt/server/steamcmd\r\ncurl -sSL -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz\r\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\r\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\r\ncd /mnt/server/steamcmd\r\n\r\n# SteamCMD fails otherwise for some reason, even running as root.\r\n# This is changed at the end of the install process anyways.\r\nchown -R root:root /mnt\r\nexport HOME=/mnt/server\r\n\r\n## install game using steamcmd\r\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\r\nfor steamcmd_try in 1 2 3; do\r\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\r\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\r\ndone\r\n\r\n## set up 32 bit libraries\r\nmkdir -p /mnt/server/.steam/sdk32\r\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\r\n\r\n## set up 64 bit libraries\r\nmkdir -p /mnt/server/.steam/sdk64\r\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\r\n\r\n## add below your custom commands if needed\r\n\r\n## Specific to Unturned\r\ncd /mnt/server/\r\nln -s ../../../steamcmd/linux64/steamclient.so Unturned_Headless_Data/Plugins/x86_64/steamclient.so\r\nln -s ../Extras/Rocket.Unturned/ Modules/\r\n\r\n## install end\r\necho \"-----------------------------------------\"\r\necho \"Installation completed...\"\r\necho \"-----------------------------------------\"",
+      "script": "#!/bin/bash\n# steamcmd Base Installation Script\n#\n# Server Files: /mnt/server\n# Image to install with is 'ghcr.io/parkervcp/installers:debian'\n\n\n## just in case someone removed the defaults.\nif [[ \"${STEAM_USER}\" == \"\" ]] || [[ \"${STEAM_PASS}\" == \"\" ]]; then\n    echo -e \"steam user is not set.\\n\"\n    echo -e \"Using anonymous user.\\n\"\n    STEAM_USER=anonymous\n    STEAM_PASS=\"\"\n    STEAM_AUTH=\"\"\nelse\n    echo -e \"user set to ${STEAM_USER}\"\nfi\n\n## download and install steamcmd\ncd /tmp\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --retry 3 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"The SteamCMD download failed.\"; exit 1; }\ntar -xzf steamcmd.tar.gz -C /mnt/server/steamcmd || exit 1\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) ${INSTALL_FLAGS} validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## add below your custom commands if needed\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f /mnt/server/Unturned_Headless.x86_64 ]]; then\n    echo -e \"\\nSteamCMD failed to install the Unturned dedicated server. Check the lines above, then reinstall.\"\n    exit 1\nfi\n\n## Specific to Unturned\ncd /mnt/server/\nln -sfn ../../../steamcmd/linux64/steamclient.so Unturned_Headless_Data/Plugins/x86_64/steamclient.so\n[ -d Extras/Rocket.Unturned ] && [ ! -e Modules/Rocket.Unturned ] && ln -s ../Extras/Rocket.Unturned/ Modules/\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"",
       "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
       "entrypoint": "bash"
     }
@@ -37,36 +37,56 @@
   "variables": [
     {
       "name": "Server Name",
-      "description": "",
+      "description": "The name in the server list (up to 50 characters).",
       "env_variable": "SRV_NAME",
       "default_value": "An Octail server",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "string|max:50",
+      "rules": "required|string|max:50|regex:/^[^\"\\\\\\r\\n]*$/",
       "sort": null,
       "field_type": "text"
     },
     {
       "name": "Server Password",
-      "description": "",
+      "description": "Optional: players must enter it to join. Empty = no password. One word: no spaces or quotes.",
       "env_variable": "SRV_PW",
       "default_value": "",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "nullable|string",
+      "rules": "nullable|string|regex:/^[^\\s\"'\\\\]*$/|max:32",
       "sort": null,
       "field_type": "text"
     },
     {
-      "name": "GSLT",
-      "description": "",
+      "name": "Game Server Login Token",
+      "description": "A Steam Game Server Login Token for app 304930 (Unturned), made at https://steamcommunity.com/dev/managegameservers with the Steam account that owns the server. An Internet server needs one to be listed; without one the server starts in LAN mode. Write-only once saved.",
       "env_variable": "GSLT",
       "default_value": "",
       "user_viewable": true,
       "user_editable": true,
-      "rules": "required|string",
+      "rules": "nullable|alpha_num|max:64",
       "sort": null,
       "field_type": "text"
+    },
+    {
+      "name": "Server Listing",
+      "description": "Internet: on the Internet server list (needs a Game Server Login Token; without one the server falls back to LAN). LAN: not listed on the Internet list, no token needed.",
+      "env_variable": "SERVER_LISTING",
+      "default_value": "Internet",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:Internet,LAN",
+      "sort": null
+    },
+    {
+      "name": "Max Players",
+      "description": "Optional: the most players online at once, written to MaxPlayers in the server's Commands.dat before every start. Empty = Commands.dat decides (Unturned's default is 8).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|integer|between:1,200",
+      "sort": null
     },
     {
       "name": "Server ID",

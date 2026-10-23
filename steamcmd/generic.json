@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail egg for any SteamCMD dedicated server (plan §6.4). Install script adapted from pelican-eggs/games-steamcmd (MIT licence). Set the app id and the startup command per game; anonymous SteamCMD only. Generic UDP idle sleep (off until staff enable it per server).",
+  "_comment": "Octail egg for any SteamCMD dedicated server (plan §6.4). Install script adapted from pelican-eggs/games-steamcmd (MIT licence). Set the app id and the startup command per game; anonymous SteamCMD only. Generic UDP idle sleep (off until staff enable it per server). No install time limit (install_sandbox timeout_s 0), like the other SteamCMD eggs: a large game's first download can take hours.",
   "meta": {
     "version": "PLCN_v3",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steamcmd/generic.json"
@@ -140,6 +140,10 @@
     "features": {
       "sleep": {
         "mode": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
       }
     }
   }

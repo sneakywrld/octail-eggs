@@ -1,0 +1,255 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), built on games-steamcmd foundry/egg-foundry.json (pelican-eggs, MIT licence), with the settings of FOUNDRY's official dedicated server guide (dedicated.foundry-game.com) and checked against the app's Steam data (app 2915550: Windows only). The Windows server runs under Wine (the wine image starts Xvfb itself, so upstream's xvfb lines are gone), Ctrl+C is handed to it by a trap (the wine image runs the line in bash as PID 1) and waited for. App.cfg is written by the install once (upstream downloaded the guide's sample at every install, unchecked) and the Startup tab's values are set in it before every start (properties parser): the seed key is mapseed as the guide spells it (upstream wrote map_seed), the save folder is fixed to saves/ instead of an editable path, and the query port gets its own automatic port (port_vars) with the Steam query (A2S) for player counts. Upstream's winetricks mono run is left out (the wine image has Wine Mono). Port readiness (any protocol, x_octail.features.ready) besides the start line, install sandbox defaults and resource hints, the anonymous login only, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/foundry.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "FOUNDRY",
+  "author": "eggs@octail.net",
+  "uuid": "bbe5d40e-512c-4fda-8ef0-93c6ec776d50",
+  "description": "Build a factory in an endless voxel world: mine, automate production lines and research your way up, alone or together. The Windows dedicated server, run under Wine.",
+  "tags": [
+    "foundry",
+    "steamcmd",
+    "wine"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Wine": "ghcr.io/sneakywrld/octail-yolks:wine"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "wine ./FoundryDedicatedServer.exe -log & FOUNDRY_PID=$!; trap \"kill -INT ${FOUNDRY_PID} 2>/dev/null; wait ${FOUNDRY_PID}\" INT TERM; wait ${FOUNDRY_PID}"
+  },
+  "config": {
+    "files": {
+      "App.cfg": {
+        "parser": "properties",
+        "find": {
+          "server_name": "{{server.environment.SERVER_NAME}}",
+          "server_password": "{{server.environment.SERVER_PASSWORD}}",
+          "server_world_name": "{{server.environment.WORLD_NAME}}",
+          "mapseed": "{{server.environment.MAP_SEED}}",
+          "server_max_players": "{{server.environment.MAX_PLAYERS}}",
+          "pause_server_when_empty": "{{server.environment.PAUSE_WHEN_EMPTY}}",
+          "autosave_interval": "{{server.environment.AUTOSAVE_INTERVAL}}",
+          "server_is_public": "{{server.environment.PUBLIC_SERVER}}",
+          "server_port": "{{server.allocations.default.port}}",
+          "server_query_port": "{{server.environment.QUERY_PORT}}",
+          "server_persistent_data_override_folder": "Z:/home/container/saves"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "Dedicated server is now running!"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Wine).\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/FoundryDedicatedServer.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the FOUNDRY dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: App.cfg (next to the server, read at start) is written once with the keys of the official guide\n## (dedicated.foundry-game.com); the panel sets the Startup tab's values in it before every start (properties\n## parser) and an existing file is kept. Saves and logs go to /home/container/saves.\nCFG=/mnt/server/App.cfg\nif [[ ! -f \"$CFG\" ]]; then\n    cat > \"$CFG\" <<'EOF'\nserver_name=Octail Foundry Server\nserver_password=\nserver_world_name=OctailFactory\nmapseed=42938743982\nserver_max_players=32\npause_server_when_empty=true\nautosave_interval=300\nserver_is_public=true\nserver_port=3724\nserver_query_port=27015\nserver_persistent_data_override_folder=Z:/home/container/saves\nEOF\nfi\nmkdir -p /mnt/server/saves\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name in the Steam server browser.",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Foundry Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\\r\\n]*$/",
+        "max:40"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (no spaces).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^\\S*$/",
+        "max:20"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "World Name",
+      "description": "The world, and the folder in saves/ it is stored in (letters, digits, - and _). Another name starts another world.",
+      "env_variable": "WORLD_NAME",
+      "default_value": "OctailFactory",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^[A-Za-z0-9_-]+$/",
+        "max:20"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Map Seed",
+      "description": "The seed a new world is generated from (digits).",
+      "env_variable": "MAP_SEED",
+      "default_value": "42938743982",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "regex:/^[0-9]{1,18}$/"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Max Players",
+      "description": "How many players can be online at once.",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "32",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,64"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Pause When Empty",
+      "description": "true pauses the world while nobody is connected.",
+      "env_variable": "PAUSE_WHEN_EMPTY",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Autosave Interval",
+      "description": "Seconds between autosaves.",
+      "env_variable": "AUTOSAVE_INTERVAL",
+      "default_value": "300",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:60,3600"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Public Server",
+      "description": "true lists the server in the Steam server browser (through the query port).",
+      "env_variable": "PUBLIC_SERVER",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Query Port",
+      "description": "Steam query port (UDP), for the server list. Set by Octail when the server is created (the port after the game port).",
+      "env_variable": "QUERY_PORT",
+      "default_value": "27015",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "integer",
+        "between:1024,65535"
+      ]
+    },
+    {
+      "sort": 10,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 11,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "2915550",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:2915550"
+      ]
+    },
+    {
+      "sort": 12,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Wine).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "FOUNDRY",
+    "features": {
+      "no_console_input": true,
+      "player_query": {
+        "type": "a2s",
+        "port_var": "QUERY_PORT"
+      },
+      "port_vars": {
+        "QUERY_PORT": "primary+1"
+      },
+      "ready": {
+        "port": "primary",
+        "proto": "any"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 8192,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

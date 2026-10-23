@@ -1,5 +1,5 @@
 {
-  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd necesse/egg-necesse.json (pelican-eggs, MIT licence). Octail adds the necesse tag, the say broadcast, generic UDP idle sleep (off until staff enable it per server), install sandbox defaults and resource hints, writes cfg/server.cfg with {{server.environment.X}} placeholders, limits the password and save name to characters server.cfg and the command line keep as they are, slots to the game's 1-250, unescapes the install script's paths, and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "_comment": "Octail curated egg (plan §6.4). Based on games-steamcmd necesse/egg-necesse.json (pelican-eggs, MIT licence). Octail adds the necesse tag, the say broadcast, generic UDP idle sleep (off until staff enable it per server), install sandbox defaults and resource hints, writes cfg/server.cfg with {{server.environment.X}} placeholders, limits the password and save name to characters server.cfg and the command line keep as they are, slots to the game's 1-250, unescapes the install script's paths, updates before every start by default (upstream: off), and makes the install fail when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
   "meta": {
     "version": "PTDL_v2",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/necesse.json"
@@ -83,7 +83,7 @@
       "name": "Steam Auto Update",
       "description": "Enable or disable auto-update on startup. 0 to disable and 1 to enable.",
       "env_variable": "AUTO_UPDATE",
-      "default_value": "0",
+      "default_value": "1",
       "user_viewable": true,
       "user_editable": true,
       "rules": "boolean",

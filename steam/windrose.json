@@ -1,0 +1,200 @@
+{
+  "_comment": "Octail's own egg (plan §6.4), built on games-steamcmd windrose/egg-windrose.json (pelican-eggs, MIT licence) and checked against the app's Steam data (app 4129620: the Windows depot, WindroseServer.exe -log). The Windows server runs under Proton (Xalia off as upstream) and its log (R5/Saved/Logs/R5.log) is followed on the console. R5/ServerDescription.json is made by the install once, with a random invite code (upstream: the shared default \"server1\"), and the Startup tab's name, password, player limit, region and connection mode are set in it before every start (json parser); the direct connection port is always the server's main port, the password switch follows the password (set at start), and the invite code is only replaced when the Startup tab has one. Upstream's world name and difficulty variables are left out (they set nothing). Install sandbox defaults and resource hints, the anonymous login only, and the install fails when SteamCMD didn't download the server. SteamCMD is retried up to 3 times: its first run on a fresh install often fails with \"Missing configuration\".",
+  "meta": {
+    "version": "PLCN_v3",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/steam/windrose.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "Windrose",
+  "author": "eggs@octail.net",
+  "uuid": "5fadbe5e-bcfa-4566-9b93-eaad9095a862",
+  "description": "Survive as a pirate in the Age of Sail: build a ship and a base, explore islands and fight at sea with your crew. The Windows dedicated server, run under Proton.",
+  "tags": [
+    "windrose",
+    "steamcmd",
+    "proton"
+  ],
+  "features": [
+    "steam_disk_space"
+  ],
+  "docker_images": {
+    "Proton": "ghcr.io/sneakywrld/octail-yolks:proton"
+  },
+  "file_denylist": [],
+  "startup_commands": {
+    "Default": "export PROTON_DISABLE_XALIA=1; if [ -n \"${SERVER_PASSWORD}\" ]; then WR_PROTECTED=true; else WR_PROTECTED=false; fi; sed -i -E \"s/(\\\"IsPasswordProtected\\\": *)(true|false)/\\1${WR_PROTECTED}/\" R5/ServerDescription.json; [ -z \"${INVITE_CODE}\" ] || sed -i -E \"s/(\\\"InviteCode\\\": *\\\")[^\\\"]*\\\"/\\1${INVITE_CODE}\\\"/\" R5/ServerDescription.json; grep -o '\"InviteCode\": *\"[^\"]*\"' R5/ServerDescription.json; proton run ./R5/Binaries/Win64/WindroseServer-Win64-Shipping.exe -log & WR_PID=$!; trap \"wait ${WR_PID}\" INT TERM; tail -c0 -F ./R5/Saved/Logs/R5.log --pid=${WR_PID} 2>/dev/null & wait ${WR_PID}"
+  },
+  "config": {
+    "files": {
+      "R5/ServerDescription.json": {
+        "parser": "json",
+        "find": {
+          "ServerDescription_Persistent.ServerName": "{{server.environment.SERVER_NAME}}",
+          "ServerDescription_Persistent.Password": "{{server.environment.SERVER_PASSWORD}}",
+          "ServerDescription_Persistent.MaxPlayerCount": "{{server.environment.MAX_PLAYERS}}",
+          "ServerDescription_Persistent.UserSelectedRegion": "{{server.environment.REGION}}",
+          "ServerDescription_Persistent.UseDirectConnection": "{{server.environment.DIRECT_CONNECTION}}",
+          "ServerDescription_Persistent.DirectConnectionServerPort": "{{server.allocations.default.port}}"
+        }
+      }
+    },
+    "startup": {
+      "done": [
+        "UEngine::LoadMap Load map complete"
+      ]
+    },
+    "logs": {},
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n## Octail curated install: SteamCMD downloads the Windows build of the server (it runs under Proton).\n## Server Files: /mnt/server\n\n## anonymous login: this server needs no Steam account\nSTEAM_USER=anonymous\nSTEAM_PASS=\"\"\nSTEAM_AUTH=\"\"\n\n## download and install steamcmd (the small archive goes to /tmp, the game straight to the server's disk)\ncd /tmp || exit 1\nmkdir -p /mnt/server/steamcmd\ncurl -fsSL --connect-timeout 30 --max-time 300 --retry 3 --retry-delay 5 -o steamcmd.tar.gz https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz || { echo \"Downloading SteamCMD failed.\"; exit 1; }\ntar -xzvf steamcmd.tar.gz -C /mnt/server/steamcmd\nrm -f steamcmd.tar.gz\nmkdir -p /mnt/server/steamapps # Fix steamcmd disk write error when this folder is missing\ncd /mnt/server/steamcmd || exit 1\n\n# SteamCMD fails otherwise for some reason, even running as root.\n# This is changed at the end of the install process anyways.\nchown -R root:root /mnt\nexport HOME=/mnt/server\n\n## install game using steamcmd\n## Octail: SteamCMD's first run often fails with \"Missing configuration\"; try up to 3 times\nfor steamcmd_try in 1 2 3; do\n    if ./steamcmd.sh +force_install_dir /mnt/server +login ${STEAM_USER} ${STEAM_PASS} ${STEAM_AUTH} $( [[ \"${WINDOWS_INSTALL}\" == \"1\" ]] && printf %s '+@sSteamCmdForcePlatformType windows' ) +app_update ${SRCDS_APPID} $( [[ -z ${SRCDS_BETAID} ]] || printf %s \"-beta ${SRCDS_BETAID}\" ) $( [[ -z ${SRCDS_BETAPASS} ]] || printf %s \"-betapassword ${SRCDS_BETAPASS}\" ) validate +quit; then break; fi\n    echo \"SteamCMD did not finish (attempt $steamcmd_try of 3)\"\ndone\n\n## set up 32 bit libraries\nmkdir -p /mnt/server/.steam/sdk32\ncp -v linux32/steamclient.so ../.steam/sdk32/steamclient.so\n\n## set up 64 bit libraries\nmkdir -p /mnt/server/.steam/sdk64\ncp -v linux64/steamclient.so ../.steam/sdk64/steamclient.so\n\n## Octail: fail the install when SteamCMD didn't download the server\nif [[ ! -f \"/mnt/server/R5/Binaries/Win64/WindroseServer-Win64-Shipping.exe\" ]]; then\n    echo -e \"\\nSteamCMD failed to install the Windrose dedicated server; try reinstalling.\"\n    exit 1\nfi\n\n## Octail: R5/ServerDescription.json is made once (the server makes it on its first start, but the panel sets the\n## Startup tab's values in it before every start, json parser), with a random invite code; an existing file is kept.\nmkdir -p /mnt/server/R5\nif [[ ! -f /mnt/server/R5/ServerDescription.json ]]; then\n    INVITE=\"oct$(tr -dc 'a-z0-9' < /dev/urandom | head -c 9)\"\n    cat > /mnt/server/R5/ServerDescription.json <<EOF\n{\n  \"Version\": 1,\n  \"DeploymentId\": \"\",\n  \"ServerDescription_Persistent\": {\n    \"PersistentServerId\": \"\",\n    \"InviteCode\": \"${INVITE}\",\n    \"IsPasswordProtected\": false,\n    \"Password\": \"\",\n    \"ServerName\": \"Octail Windrose Server\",\n    \"WorldIslandId\": \"\",\n    \"MaxPlayerCount\": 4,\n    \"UserSelectedRegion\": \"\",\n    \"P2pProxyAddress\": \"0.0.0.0\",\n    \"UseDirectConnection\": false,\n    \"DirectConnectionServerAddress\": \"\",\n    \"DirectConnectionServerPort\": 7777,\n    \"DirectConnectionProxyAddress\": \"0.0.0.0\",\n    \"AutoLoadLatestBackupIfHasBroken\": true\n  }\n}\nEOF\n    echo \"Invite code: ${INVITE}\"\nfi\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed...\"\necho \"-----------------------------------------\"\n",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "sort": 1,
+      "name": "Server Name",
+      "description": "The name players see (must contain a letter; no double quotes or backslashes).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "Octail Windrose Server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "regex:/^[^\"\\\\\\r\\n]*[A-Za-z][^\"\\\\\\r\\n]*$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 2,
+      "name": "Invite Code",
+      "description": "Optional: the code players join with (6 to 32 letters and digits, with at least one letter; case-sensitive). Empty = keep the one the install made (shown on the console at every start).",
+      "env_variable": "INVITE_CODE",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^([A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*)?$/",
+        "min:6",
+        "max:32"
+      ]
+    },
+    {
+      "sort": 3,
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = no password (no spaces; must contain a letter).",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "regex:/^(\\S*[A-Za-z]\\S*)?$/",
+        "max:64"
+      ]
+    },
+    {
+      "sort": 4,
+      "name": "Max Players",
+      "description": "Up to 4 runs best; up to 10 works with enough memory (16 GB).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "4",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "integer",
+        "between:1,10"
+      ]
+    },
+    {
+      "sort": 5,
+      "name": "Region",
+      "description": "The relay and matchmaking region: SEA, CIS or EU (EU also covers North America). Empty = picked by latency.",
+      "env_variable": "REGION",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "nullable",
+        "string",
+        "in:SEA,CIS,EU"
+      ]
+    },
+    {
+      "sort": 6,
+      "name": "Direct Connection",
+      "description": "false: players connect through the invite code (no open port needed). true: they connect straight to the main port (TCP and UDP), which must be reachable.",
+      "env_variable": "DIRECT_CONNECTION",
+      "default_value": "false",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "required",
+        "string",
+        "in:true,false"
+      ]
+    },
+    {
+      "sort": 7,
+      "name": "Auto Update",
+      "description": "Update the server with SteamCMD before every start (1 = on, 0 = off).",
+      "env_variable": "AUTO_UPDATE",
+      "default_value": "1",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": [
+        "boolean"
+      ]
+    },
+    {
+      "sort": 8,
+      "name": "Steam App ID",
+      "description": "The dedicated server's SteamCMD app.",
+      "env_variable": "SRCDS_APPID",
+      "default_value": "4129620",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:4129620"
+      ]
+    },
+    {
+      "sort": 9,
+      "name": "Windows Install",
+      "description": "Downloads the Windows build (the server runs under Proton).",
+      "env_variable": "WINDOWS_INSTALL",
+      "default_value": "1",
+      "user_viewable": false,
+      "user_editable": false,
+      "rules": [
+        "required",
+        "string",
+        "in:1"
+      ]
+    }
+  ],
+  "x_octail": {
+    "category": "Windrose",
+    "features": {
+      "no_console_input": true,
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 0
+      },
+      "resources": {
+        "memory_mb": 12288,
+        "disk_mb": 10240
+      }
+    }
+  }
+}

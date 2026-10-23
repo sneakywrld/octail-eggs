@@ -49,7 +49,7 @@
       "rules": [
         "required",
         "integer",
-        "between:1024,65536"
+        "between:1024,65535"
       ],
       "sort": 1
     },
@@ -265,7 +265,7 @@
       "rules": [
         "required",
         "integer",
-        "between:1024,65536"
+        "between:1024,65535"
       ],
       "sort": 17
     },

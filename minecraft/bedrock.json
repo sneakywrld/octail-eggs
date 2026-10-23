@@ -1,5 +1,5 @@
 {
-  "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PANEL",
+  "_comment": "Octail curated egg (plan §6.4). Based on minecraft bedrock/bedrock/egg-vanilla-bedrock.json (pelican-eggs, MIT licence). Octail rewrote the install script: latest from Mojang's download links API read with jq (upstream grepped it), a pinned version checked against the version pattern, loud failures (set -euo pipefail; upstream carried on after a failed download and left an empty server), the zip checked (its Content-MD5 when Mojang's storage sends one, its CRCs, bedrock_server inside), and server.properties, allowlist.json and permissions.json kept only when they exist. update_url is null so an update never brings back upstream images. x_octail adds the category, the start detection by the UDP game port, install sandbox defaults and resource hints. The IPv6 port (server-portv6, 19133) stays inside the container's own network: each server has its own, so two Bedrock servers on one node don't clash, and only the main port is published.",
   "meta": {
     "version": "PLCN_v1",
     "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/minecraft/bedrock.json"
@@ -30,7 +30,7 @@
   },
   "scripts": {
     "installation": {
-      "script": "#!/bin/bash\r\n\r\napt update\r\napt install -y zip unzip wget curl\r\n\r\nif [ ! -d /mnt/server/ ]; then\r\n    mkdir /mnt/server/\r\nfi\r\n\r\ncd /mnt/server\r\n\r\n# Minecraft CDN Akamai blocks script user-agents\r\nRANDVERSION=$(echo $((1 + $RANDOM % 4000)))\r\n\r\nif [ -z \"${BEDROCK_VERSION}\" ] || [ \"${BEDROCK_VERSION}\" == \"latest\" ]; then\r\n    echo -e \"\\n Downloading latest Bedrock server\"\r\n    curl -L -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.$RANDVERSION.212 Safari/537.36\" -H \"Accept-Language: en\" -H \"Accept-Encoding: gzip, deflate\" -o versions.html.gz https://net-secondary.web.minecraft-services.net/api/v1.0/download/links\r\n    DOWNLOAD_URL=$(zgrep -o 'https://www.minecraft.net/bedrockdedicatedserver/bin-linux/[^\"]*' versions.html.gz)\r\nelse \r\n    echo -e \"\\n Downloading ${BEDROCK_VERSION} Bedrock server\"\r\n    DOWNLOAD_URL=https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-$BEDROCK_VERSION.zip\r\nfi\r\n\r\nDOWNLOAD_FILE=$(echo ${DOWNLOAD_URL} | cut -d\"/\" -f5) # Retrieve archive name\r\n\r\necho -e \"backing up config files\"\r\nrm *.bak versions.html.gz\r\ncp server.properties server.properties.bak\r\ncp permissions.json permissions.json.bak\r\ncp allowlist.json allowlist.json.bak\r\n\r\n\r\necho -e \"Downloading files from: $DOWNLOAD_URL\"\r\n\r\ncurl -L -A \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.$RANDVERSION.212 Safari/537.36\" -H \"Accept-Language: en\" -o $DOWNLOAD_FILE $DOWNLOAD_URL\r\n\r\necho -e \"Unpacking server files\"\r\nunzip -o $DOWNLOAD_FILE\r\n\r\necho -e \"Cleaning up after installing\"\r\nrm $DOWNLOAD_FILE\r\n\r\necho -e \"restoring backup config files - on first install there will be file not found errors which you can ignore.\"\r\ncp -rf server.properties.bak server.properties\r\ncp -rf permissions.json.bak permissions.json\r\ncp -rf allowlist.json.bak allowlist.json\r\n\r\nchmod +x bedrock_server\r\n\r\necho -e \"Install Completed\"",
+      "script": "#!/bin/bash\n# Bedrock Dedicated Server installation (Octail): Mojang's Linux server zip, \"latest\" from Mojang's download\n# links API (net-secondary.web.minecraft-services.net, the list minecraft.net/download/server/bedrock uses) or a\n# version such as 1.21.124.2. Mojang publishes no checksum; the zip's Content-MD5 (the MD5 its storage keeps)\n# is checked when the answer has one, and the zip must test clean and hold bedrock_server. Worlds,\n# server.properties, allowlist.json and permissions.json stay on reinstall.\n#\n# Server files: /mnt/server\nset -euo pipefail\n\nfail() {\n\techo \"Installation failed: $*\"\n\texit 1\n}\n\n# installer_debian has curl, jq and unzip.\n\n# Mojang's CDN refuses script user agents, so the download names a browser.\nUA=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\"\nget() { curl -fsSL --connect-timeout 30 --max-time 120 --retry 3 -A \"${UA}\" -H \"Accept-Language: en\" \"$@\"; }\n\nVERSION=\"${BEDROCK_VERSION:-latest}\"\n[ -n \"${VERSION}\" ] || VERSION=latest\nif [ \"${VERSION}\" = latest ]; then\n\tLINKS=$(get https://net-secondary.web.minecraft-services.net/api/v1.0/download/links) ||\n\t\tfail \"Mojang's download links API didn't answer\"\n\tURL=$(echo \"${LINKS}\" | jq -r '[.result.links[] | select(.downloadType == \"serverBedrockLinux\")][0].downloadUrl // empty')\nelse\n\techo \"${VERSION}\" | grep -Eq '^[0-9]+(\\.[0-9]+){2,3}$' ||\n\t\tfail \"the Bedrock version (${VERSION}) must be a version such as 1.21.124.2 or latest\"\n\tURL=\"https://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-${VERSION}.zip\"\nfi\ncase \"${URL}\" in\nhttps://www.minecraft.net/bedrockdedicatedserver/bin-linux/bedrock-server-*.zip) ;;\n*) fail \"Mojang's download links API named no Linux server (${URL:-nothing})\" ;;\nesac\nZIP=\"${URL##*/}\"\nNAME=\"${ZIP%.zip}\"\n\nmkdir -p /mnt/server\ncd /mnt/server\nWORK=$(mktemp -d)\ntrap 'rm -rf \"${WORK}\"' EXIT\n\necho \"Downloading ${NAME} from ${URL}\"\nget --max-time 1800 -D \"${WORK}/headers\" -o \"${WORK}/${ZIP}\" \"${URL}\" ||\n\tfail \"the download of ${NAME} failed (a version that doesn't exist fails here too)\"\nMD5=$(tr -d '\\r' <\"${WORK}/headers\" | sed -n 's/^[Cc]ontent-[Mm][Dd]5: *//p' | tail -n 1)\nif [ -n \"${MD5}\" ]; then\n\tWANT=$(printf '%s' \"${MD5}\" | base64 -d | od -An -tx1 | tr -d ' \\n')\n\tGOT=$(md5sum \"${WORK}/${ZIP}\" | cut -d ' ' -f 1)\n\t[ \"${WANT}\" = \"${GOT}\" ] || fail \"${ZIP} doesn't match the MD5 its server sent (expected ${WANT}, got ${GOT})\"\n\techo \"MD5 ${GOT} checked against the download's Content-MD5.\"\nelse\n\techo \"The download came without a Content-MD5; only the zip's own CRCs are checked.\"\nfi\nunzip -tq \"${WORK}/${ZIP}\" >/dev/null || fail \"${ZIP} is damaged\"\nLIST=$(unzip -Z1 \"${WORK}/${ZIP}\") || fail \"${ZIP} is damaged\"\ngrep -qx bedrock_server <<<\"${LIST}\" || fail \"${ZIP} holds no bedrock_server\"\n\n# The owner's settings and lists survive the unzip (the zip carries default ones).\nKEEP=\"server.properties permissions.json allowlist.json\"\nfor f in ${KEEP}; do\n\tif [ -f \"${f}\" ]; then cp -f \"${f}\" \"${WORK}/${f}.keep\"; fi\ndone\nunzip -oq \"${WORK}/${ZIP}\" -d /mnt/server\nfor f in ${KEEP}; do\n\tif [ -f \"${WORK}/${f}.keep\" ]; then cp -f \"${WORK}/${f}.keep\" \"${f}\"; fi\ndone\nchmod +x bedrock_server\nrm -f versions.html.gz ./*.bak\n\necho \"${NAME} installed. Bedrock players join on the server's UDP port.\"",
       "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
       "entrypoint": "bash"
     }
@@ -136,6 +136,20 @@
     }
   ],
   "x_octail": {
-    "category": "Minecraft"
+    "category": "Minecraft",
+    "features": {
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 2048,
+        "disk_mb": 4096
+      }
+    }
   }
 }

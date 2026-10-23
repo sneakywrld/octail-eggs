@@ -1,0 +1,100 @@
+{
+  "_comment": "Octail's own egg. Octail downloads the official TES3MP 0.8.1 Linux server package from GitHub, checks it against a SHA-256 recorded in the script (the project publishes none), adds Debian 12's LuaJIT library (the package links it but doesn't bundle it; apt checks Debian's signatures), keeps server/ (CoreScripts with the players, cells and world) and tes3mp-server-default.cfg on a reinstall, edits that file with the ini parser before every start (port, slots, name, password, master server listing), runs on octail-yolks' Debian image and adds the Ctrl+C stop, the log-only console (the server reads no input), the UDP port start check, install sandbox defaults and resource hints. The server needs no Morrowind files: each player needs their own copy of Morrowind with both expansions and the TES3MP 0.8.1 client.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": "https://raw.githubusercontent.com/sneakywrld/octail-eggs/main/standalone/tes3mp.json"
+  },
+  "exported_at": "2026-10-23T00:00:00+00:00",
+  "name": "TES3MP (Morrowind multiplayer)",
+  "author": "eggs@octail.net",
+  "uuid": "36de1ce6-c52e-4356-94e4-5f60360de2c0",
+  "description": "TES3MP is a free, open-source multiplayer mod for The Elder Scrolls III: Morrowind, built on OpenMW. The server runs without the game files; players need Morrowind (with Tribunal and Bloodmoon) and the TES3MP 0.8.1 client.",
+  "features": null,
+  "docker_images": {
+    "Debian": "ghcr.io/sneakywrld/octail-yolks:debian"
+  },
+  "file_denylist": [],
+  "startup": "[ -x ./tes3mp-server.x86_64 ] || { echo \"TES3MP is not installed: reinstall the server.\"; exit 1; }; export LD_LIBRARY_PATH=\"$(pwd)/lib\"; exec ./tes3mp-server.x86_64",
+  "config": {
+    "files": "{\n    \"tes3mp-server-default.cfg\": {\n        \"parser\": \"ini\",\n        \"find\": {\n            \"General.port\": \"{{server.allocations.default.port}}\",\n            \"General.maximumPlayers\": \"{{server.environment.MAX_PLAYERS}}\",\n            \"General.hostname\": \"{{server.environment.SERVER_NAME}}\",\n            \"General.password\": \"{{server.environment.SERVER_PASSWORD}}\",\n            \"MasterServer.enabled\": \"{{server.environment.MASTER_SERVER}}\"\n        }\n    }\n}",
+    "startup": "{\n    \"done\": \"Called \\\"OnServerPostInit\\\"\"\n}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\n# TES3MP installation script (Octail): the official 0.8.1 Linux server package from GitHub, checked against the\n# SHA-256 recorded here, plus Debian 12's LuaJIT library (the package doesn't bundle it; apt checks Debian's\n# signatures). The server needs no Morrowind data: only the players do. Failures exit non-zero.\n#\n# Server Files: /mnt/server\nset -euo pipefail\n\n## TES3MP 0.8.1, the current release (2022). GitHub publishes no checksum for it, so Octail recorded the archive's\n## SHA-256 (2026-10-23). A new release needs it updated here (and in CoreScripts' expected version).\nVERSION=0.8.1\nFILE=\"tes3mp-server-GNU+Linux-x86_64-release-0.8.1-68954091c5-6da3fdea59.tar.gz\"\nSHA256=106a56e32a00ff7a92b574fae0e25671e90a199f509b16d483a8d7da6fc3bcf0\n\napt-get update -qq\napt-get install -y -qq curl tar gzip ca-certificates > /dev/null\n\nif [ \"$(uname -m)\" != x86_64 ]; then\n    echo \"Installation failed: this egg installs TES3MP's Linux x86_64 server (this node is $(uname -m)).\"\n    exit 1\nfi\n\ncd /mnt/server\nDL=/mnt/server/.tes3mp-download.tar.gz\nURL=\"https://github.com/TES3MP/TES3MP/releases/download/tes3mp-${VERSION}/tes3mp-server-GNU%2BLinux-x86_64-release-0.8.1-68954091c5-6da3fdea59.tar.gz\"\necho \"Downloading ${FILE} from GitHub\"\nif ! curl -fSL --connect-timeout 30 --max-time 1800 --retry 3 -o \"$DL\" \"$URL\"; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download from GitHub failed.\"\n    exit 1\nfi\nif ! echo \"${SHA256}  ${DL}\" | sha256sum -c --quiet -; then\n    rm -f \"$DL\"\n    echo \"Installation failed: the download doesn't match TES3MP ${VERSION}'s checksum.\"\n    exit 1\nfi\n\nrm -rf /mnt/server/.tes3mp-unpack\nmkdir -p /mnt/server/.tes3mp-unpack\nU=/mnt/server/.tes3mp-unpack/TES3MP-server\ntar -xzf \"$DL\" -C /mnt/server/.tes3mp-unpack --exclude='TES3MP-server/_deps' \\\n    --exclude='TES3MP-server/source.tar.gz' --exclude='TES3MP-server/server/.git'\nrm -f \"$DL\"\nif [ ! -f \"$U/tes3mp-server.x86_64\" ] || [ ! -f \"$U/tes3mp-server-default.cfg\" ]; then\n    rm -rf /mnt/server/.tes3mp-unpack\n    echo \"Installation failed: tes3mp-server is missing from ${FILE}.\"\n    exit 1\nfi\n\n## the server's own files are replaced; server/ (CoreScripts with your players, cells, world and custom scripts) and\n## tes3mp-server-default.cfg (your settings) are kept when they exist\nif [ -d server ]; then\n    rm -rf \"$U/server\"\nelse\n    mv \"$U/server\" .\nfi\nif [ -f tes3mp-server-default.cfg ]; then\n    rm -f \"$U/tes3mp-server-default.cfg\"\nfi\nrm -rf lib resources\ncp -a \"$U\"/. /mnt/server/\nrm -rf /mnt/server/.tes3mp-unpack\nchmod +x tes3mp-server.x86_64\n\n## LuaJIT 2.1, which the server links (libluajit-5.1.so.2), from Debian 12: apt verifies the package\nmkdir -p /tmp/luajit\ncd /tmp/luajit\napt-get download -qq libluajit-5.1-2 > /dev/null\ndpkg-deb -x libluajit-5.1-2_*.deb root\nLIB=$(find root -name 'libluajit-5.1.so.2*' -type f | head -n 1)\nif [ -z \"$LIB\" ]; then\n    echo \"Installation failed: LuaJIT isn't in Debian's libluajit-5.1-2 package.\"\n    exit 1\nfi\ncp -f \"$LIB\" /mnt/server/lib/libluajit-5.1.so.2\ncd /mnt/server\nrm -rf /tmp/luajit\n\n## install end\necho \"-----------------------------------------\"\necho \"Installation completed: TES3MP ${VERSION}.\"\necho \"-----------------------------------------\"",
+      "container": "ghcr.io/sneakywrld/octail-yolks:installer_debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Server Name",
+      "description": "The name in the TES3MP server browser (up to 64 characters).",
+      "env_variable": "SERVER_NAME",
+      "default_value": "TES3MP server",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[^\\r\\n]*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Server Password",
+      "description": "Optional: players must enter it to join. Empty = anyone can join. No spaces.",
+      "env_variable": "SERVER_PASSWORD",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|regex:/^\\S*$/|max:64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Max Players",
+      "description": "Player slots (1-64).",
+      "env_variable": "MAX_PLAYERS",
+      "default_value": "16",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|integer|between:1,64",
+      "sort": null,
+      "field_type": "text"
+    },
+    {
+      "name": "Public Server List",
+      "description": "true lists the server on the TES3MP master server (the browser in the client); false keeps it off the list (players join by address).",
+      "env_variable": "MASTER_SERVER",
+      "default_value": "true",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:true,false",
+      "sort": null,
+      "field_type": "text"
+    }
+  ],
+  "tags": [
+    "tes3mp",
+    "morrowind",
+    "open-source"
+  ],
+  "x_octail": {
+    "category": "TES3MP",
+    "features": {
+      "no_console_input": true,
+      "ready": {
+        "port": "primary",
+        "proto": "udp"
+      },
+      "install_sandbox": {
+        "network": "internet",
+        "timeout_s": 1800
+      },
+      "resources": {
+        "memory_mb": 512,
+        "disk_mb": 1024
+      }
+    }
+  }
+}

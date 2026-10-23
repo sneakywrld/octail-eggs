@@ -8,7 +8,7 @@
   "name": "Killing Floor",
   "author": "eggs@octail.net",
   "uuid": "a9b60b14-cdb8-48d6-8dae-7ac84f4a4d79",
-  "description": "Killing Floor is a co-operative survival horror shooter by Tripwire Interactive: up to six players hold out against waves of Zeds, the clone specimens of Horzine Biotech, across London, buying weapons between waves.",
+  "description": "Killing Floor is a co-operative survival horror shooter by Tripwire Interactive: up to six players hold out against waves of Zeds, the clone specimens of Horzine Biotech, across London, buying weapons between waves. Needs a logged-in Steam account (anonymous SteamCMD can't download the server; the account needn't own Killing Floor).",
   "tags": [
     "killing-floor",
     "steamcmd"
