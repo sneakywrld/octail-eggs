@@ -194,6 +194,10 @@
       ],
       "sleep": {
         "mode": "udp"
+      },
+      "resources": {
+        "memory_mb": 12288,
+        "disk_mb": 20480
       }
     }
   }
