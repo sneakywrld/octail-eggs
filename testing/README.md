@@ -7,7 +7,7 @@ Back to [all eggs](../README.md#testing).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Octail Test Game | [test-game.json](test-game.json) | [`alpine`](https://github.com/sneakywrld/octail-yolks#alpine) | – | [—](../TESTED.md#testing-test-game) | – |
+| Octail Test Game | [test-game.json](test-game.json) | [`alpine`](https://github.com/sneakywrld/octail-yolks#alpine) | – | [✓ 2026-10-24](../TESTED.md#testing-test-game) | – |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

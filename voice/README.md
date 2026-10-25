@@ -8,7 +8,7 @@ Back to [all eggs](../README.md#voice-servers).
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Mumble Server | [mumble.json](mumble.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-12](../TESTED.md#voice-mumble) | no console input, start detected by port |
-| TeamSpeak 3 Server | [teamspeak.json](teamspeak.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | QUERY_PORT +1, FILE_TRANSFER_PORT +2 | [—](../TESTED.md#voice-teamspeak) | no console input, start detected by port |
+| TeamSpeak 3 Server | [teamspeak.json](teamspeak.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | QUERY_PORT +1, FILE_TRANSFER_PORT +2 | [✓ 2026-10-24](../TESTED.md#voice-teamspeak) | no console input, start detected by port |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

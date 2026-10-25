@@ -2,26 +2,26 @@
 window.OCTAIL_STATS = {
   "schema": 1,
   "repo": "sneakywrld/octail-eggs",
-  "date": "2026-10-24",
+  "date": "2026-10-25",
   "eggs": 158,
   "categories": [
     {
       "folder": "minecraft",
       "title": "Minecraft",
       "eggs": 23,
-      "pass": 21,
+      "pass": 23,
       "fail": 0,
       "blocked": 0,
-      "untested": 2
+      "untested": 0
     },
     {
       "folder": "source",
       "title": "Source",
       "eggs": 16,
-      "pass": 11,
-      "fail": 1,
+      "pass": 15,
+      "fail": 0,
       "blocked": 0,
-      "untested": 4
+      "untested": 1
     },
     {
       "folder": "goldsrc",
@@ -45,10 +45,10 @@ window.OCTAIL_STATS = {
       "folder": "ark",
       "title": "ARK",
       "eggs": 2,
-      "pass": 1,
+      "pass": 2,
       "fail": 0,
       "blocked": 0,
-      "untested": 1
+      "untested": 0
     },
     {
       "folder": "valheim",
@@ -72,19 +72,19 @@ window.OCTAIL_STATS = {
       "folder": "steam",
       "title": "Steam games",
       "eggs": 65,
-      "pass": 34,
+      "pass": 52,
       "fail": 0,
-      "blocked": 8,
-      "untested": 23
+      "blocked": 11,
+      "untested": 2
     },
     {
       "folder": "steamcmd",
       "title": "SteamCMD",
       "eggs": 1,
-      "pass": 0,
+      "pass": 1,
       "fail": 0,
       "blocked": 0,
-      "untested": 1
+      "untested": 0
     },
     {
       "folder": "standalone",
@@ -99,38 +99,38 @@ window.OCTAIL_STATS = {
       "folder": "voice",
       "title": "Voice servers",
       "eggs": 2,
-      "pass": 1,
+      "pass": 2,
       "fail": 0,
       "blocked": 0,
-      "untested": 1
+      "untested": 0
     },
     {
       "folder": "apps",
       "title": "Apps",
       "eggs": 12,
-      "pass": 10,
+      "pass": 11,
       "fail": 0,
-      "blocked": 0,
-      "untested": 2
+      "blocked": 1,
+      "untested": 0
     },
     {
       "folder": "testing",
       "title": "Testing",
       "eggs": 1,
-      "pass": 0,
+      "pass": 1,
       "fail": 0,
       "blocked": 0,
-      "untested": 1
+      "untested": 0
     }
   ],
   "tested": {
-    "pass": 111,
-    "fail": 1,
-    "blocked": 11,
-    "untested": 35,
-    "runs": 112,
-    "pass_rate": 99.1,
-    "coverage": 70.9,
+    "pass": 140,
+    "fail": 0,
+    "blocked": 15,
+    "untested": 3,
+    "runs": 140,
+    "pass_rate": 100,
+    "coverage": 88.6,
     "last_run": "2026-10-24"
   },
   "images": [
@@ -139,77 +139,77 @@ window.OCTAIL_STATS = {
       "kind": "runtime",
       "ours": true,
       "eggs": 47,
-      "pass": 27
+      "pass": 38
     },
     {
       "image": "debian",
       "kind": "runtime",
       "ours": true,
       "eggs": 29,
-      "pass": 25
+      "pass": 26
     },
     {
       "image": "java_21",
       "kind": "runtime",
       "ours": true,
       "eggs": 22,
-      "pass": 19
+      "pass": 22
     },
     {
       "image": "source",
       "kind": "runtime",
       "ours": true,
       "eggs": 21,
-      "pass": 17
+      "pass": 21
     },
     {
       "image": "java_25",
       "kind": "runtime",
       "ours": true,
       "eggs": 20,
-      "pass": 16
+      "pass": 19
     },
     {
       "image": "java_17",
       "kind": "runtime",
       "ours": true,
       "eggs": 18,
-      "pass": 16
+      "pass": 18
     },
     {
       "image": "wine",
       "kind": "runtime",
       "ours": true,
       "eggs": 14,
-      "pass": 4
+      "pass": 11
     },
     {
       "image": "java_11",
       "kind": "runtime",
       "ours": true,
       "eggs": 12,
-      "pass": 10
+      "pass": 12
     },
     {
       "image": "java_8",
       "kind": "runtime",
       "ours": true,
       "eggs": 12,
-      "pass": 10
+      "pass": 12
     },
     {
       "image": "proton",
       "kind": "runtime",
       "ours": true,
       "eggs": 6,
-      "pass": 4
+      "pass": 6
     },
     {
       "image": "wine_staging",
       "kind": "runtime",
       "ours": true,
       "eggs": 4,
-      "pass": 2
+      "pass": 3
     },
     {
       "image": "dotnet_10",
@@ -223,14 +223,14 @@ window.OCTAIL_STATS = {
       "kind": "runtime",
       "ours": true,
       "eggs": 3,
-      "pass": 1
+      "pass": 2
     },
     {
       "image": "alpine",
       "kind": "runtime",
       "ours": true,
       "eggs": 2,
-      "pass": 1
+      "pass": 2
     },
     {
       "image": "dotnet_8",
@@ -349,14 +349,14 @@ window.OCTAIL_STATS = {
       "kind": "installer",
       "ours": true,
       "eggs": 132,
-      "pass": 89
+      "pass": 115
     },
     {
       "image": "installer_alpine",
       "kind": "installer",
       "ours": true,
       "eggs": 21,
-      "pass": 17
+      "pass": 20
     },
     {
       "image": "installer_java_21",
@@ -389,7 +389,7 @@ window.OCTAIL_STATS = {
   ],
   "added": {
     "days": 30,
-    "since": "2026-09-24",
+    "since": "2026-09-25",
     "known": true,
     "eggs": [
       {
@@ -1306,8 +1306,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 59,
+        "peak_mib": 5722,
+        "limit_mib": 12288,
+        "disk_mib": 24096,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -1341,11 +1347,11 @@ window.OCTAIL_STATS = {
         "result": "pass",
         "date": "2026-10-24",
         "image": "steamcmd_debian",
-        "ready_s": 17,
-        "peak_mib": 2428,
+        "ready_s": 19,
+        "peak_mib": 2437,
         "limit_mib": 6144,
-        "disk_mib": 10206,
-        "node": "node1"
+        "disk_mib": 10207,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -1360,8 +1366,8 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "blocked",
+        "note": "needs a Steam game server login token for app 1898300 (AUTH_TOKEN): without one the session fails with CustomAuthenticationFailed"
       },
       "added": "2026-10-12"
     },
@@ -1517,8 +1523,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Source); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "source",
+        "ready_s": 17,
+        "peak_mib": 329,
+        "limit_mib": 3072,
+        "disk_mib": 29820,
+        "node": "wings-fr1"
       },
       "added": "2026-10-13"
     },
@@ -1951,8 +1963,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 42,
+        "peak_mib": 868,
+        "limit_mib": 8192,
+        "disk_mib": 18472,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -2151,8 +2169,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 53,
+        "peak_mib": 3058,
+        "limit_mib": 8192,
+        "disk_mib": 2731,
+        "node": "wings-fr1"
       },
       "added": "2026-10-23"
     },
@@ -2212,7 +2236,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 1,
+        "peak_mib": 13,
+        "limit_mib": 10515,
+        "disk_mib": 3389,
+        "node": "wings-fr1"
       },
       "added": "2026-10-07"
     },
@@ -2228,7 +2259,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_alpine",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "java_25",
+        "ready_s": 6,
+        "peak_mib": 339,
+        "limit_mib": 1024,
+        "disk_mib": 59,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -2332,7 +2370,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 12,
+        "peak_mib": 697,
+        "limit_mib": 4096,
+        "disk_mib": 10148,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -2428,8 +2473,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_ubuntu",
+        "ready_s": 83,
+        "peak_mib": 1073,
+        "limit_mib": 3072,
+        "disk_mib": 5089,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -2448,7 +2499,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "java_21",
+        "ready_s": 9,
+        "peak_mib": 40,
+        "limit_mib": 1024,
+        "disk_mib": 2,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -2680,8 +2738,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 25,
+        "peak_mib": 612,
+        "limit_mib": 4096,
+        "disk_mib": 5571,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -2717,8 +2781,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 62,
+        "peak_mib": 5894,
+        "limit_mib": 12288,
+        "disk_mib": 8224,
+        "node": "wings-fr1"
       },
       "added": "2026-10-13"
     },
@@ -2825,8 +2895,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 32,
+        "peak_mib": 1281,
+        "limit_mib": 8192,
+        "disk_mib": 7348,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -2841,8 +2917,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg; not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 22,
+        "peak_mib": 2346,
+        "limit_mib": 10443,
+        "disk_mib": 10919,
+        "node": "wings-fr1"
       },
       "added": "2026-10-23"
     },
@@ -2903,7 +2985,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_alpine",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "alpine",
+        "ready_s": 2,
+        "peak_mib": 1,
+        "limit_mib": 7398,
+        "disk_mib": 0,
+        "node": "wings-fr1"
       },
       "added": "2026-10-06"
     },
@@ -2998,7 +3087,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 10,
+        "peak_mib": 261,
+        "limit_mib": 4096,
+        "disk_mib": 6985,
+        "node": "wings-fr1"
       },
       "added": "2026-10-23"
     },
@@ -3014,7 +3110,7 @@ window.OCTAIL_STATS = {
       "installer": "installer_debian",
       "tested": {
         "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "note": "not re-run on octail-yolks yet: vm1 (the only node) hadn't the 8 GB of free memory it needs on 2026-10-24; it runs live on vm1 on octail-yolks"
       },
       "added": "2026-10-08"
     },
@@ -3071,8 +3167,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 102,
+        "peak_mib": 3103,
+        "limit_mib": 8192,
+        "disk_mib": 4778,
+        "node": "wings-fr1"
       },
       "added": "2026-10-13"
     },
@@ -3317,8 +3419,8 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg; not yet run on a node"
+        "result": "blocked",
+        "note": "needs a Discord bot token (RED_TOKEN)"
       },
       "added": "2026-10-23"
     },
@@ -3370,8 +3472,8 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg; not yet run on a node"
+        "result": "blocked",
+        "note": "needs the owner's RuneScape: Dragonwilds Player ID (the server doesn't start without it)"
       },
       "added": "2026-10-23"
     },
@@ -3489,8 +3591,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 142,
+        "peak_mib": 8733,
+        "limit_mib": 15556,
+        "disk_mib": 2446,
+        "node": "wings-fr1"
       },
       "added": "2026-10-09"
     },
@@ -3505,7 +3613,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "source",
+        "ready_s": 66,
+        "peak_mib": 132,
+        "limit_mib": 11553,
+        "disk_mib": 2613,
+        "node": "wings-fr1"
       },
       "added": "2026-10-07"
     },
@@ -3636,7 +3751,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 31,
+        "peak_mib": 3121,
+        "limit_mib": 6144,
+        "disk_mib": 33583,
+        "node": "wings-fr1"
       },
       "added": "2026-10-13"
     },
@@ -3690,8 +3812,8 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "blocked",
+        "note": "needs a Steam account that owns Stormworks (app 1247090 is now a stub; the server ships with the base game, app 573090)"
       },
       "added": "2026-10-12"
     },
@@ -3749,8 +3871,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "source",
+        "ready_s": 21,
+        "peak_mib": 603,
+        "limit_mib": 2048,
+        "disk_mib": 15002,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -3765,12 +3893,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "fail",
-        "date": "2026-10-13",
+        "result": "pass",
+        "date": "2026-10-24",
         "image": "source",
+        "ready_s": 25,
+        "peak_mib": 400,
         "limit_mib": 3072,
-        "node": "node1",
-        "note": "install install_failed after 442 s: UpdateUI: skip show logo / [----] !!! Fatal Error: Steamcmd needs 250MB of free disk space to update. / SteamCMD did not fi…"
+        "disk_mib": 22239,
+        "node": "wings-fr1"
       },
       "added": "2026-10-13"
     },
@@ -3806,7 +3936,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "debian",
+        "ready_s": 11,
+        "peak_mib": 19,
+        "limit_mib": 256,
+        "disk_mib": 21,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -3909,8 +4046,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 37,
+        "peak_mib": 1131,
+        "limit_mib": 4096,
+        "disk_mib": 2027,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -3925,8 +4068,15 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 36,
+        "peak_mib": 8418,
+        "limit_mib": 8192,
+        "disk_mib": 3478,
+        "node": "wings-fr1",
+        "note": "peak 8.2 GB of an 8 GB cap"
       },
       "added": "2026-10-09"
     },
@@ -3941,7 +4091,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 22,
+        "peak_mib": 1393,
+        "limit_mib": 6326,
+        "disk_mib": 1717,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -3956,8 +4113,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Wine); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "wine",
+        "ready_s": 37,
+        "peak_mib": 1072,
+        "limit_mib": 8192,
+        "disk_mib": 4429,
+        "node": "wings-fr1"
       },
       "added": "2026-10-12"
     },
@@ -4239,7 +4402,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_alpine",
       "tested": {
-        "result": "untested"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "java_25",
+        "ready_s": 14,
+        "peak_mib": 447,
+        "limit_mib": 4096,
+        "disk_mib": 59,
+        "node": "wings-fr1"
       },
       "added": "2026-10-23"
     },
@@ -4254,8 +4424,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg; not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "steamcmd_debian",
+        "ready_s": 22,
+        "peak_mib": 3525,
+        "limit_mib": 6144,
+        "disk_mib": 9521,
+        "node": "wings-fr1"
       },
       "added": "2026-10-23"
     },
@@ -4338,8 +4514,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "new egg (Proton); not yet run on a node"
+        "result": "pass",
+        "date": "2026-10-24",
+        "image": "proton",
+        "ready_s": 31,
+        "peak_mib": 1048,
+        "limit_mib": 11353,
+        "disk_mib": 3262,
+        "node": "wings-fr1"
       },
       "added": "2026-10-23"
     },

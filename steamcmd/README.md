@@ -7,7 +7,7 @@ Back to [all eggs](../README.md#steamcmd).
 
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
-| Generic SteamCMD game | [generic.json](generic.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | [—](../TESTED.md#steamcmd-generic) | sleep (udp), Proton |
+| Generic SteamCMD game | [generic.json](generic.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) [`proton`](https://github.com/sneakywrld/octail-yolks#proton) | – | [✓ 2026-10-24](../TESTED.md#steamcmd-generic) | sleep (udp), Proton |
 
 Extra ports are the ports Octail assigns next to the primary one (`+1` = primary port + 1). Notes: RCON (and its protocol), the Players tab or a player count, idle sleep (wake on connect), Wine/Proton and other things to know.
 

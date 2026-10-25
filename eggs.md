@@ -80,7 +80,7 @@ installs and runs on Octail's own images.
 
 ## Where things stand
 
-Numbers as of 2026-10-24, after the round 30 smoke batches.
+Numbers as of 2026-10-24, after every egg that could run had a turn on vm1.
 
 **158 eggs** in 13 folders:
 
@@ -99,14 +99,70 @@ stop):
 
 | Result     | Eggs | Meaning                                                                                                                   |
 | ---------- | ---: | ------------------------------------------------------------------------------------------------------------------------- |
-| `pass`     |  111 | ran on an octail-yolks image                                                                                              |
-| `untested` |   35 | not yet run on octail-yolks                                                                                               |
-| `blocked`  |   11 | can't be run yet: needs a token, a Steam account, the EULA, a port pair, game data files, or upstream to fix its download |
-| `fail`     |    1 | Team Fortress 2 Classified (see the changelog)                                                                            |
+| `pass`     |  140 | ran on an octail-yolks image                                                                                              |
+| `untested` |    3 | not yet run on octail-yolks                                                                                               |
+| `blocked`  |   15 | can't be run yet: needs a token, a Steam account, the EULA, a port pair, game data files, or upstream to fix its download |
+| `fail`     |    0 | none                                                                                                                      |
+
+## What's left
+
+- **Needs a decision**: Counter-Strike 2 downloads more than 60 GB (disk hint 80 GB now); it waits for an OK to
+  install that much on vm1, the only node, whose VMware datastore's free space the guest can't see.
+- **Running live, not smoke-tested**: Palworld and Satisfactory run on our own servers on vm1 on octail-yolks images.
+  The harness doesn't change an egg that live servers use, so their panel copies are updated from the shipped files
+  in Admin, then they can run.
+- **Needs something we don't have** (`blocked`):
+  - a Steam account that owns the game: Arma 3, Assetto Corsa, DayZ, Killing Floor, Starbound, Stormworks;
+  - a token or id: ASKA (Steam game server login token), BeamMP (AuthKey), Don't Starve Together (Klei cluster
+    token), Hytale (an account that owns it), Red-DiscordBot (a Discord bot token), RuneScape: Dragonwilds (the owner's
+    Player ID);
+  - game data files: OpenRCT2 (the original RollerCoaster Tycoon 2 files);
+  - node ports in pairs: Pavlov VR (the main port and the main port + 400);
+  - upstream: Risk of Rain 2 (Steam's public branch of the server carries an empty depot).
 
 ## Changelog
 
 Newest first. Dates are when the work landed in the panel repository; "round" is the batch of parallel work it came in.
+
+### 2026-10-24 (later): one egg at a time on vm1, and what that found
+
+With the test node gone, every egg that hadn't passed yet ran on vm1's Production node one at a time: never past
+the node's real free disk and memory, the disk trimmed after each one so the deleted test server's space goes back.
+**140 of 158 eggs pass** now (111 this morning), none fail; 15 wait for an account, a token or upstream and 3 for the
+reasons under "What's left".
+
+- **SteamCMD retries never retried.** SteamCMD exits 0 even after `ERROR! Failed to install app … (Missing
+configuration)`, so every egg's three-attempt loop stopped after the first failed run and the install then failed on
+  its own file check (Satisfactory did, on vm1). A run now counts only when SteamCMD printed its own `Success! App`
+  line and no `ERROR! Failed to install app` (87 eggs; the GoldSrc eggs already checked their files).
+- **Arma Reforger** "didn't install" for a customer on 2026-10-22: those installs ran on the old test node while its
+  disk was 8 GB, and the same egg installed on Production. A run on vm1 found the real problem: the server counted as
+  started on `Starting RPL server`, which comes before the scenario has loaded, and it ignores Stop until the world
+  runs (killed after 120 s). It's ready on `SCR_BaseGameMode::OnGameStateChanged = GAME` now; Stop saves and stops it
+  in about 3 s. Passes.
+- **SteamCMD (generic)**: its install stopped at once (`set -e` and a `chown` that reached the read-only install
+  script). Passes since.
+- **Windrose** ignores Ctrl+C under Proton: the stop waits up to 30 s, then SIGTERM (as Astroneer). Passes since.
+- **ASKA** failed when it opened its session (`String.Remove` in `_WriteServerSaveId`): it looks for Windows line ends
+  in its properties file, and both the install and Tentacle's config editor wrote it with LF. The install keeps it CRLF
+  now, and Tentacle's `file`, `properties` and `ini` editors keep any CRLF file CRLF. Then the session needed a Steam
+  game server login token: the Authentication Token is required now, and ASKA waits for one.
+- **Operation: Harsh Doorstop** was up but never counted as started: it had no ready line and its Steam socket isn't
+  seen as a bound UDP port. It's ready on the engine's `(Engine Initialization) Total time` now. Passes.
+- **Team Fortress 2 Classified**, the one failing egg, passes with room on the disk (22 GB).
+- **Hints from real runs**: The Front peaked at 8.2 GB (memory hint 10 GB now), Holdfast filled its 10 GB disk hint
+  with the install alone (14 GB), Squad 44's download outgrew 20 GB (33 GB installed, hint 40 GB), CS2's outgrew 60 GB
+  (hint 80 GB).
+- **Stormworks** needs a Steam account that owns the game (above).
+- **Blocked on something we don't have**: RuneScape: Dragonwilds (the owner's Player ID), Red-DiscordBot (a Discord bot
+  token), ASKA (a Steam game server token).
+- **Install progress**: Tentacle now reads how far an install is (SteamCMD's own percent and bytes, and its steps:
+  queued, getting the image, starting, downloading, verifying, finishing) and the panel shows a page of its own while a
+  server installs. Modpack installs show their step and files on every tab of the server.
+- **Modpacks** that switch Minecraft version finish now (the install waited for the loader's jar swap without asking
+  the node and gave up after 30 minutes), and a server moves to the Java its Minecraft version runs on when a version
+  change or a modpack install finishes (Cobblemon for 1.21.1 refused the Java 25 a 26.2 server had). Cobblemon installs
+  in 20 s on vm1 and starts with its 113 mods.
 
 ### 2026-10-24: the round 30 eggs on real nodes
 
@@ -120,6 +176,9 @@ on our own images, up from 59. What they found and what changed:
 - **Astroneer** ignores Ctrl+C under Proton: the stop waits up to 30 s, then sends SIGTERM. Passes since.
 - **Eco** ignored `exit` typed into its console under Tentacle; its stop is now Ctrl+C, on which it saves and shuts
   down in about 20 s. Passes since.
+- **Stormworks** needs a Steam account now: its free server tool (app 1247090) became a stub that only says the server
+  has moved into the base game. The egg downloads the game (app 573090, Windows) with a Steam account that owns
+  Stormworks (`steam_login`, required); the disk hint grows to 16 GB.
 - **Rust and Satisfactory** got memory and disk hints (8 GB / 20 GB and 12 GB / 20 GB).
 - **The app eggs** (Node.js, Python, Go, Bun, Deno) pass with a small test app uploaded before the start.
 - **Team Fortress 2 Classified** still fails: SteamCMD ran out of disk on the test node. It needs its 40 GB.
@@ -402,7 +461,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Folia             | `minecraft/folia.json`        | 2026-10-12  | `java_25`, `java_21`, `java_17`                      | `installer_alpine`  | pass (2026-10-24) |
 | Forge             | `minecraft/forge.json`        | 2026-10-07  | `java_25`, `java_21`, `java_17`, `java_11`, `java_8` | `installer_java_8`  | pass (2026-10-23) |
 | Gate              | `minecraft/gate.json`         | 2026-10-23  | `debian`                                             | `installer_alpine`  | pass (2026-10-24) |
-| Geyser Standalone | `minecraft/geyser.json`       | 2026-10-12  | `java_25`, `java_21`                                 | `installer_alpine`  | untested          |
+| Geyser Standalone | `minecraft/geyser.json`       | 2026-10-12  | `java_25`, `java_21`                                 | `installer_alpine`  | pass (2026-10-24) |
 | Leaf              | `minecraft/leaf.json`         | 2026-10-13  | `java_25`, `java_21`                                 | `installer_alpine`  | pass (2026-10-13) |
 | Mohist            | `minecraft/mohist.json`       | 2026-10-13  | `java_21`, `java_17`, `java_11`, `java_8`            | `installer_alpine`  | pass (2026-10-13) |
 | NanoLimbo         | `minecraft/nanolimbo.json`    | 2026-10-23  | `java_25`, `java_21`                                 | `installer_alpine`  | pass (2026-10-23) |
@@ -415,14 +474,14 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Quilt             | `minecraft/quilt.json`        | 2026-10-12  | `java_25`, `java_21`, `java_17`, `java_11`, `java_8` | `installer_java_21` | pass (2026-10-13) |
 | Spigot            | `minecraft/spigot.json`       | 2026-10-12  | `java_25`, `java_21`, `java_17`, `java_11`, `java_8` | `installer_java_25` | pass (2026-10-24) |
 | SpongeVanilla     | `minecraft/sponge.json`       | 2026-10-12  | `java_25`, `java_21`, `java_17`, `java_11`, `java_8` | `installer_alpine`  | pass (2026-10-24) |
-| Vanilla Minecraft | `minecraft/vanilla.json`      | 2026-10-23  | `java_25`, `java_21`, `java_17`, `java_11`, `java_8` | `installer_alpine`  | untested          |
+| Vanilla Minecraft | `minecraft/vanilla.json`      | 2026-10-23  | `java_25`, `java_21`, `java_17`, `java_11`, `java_8` | `installer_alpine`  | pass (2026-10-24) |
 | Velocity          | `minecraft/velocity.json`     | 2026-10-07  | `java_25`, `java_21`, `java_17`                      | `installer_alpine`  | pass (2026-10-23) |
 
 ### Source (`source/`, 16)
 
 | Egg                        | File                                     | First added | Runtime image     | Install image      | Smoke             |
 | -------------------------- | ---------------------------------------- | ----------- | ----------------- | ------------------ | ----------------- |
-| Black Mesa: Deathmatch     | `source/black-mesa.json`                 | 2026-10-13  | `source`          | `installer_debian` | untested          |
+| Black Mesa: Deathmatch     | `source/black-mesa.json`                 | 2026-10-13  | `source`          | `installer_debian` | pass (2026-10-24) |
 | Counter-Strike 2           | `source/counter-strike-2.json`           | 2026-10-08  | `steamcmd_sniper` | `installer_debian` | untested          |
 | Counter-Strike: Source     | `source/counter-strike-source.json`      | 2026-10-09  | `steamcmd_debian` | `installer_debian` | pass (2026-10-23) |
 | Day of Defeat: Source      | `source/day-of-defeat-source.json`       | 2026-10-09  | `source`          | `installer_debian` | pass (2026-10-23) |
@@ -434,9 +493,9 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Left 4 Dead 2              | `source/left-4-dead-2.json`              | 2026-10-08  | `source`          | `installer_debian` | pass (2026-10-24) |
 | Left 4 Dead                | `source/left-4-dead.json`                | 2026-10-13  | `source`          | `installer_debian` | pass (2026-10-13) |
 | No More Room in Hell       | `source/no-more-room-in-hell.json`       | 2026-10-12  | `source`          | `installer_debian` | pass (2026-10-24) |
-| Source Engine Game (SRCDS) | `source/generic.json`                    | 2026-10-07  | `source`          | `installer_debian` | untested          |
-| Team Fortress 2 Classified | `source/team-fortress-2-classified.json` | 2026-10-13  | `source`          | `installer_debian` | fail (2026-10-13) |
-| Team Fortress 2            | `source/team-fortress-2.json`            | 2026-10-08  | `source`          | `installer_debian` | untested          |
+| Source Engine Game (SRCDS) | `source/generic.json`                    | 2026-10-07  | `source`          | `installer_debian` | pass (2026-10-24) |
+| Team Fortress 2 Classified | `source/team-fortress-2-classified.json` | 2026-10-13  | `source`          | `installer_debian` | pass (2026-10-24) |
+| Team Fortress 2            | `source/team-fortress-2.json`            | 2026-10-08  | `source`          | `installer_debian` | pass (2026-10-24) |
 | Zombie Panic! Source       | `source/zombie-panic-source.json`        | 2026-10-13  | `source`          | `installer_debian` | pass (2026-10-16) |
 
 ### GoldSrc (`goldsrc/`, 7)
@@ -462,7 +521,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Egg                    | File                         | First added | Runtime image     | Install image      | Smoke             |
 | ---------------------- | ---------------------------- | ----------- | ----------------- | ------------------ | ----------------- |
 | ARK: Survival Ascended | `ark/survival-ascended.json` | 2026-10-08  | `proton`          | `installer_debian` | pass (2026-10-10) |
-| Ark: Survival Evolved  | `ark/survival-evolved.json`  | 2026-10-08  | `steamcmd_debian` | `installer_debian` | untested          |
+| Ark: Survival Evolved  | `ark/survival-evolved.json`  | 2026-10-08  | `steamcmd_debian` | `installer_debian` | pass (2026-10-24) |
 
 ### Valheim (`valheim/`, 2)
 
@@ -488,7 +547,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | American Truck Simulator Dedicated Server | `steam/american-truck-simulator.json`  | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Arma 3                                    | `steam/arma-3.json`                    | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | blocked           |
 | Arma Reforger                             | `steam/arma-reforger.json`             | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
-| ASKA                                      | `steam/aska.json`                      | 2026-10-12  | `wine`                 | `installer_debian` | untested          |
+| ASKA                                      | `steam/aska.json`                      | 2026-10-12  | `wine`                 | `installer_debian` | blocked           |
 | Assetto Corsa                             | `steam/assetto-corsa.json`             | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | blocked           |
 | Astroneer                                 | `steam/astroneer.json`                 | 2026-10-09  | `proton`               | `installer_debian` | pass (2026-10-24) |
 | Avorion                                   | `steam/avorion.json`                   | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-23) |
@@ -501,59 +560,59 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | DayZ                                      | `steam/dayz.json`                      | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | blocked           |
 | Don't Starve Together                     | `steam/dont-starve-together.json`      | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | blocked           |
 | Eco                                       | `steam/eco.json`                       | 2026-10-08  | `steamcmd_dotnet`      | `installer_debian` | pass (2026-10-24) |
-| Empyrion - Galactic Survival              | `steam/empyrion.json`                  | 2026-10-12  | `wine`, `wine_staging` | `installer_debian` | untested          |
+| Empyrion - Galactic Survival              | `steam/empyrion.json`                  | 2026-10-12  | `wine`, `wine_staging` | `installer_debian` | pass (2026-10-24) |
 | Enshrouded                                | `steam/enshrouded.json`                | 2026-10-08  | `proton`               | `installer_debian` | pass (2026-10-10) |
 | Euro Truck Simulator 2 Dedicated Server   | `steam/euro-truck-simulator-2.json`    | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
-| FOUNDRY                                   | `steam/foundry.json`                   | 2026-10-23  | `wine`                 | `installer_debian` | untested          |
+| FOUNDRY                                   | `steam/foundry.json`                   | 2026-10-23  | `wine`                 | `installer_debian` | pass (2026-10-24) |
 | Ground Branch                             | `steam/ground-branch.json`             | 2026-10-13  | `wine_staging`, `wine` | `installer_debian` | pass (2026-10-13) |
-| Holdfast: Nations At War                  | `steam/holdfast.json`                  | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Holdfast: Nations At War                  | `steam/holdfast.json`                  | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Hurtworld                                 | `steam/hurtworld.json`                 | 2026-10-09  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Icarus                                    | `steam/icarus.json`                    | 2026-10-09  | `wine`                 | `installer_debian` | pass (2026-10-10) |
-| Insurgency: Sandstorm                     | `steam/insurgency-sandstorm.json`      | 2026-10-08  | `steamcmd_ubuntu`      | `installer_debian` | untested          |
+| Insurgency: Sandstorm                     | `steam/insurgency-sandstorm.json`      | 2026-10-08  | `steamcmd_ubuntu`      | `installer_debian` | pass (2026-10-24) |
 | Killing Floor 2                           | `steam/killing-floor-2.json`           | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Killing Floor                             | `steam/killing-floor.json`             | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | blocked           |
-| Mordhau                                   | `steam/mordhau.json`                   | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | untested          |
-| Myth of Empires                           | `steam/myth-of-empires.json`           | 2026-10-13  | `wine`                 | `installer_debian` | untested          |
+| Mordhau                                   | `steam/mordhau.json`                   | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
+| Myth of Empires                           | `steam/myth-of-empires.json`           | 2026-10-13  | `wine`                 | `installer_debian` | pass (2026-10-24) |
 | Natural Selection 2                       | `steam/natural-selection-2.json`       | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-13) |
 | Necesse                                   | `steam/necesse.json`                   | 2026-10-09  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-23) |
-| Night of the Dead                         | `steam/night-of-the-dead.json`         | 2026-10-12  | `wine`                 | `installer_debian` | untested          |
-| Nightingale                               | `steam/nightingale.json`               | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | untested          |
-| Operation: Harsh Doorstop                 | `steam/operation-harsh-doorstop.json`  | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Night of the Dead                         | `steam/night-of-the-dead.json`         | 2026-10-12  | `wine`                 | `installer_debian` | pass (2026-10-24) |
+| Nightingale                               | `steam/nightingale.json`               | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
+| Operation: Harsh Doorstop                 | `steam/operation-harsh-doorstop.json`  | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Palworld                                  | `steam/palworld.json`                  | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | untested          |
 | Pavlov VR                                 | `steam/pavlov-vr.json`                 | 2026-10-09  | `steamcmd_ubuntu`      | `installer_debian` | blocked           |
-| PixARK                                    | `steam/pixark.json`                    | 2026-10-13  | `wine`                 | `installer_debian` | untested          |
+| PixARK                                    | `steam/pixark.json`                    | 2026-10-13  | `wine`                 | `installer_debian` | pass (2026-10-24) |
 | Project Zomboid                           | `steam/project-zomboid.json`           | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Quake Live                                | `steam/quake-live.json`                | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-13) |
-| The Lord of the Rings: Return to Moria    | `steam/return-to-moria.json`           | 2026-10-12  | `wine`                 | `installer_debian` | untested          |
+| The Lord of the Rings: Return to Moria    | `steam/return-to-moria.json`           | 2026-10-12  | `wine`                 | `installer_debian` | pass (2026-10-24) |
 | Rising World                              | `steam/rising-world.json`              | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-13) |
 | Risk of Rain 2                            | `steam/risk-of-rain-2.json`            | 2026-10-13  | `wine`                 | `installer_debian` | blocked           |
-| RuneScape: Dragonwilds                    | `steam/runescape-dragonwilds.json`     | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | untested          |
+| RuneScape: Dragonwilds                    | `steam/runescape-dragonwilds.json`     | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | blocked           |
 | Satisfactory                              | `steam/satisfactory.json`              | 2026-10-07  | `steamcmd_debian`      | `installer_debian` | untested          |
 | SCP: Secret Laboratory                    | `steam/scp-secret-laboratory.json`     | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Smalland: Survive the Wilds               | `steam/smalland.json`                  | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Sons Of The Forest                        | `steam/sons-of-the-forest.json`        | 2026-10-09  | `wine`                 | `installer_debian` | pass (2026-10-10) |
-| Soulmask                                  | `steam/soulmask.json`                  | 2026-10-09  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Soulmask                                  | `steam/soulmask.json`                  | 2026-10-09  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Space Engineers                           | `steam/space-engineers.json`           | 2026-10-09  | `wine`                 | `installer_debian` | pass (2026-10-10) |
-| Squad 44                                  | `steam/squad-44.json`                  | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Squad 44                                  | `steam/squad-44.json`                  | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Squad                                     | `steam/squad.json`                     | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-10) |
 | Starbound                                 | `steam/starbound.json`                 | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | blocked           |
 | Stationeers                               | `steam/stationeers.json`               | 2026-10-09  | `steamcmd_ubuntu`      | `installer_debian` | pass (2026-10-12) |
-| Stormworks: Build and Rescue              | `steam/stormworks.json`                | 2026-10-12  | `wine`, `wine_staging` | `installer_debian` | untested          |
-| The Forest                                | `steam/the-forest.json`                | 2026-10-12  | `wine`                 | `installer_debian` | untested          |
-| The Front                                 | `steam/the-front.json`                 | 2026-10-09  | `steamcmd_debian`      | `installer_debian` | untested          |
-| The Isle (Evrima)                         | `steam/the-isle.json`                  | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Stormworks: Build and Rescue              | `steam/stormworks.json`                | 2026-10-12  | `wine`, `wine_staging` | `installer_debian` | blocked           |
+| The Forest                                | `steam/the-forest.json`                | 2026-10-12  | `wine`                 | `installer_debian` | pass (2026-10-24) |
+| The Front                                 | `steam/the-front.json`                 | 2026-10-09  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
+| The Isle (Evrima)                         | `steam/the-isle.json`                  | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Unturned                                  | `steam/unturned.json`                  | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-23) |
 | V Rising BepInEx                          | `steam/v-rising.json`                  | 2026-10-08  | `wine_staging`         | `installer_debian` | pass (2026-10-10) |
-| VEIN                                      | `steam/vein.json`                      | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | untested          |
+| VEIN                                      | `steam/vein.json`                      | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Warfork                                   | `steam/warfork.json`                   | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-23) |
-| Windrose                                  | `steam/windrose.json`                  | 2026-10-23  | `proton`               | `installer_debian` | untested          |
+| Windrose                                  | `steam/windrose.json`                  | 2026-10-23  | `proton`               | `installer_debian` | pass (2026-10-24) |
 | Wurm Unlimited                            | `steam/wurm-unlimited.json`            | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-13) |
 
 ### SteamCMD (`steamcmd/`, 1)
 
-| Egg                   | File                    | First added | Runtime image               | Install image      | Smoke    |
-| --------------------- | ----------------------- | ----------- | --------------------------- | ------------------ | -------- |
-| Generic SteamCMD game | `steamcmd/generic.json` | 2026-10-07  | `steamcmd_debian`, `proton` | `installer_debian` | untested |
+| Egg                   | File                    | First added | Runtime image               | Install image      | Smoke             |
+| --------------------- | ----------------------- | ----------- | --------------------------- | ------------------ | ----------------- |
+| Generic SteamCMD game | `steamcmd/generic.json` | 2026-10-07  | `steamcmd_debian`, `proton` | `installer_debian` | pass (2026-10-24) |
 
 ### Standalone games (`standalone/`, 23)
 
@@ -588,7 +647,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Egg                | File                   | First added | Runtime image | Install image      | Smoke             |
 | ------------------ | ---------------------- | ----------- | ------------- | ------------------ | ----------------- |
 | Mumble Server      | `voice/mumble.json`    | 2026-10-12  | `debian`      | `installer_debian` | pass (2026-10-12) |
-| TeamSpeak 3 Server | `voice/teamspeak.json` | 2026-10-12  | `debian`      | `installer_debian` | untested          |
+| TeamSpeak 3 Server | `voice/teamspeak.json` | 2026-10-12  | `debian`      | `installer_debian` | pass (2026-10-24) |
 
 ### Apps (`apps/`, 12)
 
@@ -597,18 +656,18 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Bun App                   | `apps/bun-app.json`        | 2026-10-23  | `bun_1`                                              | `installer_debian` | pass (2026-10-24) |
 | Deno App                  | `apps/deno-app.json`       | 2026-10-23  | `deno_2`                                             | `installer_debian` | pass (2026-10-24) |
 | Go App                    | `apps/go-app.json`         | 2026-10-12  | `go_1.27`, `go_1.26`, `go_1.23`                      | `installer_debian` | pass (2026-10-24) |
-| Java App (JAR)            | `apps/java-jar.json`       | 2026-10-12  | `java_21`, `java_25`, `java_17`, `java_11`, `java_8` | `installer_debian` | untested          |
+| Java App (JAR)            | `apps/java-jar.json`       | 2026-10-12  | `java_21`, `java_25`, `java_17`, `java_11`, `java_8` | `installer_debian` | pass (2026-10-24) |
 | Lavalink                  | `apps/lavalink.json`       | 2026-10-23  | `java_21`, `java_25`, `java_17`                      | `installer_debian` | pass (2026-10-23) |
 | MariaDB                   | `apps/mariadb.json`        | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
 | Node.js App               | `apps/nodejs-app.json`     | 2026-10-12  | `nodejs_24`, `nodejs_22`, `nodejs_20`                | `installer_debian` | pass (2026-10-24) |
 | PostgreSQL                | `apps/postgresql.json`     | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
 | Python App                | `apps/python-app.json`     | 2026-10-12  | `python_3.14`, `python_3.13`, `python_3.12`          | `installer_debian` | pass (2026-10-24) |
-| Red-DiscordBot            | `apps/red-discordbot.json` | 2026-10-23  | `debian`                                             | `installer_debian` | untested          |
+| Red-DiscordBot            | `apps/red-discordbot.json` | 2026-10-23  | `debian`                                             | `installer_debian` | blocked           |
 | Uptime Kuma               | `apps/uptime-kuma.json`    | 2026-10-23  | `nodejs_22`                                          | `installer_debian` | pass (2026-10-23) |
 | Valkey (Redis-compatible) | `apps/valkey.json`         | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
 
 ### Testing (`testing/`, 1)
 
-| Egg              | File                     | First added | Runtime image | Install image      | Smoke    |
-| ---------------- | ------------------------ | ----------- | ------------- | ------------------ | -------- |
-| Octail Test Game | `testing/test-game.json` | 2026-10-06  | `alpine`      | `installer_alpine` | untested |
+| Egg              | File                     | First added | Runtime image | Install image      | Smoke             |
+| ---------------- | ------------------------ | ----------- | ------------- | ------------------ | ----------------- |
+| Octail Test Game | `testing/test-game.json` | 2026-10-06  | `alpine`      | `installer_alpine` | pass (2026-10-24) |
