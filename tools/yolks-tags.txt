@@ -5,7 +5,6 @@ deno_2
 dotnet_10
 dotnet_8
 dotnet_9
-go_1.23
 go_1.26
 go_1.27
 installer_alpine

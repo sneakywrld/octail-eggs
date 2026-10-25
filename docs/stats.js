@@ -268,13 +268,6 @@ window.OCTAIL_STATS = {
       "pass": 1
     },
     {
-      "image": "go_1.23",
-      "kind": "runtime",
-      "ours": true,
-      "eggs": 1,
-      "pass": 1
-    },
-    {
       "image": "go_1.26",
       "kind": "runtime",
       "ours": true,
@@ -2284,8 +2277,7 @@ window.OCTAIL_STATS = {
       "category": "Apps",
       "images": [
         "go_1.27",
-        "go_1.26",
-        "go_1.23"
+        "go_1.26"
       ],
       "installer": "installer_debian",
       "tested": {

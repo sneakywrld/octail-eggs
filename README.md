@@ -21,9 +21,9 @@ in [CHANGELOG.md](CHANGELOG.md); the history of every egg and the rules they fol
 
 ## Stats
 
-[![eggs: 158](https://img.shields.io/badge/eggs-158-blue)](#all-games) [![categories: 13](https://img.shields.io/badge/categories-13-blue)](#categories) [![smoke tests: 143 passed of 158](https://img.shields.io/badge/smoke%20tests-143%20passed%20of%20158-brightgreen)](TESTED.md) [![pass rate: 100%](https://img.shields.io/badge/pass%20rate-100%25-brightgreen)](TESTED.md) [![last smoke run: 2026-10-25](https://img.shields.io/badge/last%20smoke%20run-2026--10--25-informational)](TESTED.md) [![runtime images: 30](https://img.shields.io/badge/runtime%20images-30-2496ED)](https://github.com/sneakywrld/octail-yolks) [![new in 30 days: 158](https://img.shields.io/badge/new%20in%2030%20days-158-blueviolet)](#stats)
+[![eggs: 158](https://img.shields.io/badge/eggs-158-blue)](#all-games) [![categories: 13](https://img.shields.io/badge/categories-13-blue)](#categories) [![smoke tests: 143 passed of 158](https://img.shields.io/badge/smoke%20tests-143%20passed%20of%20158-brightgreen)](TESTED.md) [![pass rate: 100%](https://img.shields.io/badge/pass%20rate-100%25-brightgreen)](TESTED.md) [![last smoke run: 2026-10-25](https://img.shields.io/badge/last%20smoke%20run-2026--10--25-informational)](TESTED.md) [![runtime images: 29](https://img.shields.io/badge/runtime%20images-29-2496ED)](https://github.com/sneakywrld/octail-yolks) [![new in 30 days: 158](https://img.shields.io/badge/new%20in%2030%20days-158-blueviolet)](#stats)
 
-**158 eggs** in 13 categories, running on 30 runtime images.
+**158 eggs** in 13 categories, running on 29 runtime images.
 Real runs on our nodes (install, start, a console command, stop): **143 passed**, 0 failed,
 15 blocked (a login, a licence or more resources needed) and 0 not run on the current images
 yet: 100 % of runs pass and 90.5 % of eggs have one. Last smoke run: 2026-10-25. Details per egg in [TESTED.md](TESTED.md).
@@ -68,7 +68,6 @@ Added in the last 30 days (since 2026-09-25): **158**, [AssaultCube](standalone/
 | [`bun_1`](https://github.com/sneakywrld/octail-yolks#bun_1) | 1 | 1 |
 | [`deno_2`](https://github.com/sneakywrld/octail-yolks#deno_2) | 1 | 1 |
 | [`dotnet_9`](https://github.com/sneakywrld/octail-yolks#dotnet_9) | 1 | 1 |
-| [`go_1.23`](https://github.com/sneakywrld/octail-yolks#go_1.23) | 1 | 1 |
 | [`go_1.26`](https://github.com/sneakywrld/octail-yolks#go_1.26) | 1 | 1 |
 | [`go_1.27`](https://github.com/sneakywrld/octail-yolks#go_1.27) | 1 | 1 |
 | [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | 1 | 1 |
@@ -530,7 +529,7 @@ Generic Node.js, Bun, Deno, Python, Java and Go apps such as Discord bots. Folde
 | --- | --- | --- | --- | --- | --- |
 | Bun App | [bun-app.json](apps/bun-app.json) | [`bun_1`](https://github.com/sneakywrld/octail-yolks#bun_1) | – | [✓ 2026-10-24](TESTED.md#apps-bun-app) | start detected by port |
 | Deno App | [deno-app.json](apps/deno-app.json) | [`deno_2`](https://github.com/sneakywrld/octail-yolks#deno_2) | – | [✓ 2026-10-24](TESTED.md#apps-deno-app) | start detected by port |
-| Go App | [go-app.json](apps/go-app.json) | [`go_1.27`](https://github.com/sneakywrld/octail-yolks#go_1.27) [`go_1.26`](https://github.com/sneakywrld/octail-yolks#go_1.26) [`go_1.23`](https://github.com/sneakywrld/octail-yolks#go_1.23) | – | [✓ 2026-10-24](TESTED.md#apps-go-app) | start detected by port |
+| Go App | [go-app.json](apps/go-app.json) | [`go_1.27`](https://github.com/sneakywrld/octail-yolks#go_1.27) [`go_1.26`](https://github.com/sneakywrld/octail-yolks#go_1.26) | – | [✓ 2026-10-24](TESTED.md#apps-go-app) | start detected by port |
 | Java App (JAR) | [java-jar.json](apps/java-jar.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [✓ 2026-10-24](TESTED.md#apps-java-jar) | start detected by port |
 | Lavalink | [lavalink.json](apps/lavalink.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [✓ 2026-10-23](TESTED.md#apps-lavalink) | no console input, start detected by port |
 | MariaDB | [mariadb.json](apps/mariadb.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-23](TESTED.md#apps-mariadb) | no console input, start detected by port |

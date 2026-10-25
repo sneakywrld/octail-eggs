@@ -16,8 +16,7 @@
   "features": [],
   "docker_images": {
     "Go 1.27": "ghcr.io/sneakywrld/octail-yolks:go_1.27",
-    "Go 1.26": "ghcr.io/sneakywrld/octail-yolks:go_1.26",
-    "Go 1.23 (end of life)": "ghcr.io/sneakywrld/octail-yolks:go_1.23"
+    "Go 1.26": "ghcr.io/sneakywrld/octail-yolks:go_1.26"
   },
   "file_denylist": [],
   "startup_commands": {

@@ -663,7 +663,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | ------------------------- | -------------------------- | ----------- | ---------------------------------------------------- | ------------------ | ----------------- |
 | Bun App                   | `apps/bun-app.json`        | 2026-10-23  | `bun_1`                                              | `installer_debian` | pass (2026-10-24) |
 | Deno App                  | `apps/deno-app.json`       | 2026-10-23  | `deno_2`                                             | `installer_debian` | pass (2026-10-24) |
-| Go App                    | `apps/go-app.json`         | 2026-10-12  | `go_1.27`, `go_1.26`, `go_1.23`                      | `installer_debian` | pass (2026-10-24) |
+| Go App                    | `apps/go-app.json`         | 2026-10-12  | `go_1.27`, `go_1.26`                                 | `installer_debian` | pass (2026-10-24) |
 | Java App (JAR)            | `apps/java-jar.json`       | 2026-10-12  | `java_21`, `java_25`, `java_17`, `java_11`, `java_8` | `installer_debian` | pass (2026-10-24) |
 | Lavalink                  | `apps/lavalink.json`       | 2026-10-23  | `java_21`, `java_25`, `java_17`                      | `installer_debian` | pass (2026-10-23) |
 | MariaDB                   | `apps/mariadb.json`        | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
