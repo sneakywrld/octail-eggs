@@ -18,10 +18,10 @@ window.OCTAIL_STATS = {
       "folder": "source",
       "title": "Source",
       "eggs": 16,
-      "pass": 15,
+      "pass": 16,
       "fail": 0,
       "blocked": 0,
-      "untested": 1
+      "untested": 0
     },
     {
       "folder": "goldsrc",
@@ -72,10 +72,10 @@ window.OCTAIL_STATS = {
       "folder": "steam",
       "title": "Steam games",
       "eggs": 65,
-      "pass": 52,
+      "pass": 54,
       "fail": 0,
       "blocked": 11,
-      "untested": 2
+      "untested": 0
     },
     {
       "folder": "steamcmd",
@@ -124,14 +124,14 @@ window.OCTAIL_STATS = {
     }
   ],
   "tested": {
-    "pass": 140,
+    "pass": 143,
     "fail": 0,
     "blocked": 15,
-    "untested": 3,
-    "runs": 140,
+    "untested": 0,
+    "runs": 143,
     "pass_rate": 100,
-    "coverage": 88.6,
-    "last_run": "2026-10-24"
+    "coverage": 90.5,
+    "last_run": "2026-10-25"
   },
   "images": [
     {
@@ -139,7 +139,7 @@ window.OCTAIL_STATS = {
       "kind": "runtime",
       "ours": true,
       "eggs": 47,
-      "pass": 38
+      "pass": 40
     },
     {
       "image": "debian",
@@ -342,14 +342,14 @@ window.OCTAIL_STATS = {
       "kind": "runtime",
       "ours": true,
       "eggs": 1,
-      "pass": 0
+      "pass": 1
     },
     {
       "image": "installer_debian",
       "kind": "installer",
       "ours": true,
       "eggs": 132,
-      "pass": 115
+      "pass": 118
     },
     {
       "image": "installer_alpine",
@@ -1676,8 +1676,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "the game server token is optional since 2026-10-23 (it was blocked on needing one); not yet run"
+        "result": "pass",
+        "date": "2026-10-25",
+        "image": "steamcmd_sniper",
+        "ready_s": 29,
+        "peak_mib": 914,
+        "limit_mib": 4096,
+        "disk_mib": 70545,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -3109,8 +3115,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "not re-run on octail-yolks yet: vm1 (the only node) hadn't the 8 GB of free memory it needs on 2026-10-24; it runs live on vm1 on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-25",
+        "image": "steamcmd_debian",
+        "ready_s": 9,
+        "peak_mib": 1459,
+        "limit_mib": 8319,
+        "disk_mib": 5004,
+        "node": "wings-fr1"
       },
       "added": "2026-10-08"
     },
@@ -3510,8 +3522,14 @@ window.OCTAIL_STATS = {
       ],
       "installer": "installer_debian",
       "tested": {
-        "result": "untested",
-        "note": "passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks"
+        "result": "pass",
+        "date": "2026-10-25",
+        "image": "steamcmd_debian",
+        "ready_s": 12,
+        "peak_mib": 182,
+        "limit_mib": 8302,
+        "disk_mib": 3409,
+        "node": "wings-fr1"
       },
       "added": "2026-10-07"
     },

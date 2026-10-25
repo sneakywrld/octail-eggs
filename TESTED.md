@@ -6,8 +6,8 @@ The last real run of each egg on one of Octail's nodes, with the runtime image i
 its ready line (or its bound game port, for eggs that detect the start that way), sent a console command, stopped.
 A run is limited like a customer server (the memory limit below).
 
-140 of 158 eggs have a run on the current images: 140 passed, 0 failed.
-15 couldn't be run yet and 3 haven't been tried on these images.
+143 of 158 eggs have a run on the current images: 143 passed, 0 failed.
+15 couldn't be run yet and 0 haven't been tried on these images.
 
 | Egg | Result | Date | Image | Ready | Memory peak / limit | Node | Earlier | Note |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -35,7 +35,7 @@ A run is limited like a customer server (the memory limit below).
 | <a name="minecraft-vanilla"></a>[minecraft/vanilla.json](minecraft/vanilla.json) | ✓ passed | 2026-10-24 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 14 s | 447 / 4096 MiB | wings-fr1 | – | – |
 | <a name="minecraft-velocity"></a>[minecraft/velocity.json](minecraft/velocity.json) | ✓ passed | 2026-10-23 | [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) | 2 s | 229 / 1024 MiB | node1 | ✓ 2026-10-12 (ghcr.io/sneakywrld/octail-yolks:java_25) | – |
 | <a name="source-black-mesa"></a>[source/black-mesa.json](source/black-mesa.json) | ✓ passed | 2026-10-24 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 17 s | 329 / 3072 MiB | wings-fr1 | – | – |
-| <a name="source-counter-strike-2"></a>[source/counter-strike-2.json](source/counter-strike-2.json) | not tested yet | – | – | – | – | – | – | the game server token is optional since 2026-10-23 (it was blocked on needing one); not yet run |
+| <a name="source-counter-strike-2"></a>[source/counter-strike-2.json](source/counter-strike-2.json) | ✓ passed | 2026-10-25 | [`steamcmd_sniper`](https://github.com/sneakywrld/octail-yolks#steamcmd_sniper) | 29 s | 914 / 4096 MiB | wings-fr1 | – | – |
 | <a name="source-counter-strike-source"></a>[source/counter-strike-source.json](source/counter-strike-source.json) | ✓ passed | 2026-10-23 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 11 s | 196 / 1024 MiB | node1 | – | – |
 | <a name="source-day-of-defeat-source"></a>[source/day-of-defeat-source.json](source/day-of-defeat-source.json) | ✓ passed | 2026-10-23 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 11 s | 163 / 1024 MiB | node1 | ✓ 2026-10-09 (upstream) | – |
 | <a name="source-day-of-infamy"></a>[source/day-of-infamy.json](source/day-of-infamy.json) | ✓ passed | 2026-10-24 | [`source`](https://github.com/sneakywrld/octail-yolks#source) | 15 s | 280 / 3072 MiB | node1 | – | – |
@@ -101,7 +101,7 @@ A run is limited like a customer server (the memory limit below).
 | <a name="steam-night-of-the-dead"></a>[steam/night-of-the-dead.json](steam/night-of-the-dead.json) | ✓ passed | 2026-10-24 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | 32 s | 1281 / 8192 MiB | wings-fr1 | – | – |
 | <a name="steam-nightingale"></a>[steam/nightingale.json](steam/nightingale.json) | ✓ passed | 2026-10-24 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 22 s | 2346 / 10443 MiB | wings-fr1 | – | – |
 | <a name="steam-operation-harsh-doorstop"></a>[steam/operation-harsh-doorstop.json](steam/operation-harsh-doorstop.json) | ✓ passed | 2026-10-24 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 10 s | 261 / 4096 MiB | wings-fr1 | – | – |
-| <a name="steam-palworld"></a>[steam/palworld.json](steam/palworld.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | not re-run on octail-yolks yet: vm1 (the only node) hadn't the 8 GB of free memory it needs on 2026-10-24; it runs live on vm1 on octail-yolks |
+| <a name="steam-palworld"></a>[steam/palworld.json](steam/palworld.json) | ✓ passed | 2026-10-25 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 9 s | 1459 / 8319 MiB | wings-fr1 | ✓ 2026-10-09 (upstream) | – |
 | <a name="steam-pavlov-vr"></a>[steam/pavlov-vr.json](steam/pavlov-vr.json) | not run | – | – | – | – | – | ✓ 2026-10-09 (upstream) | needs node ports in pairs: the main port and the main port + 400, e.g. 7777 and 8177 (Allocations, Pair with +400) |
 | <a name="steam-pixark"></a>[steam/pixark.json](steam/pixark.json) | ✓ passed | 2026-10-24 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | 102 s | 3103 / 8192 MiB | wings-fr1 | – | – |
 | <a name="steam-project-zomboid"></a>[steam/project-zomboid.json](steam/project-zomboid.json) | ✓ passed | 2026-10-24 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 74 s | 7390 / 8192 MiB | node1 | ✗ 2026-10-23 (ghcr.io/sneakywrld/octail-yolks:steamcmd_debian) | peak 7.2 GB of an 8 GB cap |
@@ -110,7 +110,7 @@ A run is limited like a customer server (the memory limit below).
 | <a name="steam-rising-world"></a>[steam/rising-world.json](steam/rising-world.json) | ✓ passed | 2026-10-13 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 10 s | 717 / 4096 MiB | node1 | – | – |
 | <a name="steam-risk-of-rain-2"></a>[steam/risk-of-rain-2.json](steam/risk-of-rain-2.json) | not run | – | – | – | – | – | ✗ 2026-10-13 (ghcr.io/sneakywrld/octail-yolks:wine) | Steam's public branch of app 1180760 (the dedicated server) has carried an empty depot since 2025-11: SteamCMD reports it installed and leaves no files; nothing on a server can fix that, and the egg says so when it happens. The last real run (2026-10-13) failed for this reason. |
 | <a name="steam-runescape-dragonwilds"></a>[steam/runescape-dragonwilds.json](steam/runescape-dragonwilds.json) | not run | – | – | – | – | – | – | needs the owner's RuneScape: Dragonwilds Player ID (the server doesn't start without it) |
-| <a name="steam-satisfactory"></a>[steam/satisfactory.json](steam/satisfactory.json) | not tested yet | – | – | – | – | – | ✓ 2026-10-09 (upstream) | passed on the old upstream images (2026-10-09); not yet re-run on octail-yolks |
+| <a name="steam-satisfactory"></a>[steam/satisfactory.json](steam/satisfactory.json) | ✓ passed | 2026-10-25 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 12 s | 182 / 8302 MiB | wings-fr1 | ✓ 2026-10-09 (upstream) | – |
 | <a name="steam-scp-secret-laboratory"></a>[steam/scp-secret-laboratory.json](steam/scp-secret-laboratory.json) | ✓ passed | 2026-10-24 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 12 s | 1031 / 4096 MiB | node1 | ✗ 2026-10-23 (ghcr.io/sneakywrld/octail-yolks:steamcmd_debian) | – |
 | <a name="steam-smalland"></a>[steam/smalland.json](steam/smalland.json) | ✓ passed | 2026-10-24 | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | 22 s | 2850 / 6144 MiB | node1 | ✗ 2026-10-23 (ghcr.io/sneakywrld/octail-yolks:steamcmd_debian) | – |
 | <a name="steam-sons-of-the-forest"></a>[steam/sons-of-the-forest.json](steam/sons-of-the-forest.json) | ✓ passed | 2026-10-10 | [`wine`](https://github.com/sneakywrld/octail-yolks#wine) | 83 s | 6448 / 8192 MiB | node1 | – | – |

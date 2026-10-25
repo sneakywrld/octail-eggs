@@ -99,18 +99,13 @@ stop):
 
 | Result     | Eggs | Meaning                                                                                                                   |
 | ---------- | ---: | ------------------------------------------------------------------------------------------------------------------------- |
-| `pass`     |  140 | ran on an octail-yolks image                                                                                              |
-| `untested` |    3 | not yet run on octail-yolks                                                                                               |
+| `pass`     |  143 | ran on an octail-yolks image                                                                                              |
+| `untested` |    0 | not yet run on octail-yolks                                                                                               |
 | `blocked`  |   15 | can't be run yet: needs a token, a Steam account, the EULA, a port pair, game data files, or upstream to fix its download |
 | `fail`     |    0 | none                                                                                                                      |
 
 ## What's left
 
-- **Needs a decision**: Counter-Strike 2 downloads more than 60 GB (disk hint 80 GB now); it waits for an OK to
-  install that much on vm1, the only node, whose VMware datastore's free space the guest can't see.
-- **Running live, not smoke-tested**: Palworld and Satisfactory run on our own servers on vm1 on octail-yolks images.
-  The harness doesn't change an egg that live servers use, so their panel copies are updated from the shipped files
-  in Admin, then they can run.
 - **Needs something we don't have** (`blocked`):
   - a Steam account that owns the game: Arma 3, Assetto Corsa, DayZ, Killing Floor, Starbound, Stormworks;
   - a token or id: ASKA (Steam game server login token), BeamMP (AuthKey), Don't Starve Together (Klei cluster
@@ -123,6 +118,19 @@ stop):
 ## Changelog
 
 Newest first. Dates are when the work landed in the panel repository; "round" is the batch of parallel work it came in.
+
+### 2026-10-25: the last three, and the panel's copies
+
+**143 of 158 eggs pass**, none fail, none untested; the other 15 are `blocked` (see "What's left").
+
+- **Counter-Strike 2** passed on vm1 with the owner's OK for its size: 31 min to install, 70 GB on disk (the 80 GB
+  hint holds), ready in 29 s.
+- **Palworld** and **Satisfactory** passed once their panel copies had the SteamCMD retry fix (both install in under
+  two minutes).
+- **The panel's own copies** of every egg were compared with the shipped files through the panel's importer: 77 still
+  had the old SteamCMD retry loop (Palworld, Satisfactory and Valheim among them, which live servers use; the install
+  script only runs on a reinstall), Arma Reforger's old ready line, ASKA's optional token and Stormworks' old app id.
+  They were updated from the shipped files; all 130 match now.
 
 ### 2026-10-24 (later): one egg at a time on vm1, and what that found
 
@@ -482,7 +490,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Egg                        | File                                     | First added | Runtime image     | Install image      | Smoke             |
 | -------------------------- | ---------------------------------------- | ----------- | ----------------- | ------------------ | ----------------- |
 | Black Mesa: Deathmatch     | `source/black-mesa.json`                 | 2026-10-13  | `source`          | `installer_debian` | pass (2026-10-24) |
-| Counter-Strike 2           | `source/counter-strike-2.json`           | 2026-10-08  | `steamcmd_sniper` | `installer_debian` | untested          |
+| Counter-Strike 2           | `source/counter-strike-2.json`           | 2026-10-08  | `steamcmd_sniper` | `installer_debian` | pass (2026-10-25) |
 | Counter-Strike: Source     | `source/counter-strike-source.json`      | 2026-10-09  | `steamcmd_debian` | `installer_debian` | pass (2026-10-23) |
 | Day of Defeat: Source      | `source/day-of-defeat-source.json`       | 2026-10-09  | `source`          | `installer_debian` | pass (2026-10-23) |
 | Day of Infamy              | `source/day-of-infamy.json`              | 2026-10-12  | `source`          | `installer_debian` | pass (2026-10-24) |
@@ -578,7 +586,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Night of the Dead                         | `steam/night-of-the-dead.json`         | 2026-10-12  | `wine`                 | `installer_debian` | pass (2026-10-24) |
 | Nightingale                               | `steam/nightingale.json`               | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Operation: Harsh Doorstop                 | `steam/operation-harsh-doorstop.json`  | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
-| Palworld                                  | `steam/palworld.json`                  | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Palworld                                  | `steam/palworld.json`                  | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-25) |
 | Pavlov VR                                 | `steam/pavlov-vr.json`                 | 2026-10-09  | `steamcmd_ubuntu`      | `installer_debian` | blocked           |
 | PixARK                                    | `steam/pixark.json`                    | 2026-10-13  | `wine`                 | `installer_debian` | pass (2026-10-24) |
 | Project Zomboid                           | `steam/project-zomboid.json`           | 2026-10-08  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
@@ -587,7 +595,7 @@ One table per folder. "First added" is the date the egg's file first appeared in
 | Rising World                              | `steam/rising-world.json`              | 2026-10-13  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-13) |
 | Risk of Rain 2                            | `steam/risk-of-rain-2.json`            | 2026-10-13  | `wine`                 | `installer_debian` | blocked           |
 | RuneScape: Dragonwilds                    | `steam/runescape-dragonwilds.json`     | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | blocked           |
-| Satisfactory                              | `steam/satisfactory.json`              | 2026-10-07  | `steamcmd_debian`      | `installer_debian` | untested          |
+| Satisfactory                              | `steam/satisfactory.json`              | 2026-10-07  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-25) |
 | SCP: Secret Laboratory                    | `steam/scp-secret-laboratory.json`     | 2026-10-12  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Smalland: Survive the Wilds               | `steam/smalland.json`                  | 2026-10-23  | `steamcmd_debian`      | `installer_debian` | pass (2026-10-24) |
 | Sons Of The Forest                        | `steam/sons-of-the-forest.json`        | 2026-10-09  | `wine`                 | `installer_debian` | pass (2026-10-10) |

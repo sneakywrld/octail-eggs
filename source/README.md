@@ -8,7 +8,7 @@ Back to [all eggs](../README.md#source).
 | Game | Egg | Runtime images | Extra ports | Tested | Notes |
 | --- | --- | --- | --- | --- | --- |
 | Black Mesa: Deathmatch | [black-mesa.json](black-mesa.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-24](../TESTED.md#source-black-mesa) | RCON (source), Players tab, sleep (udp), start detected by port |
-| Counter-Strike 2 | [counter-strike-2.json](counter-strike-2.json) | [`steamcmd_sniper`](https://github.com/sneakywrld/octail-yolks#steamcmd_sniper) | TV_PORT +1 | [—](../TESTED.md#source-counter-strike-2) | RCON (source), Players tab, sleep (udp), start detected by port |
+| Counter-Strike 2 | [counter-strike-2.json](counter-strike-2.json) | [`steamcmd_sniper`](https://github.com/sneakywrld/octail-yolks#steamcmd_sniper) | TV_PORT +1 | [✓ 2026-10-25](../TESTED.md#source-counter-strike-2) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Counter-Strike: Source | [counter-strike-source.json](counter-strike-source.json) | [`steamcmd_debian`](https://github.com/sneakywrld/octail-yolks#steamcmd_debian) | – | [✓ 2026-10-23](../TESTED.md#source-counter-strike-source) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Day of Defeat: Source | [day-of-defeat-source.json](day-of-defeat-source.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-23](../TESTED.md#source-day-of-defeat-source) | RCON (source), Players tab, sleep (udp), start detected by port |
 | Day of Infamy | [day-of-infamy.json](day-of-infamy.json) | [`source`](https://github.com/sneakywrld/octail-yolks#source) | – | [✓ 2026-10-24](../TESTED.md#source-day-of-infamy) | RCON (source), Players tab, sleep (udp), start detected by port |
