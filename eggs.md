@@ -659,20 +659,20 @@ One table per folder. "First added" is the date the egg's file first appeared in
 
 ### Apps (`apps/`, 12)
 
-| Egg                       | File                       | First added | Runtime image                                        | Install image      | Smoke             |
-| ------------------------- | -------------------------- | ----------- | ---------------------------------------------------- | ------------------ | ----------------- |
-| Bun App                   | `apps/bun-app.json`        | 2026-10-23  | `bun_1`                                              | `installer_debian` | pass (2026-10-24) |
-| Deno App                  | `apps/deno-app.json`       | 2026-10-23  | `deno_2`                                             | `installer_debian` | pass (2026-10-24) |
-| Go App                    | `apps/go-app.json`         | 2026-10-12  | `go_1.27`, `go_1.26`                                 | `installer_debian` | pass (2026-10-24) |
-| Java App (JAR)            | `apps/java-jar.json`       | 2026-10-12  | `java_21`, `java_25`, `java_17`, `java_11`, `java_8` | `installer_debian` | pass (2026-10-24) |
-| Lavalink                  | `apps/lavalink.json`       | 2026-10-23  | `java_21`, `java_25`, `java_17`                      | `installer_debian` | pass (2026-10-23) |
-| MariaDB                   | `apps/mariadb.json`        | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
-| Node.js App               | `apps/nodejs-app.json`     | 2026-10-12  | `nodejs_24`, `nodejs_22`, `nodejs_20`                | `installer_debian` | pass (2026-10-24) |
-| PostgreSQL                | `apps/postgresql.json`     | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
-| Python App                | `apps/python-app.json`     | 2026-10-12  | `python_3.14`, `python_3.13`, `python_3.12`          | `installer_debian` | pass (2026-10-24) |
-| Red-DiscordBot            | `apps/red-discordbot.json` | 2026-10-23  | `debian`                                             | `installer_debian` | blocked           |
-| Uptime Kuma               | `apps/uptime-kuma.json`    | 2026-10-23  | `nodejs_22`                                          | `installer_debian` | pass (2026-10-23) |
-| Valkey (Redis-compatible) | `apps/valkey.json`         | 2026-10-23  | `debian`                                             | `installer_debian` | pass (2026-10-23) |
+| Egg                       | File                       | First added | Runtime image                                              | Install image      | Smoke             |
+| ------------------------- | -------------------------- | ----------- | ---------------------------------------------------------- | ------------------ | ----------------- |
+| Bun App                   | `apps/bun-app.json`        | 2026-10-23  | `bun_1`                                                    | `installer_debian` | pass (2026-10-24) |
+| Deno App                  | `apps/deno-app.json`       | 2026-10-23  | `deno_2`                                                   | `installer_debian` | pass (2026-10-24) |
+| Go App                    | `apps/go-app.json`         | 2026-10-12  | `go_1.27`, `go_1.26`                                       | `installer_debian` | pass (2026-10-24) |
+| Java App (JAR)            | `apps/java-jar.json`       | 2026-10-12  | `java_21`, `java_25`, `java_17`, `java_11`, `java_8`       | `installer_debian` | pass (2026-10-24) |
+| Lavalink                  | `apps/lavalink.json`       | 2026-10-23  | `java_21`, `java_25`, `java_17`                            | `installer_debian` | pass (2026-10-23) |
+| MariaDB                   | `apps/mariadb.json`        | 2026-10-23  | `debian`                                                   | `installer_debian` | pass (2026-10-23) |
+| Node.js App               | `apps/nodejs-app.json`     | 2026-10-12  | `nodejs_24`, `nodejs_26`, `nodejs_22`, `nodejs_20`         | `installer_debian` | pass (2026-10-24) |
+| PostgreSQL                | `apps/postgresql.json`     | 2026-10-23  | `debian`                                                   | `installer_debian` | pass (2026-10-23) |
+| Python App                | `apps/python-app.json`     | 2026-10-12  | `python_3.15`, `python_3.14`, `python_3.13`, `python_3.12` | `installer_debian` | pass (2026-10-24) |
+| Red-DiscordBot            | `apps/red-discordbot.json` | 2026-10-23  | `debian`                                                   | `installer_debian` | blocked           |
+| Uptime Kuma               | `apps/uptime-kuma.json`    | 2026-10-23  | `nodejs_22`                                                | `installer_debian` | pass (2026-10-23) |
+| Valkey (Redis-compatible) | `apps/valkey.json`         | 2026-10-23  | `debian`                                                   | `installer_debian` | pass (2026-10-23) |
 
 ### Testing (`testing/`, 1)
 

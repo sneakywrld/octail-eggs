@@ -23,10 +23,12 @@ mono
 nodejs_20
 nodejs_22
 nodejs_24
+nodejs_26
 proton
 python_3.12
 python_3.13
 python_3.14
+python_3.15
 rust
 source
 steamcmd_debian

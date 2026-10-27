@@ -2,7 +2,7 @@
 window.OCTAIL_STATS = {
   "schema": 1,
   "repo": "sneakywrld/octail-eggs",
-  "date": "2026-10-25",
+  "date": "2026-10-27",
   "eggs": 158,
   "categories": [
     {
@@ -296,6 +296,13 @@ window.OCTAIL_STATS = {
       "pass": 1
     },
     {
+      "image": "nodejs_26",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 1
+    },
+    {
       "image": "python_3.12",
       "kind": "runtime",
       "ours": true,
@@ -311,6 +318,13 @@ window.OCTAIL_STATS = {
     },
     {
       "image": "python_3.14",
+      "kind": "runtime",
+      "ours": true,
+      "eggs": 1,
+      "pass": 1
+    },
+    {
+      "image": "python_3.15",
       "kind": "runtime",
       "ours": true,
       "eggs": 1,
@@ -382,7 +396,7 @@ window.OCTAIL_STATS = {
   ],
   "added": {
     "days": 30,
-    "since": "2026-09-25",
+    "since": "2026-09-27",
     "known": true,
     "eggs": [
       {
@@ -2956,6 +2970,7 @@ window.OCTAIL_STATS = {
       "category": "Apps",
       "images": [
         "nodejs_24",
+        "nodejs_26",
         "nodejs_22",
         "nodejs_20"
       ],
@@ -3327,6 +3342,7 @@ window.OCTAIL_STATS = {
       "folder": "apps",
       "category": "Apps",
       "images": [
+        "python_3.15",
         "python_3.14",
         "python_3.13",
         "python_3.12"

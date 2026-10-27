@@ -16,6 +16,7 @@
   "features": [],
   "docker_images": {
     "Node.js 24 (LTS)": "ghcr.io/sneakywrld/octail-yolks:nodejs_24",
+    "Node.js 26 (current, LTS from late October 2026)": "ghcr.io/sneakywrld/octail-yolks:nodejs_26",
     "Node.js 22 (LTS)": "ghcr.io/sneakywrld/octail-yolks:nodejs_22",
     "Node.js 20 (end of life)": "ghcr.io/sneakywrld/octail-yolks:nodejs_20"
   },

@@ -15,6 +15,7 @@
   ],
   "features": [],
   "docker_images": {
+    "Python 3.15": "ghcr.io/sneakywrld/octail-yolks:python_3.15",
     "Python 3.14": "ghcr.io/sneakywrld/octail-yolks:python_3.14",
     "Python 3.13": "ghcr.io/sneakywrld/octail-yolks:python_3.13",
     "Python 3.12": "ghcr.io/sneakywrld/octail-yolks:python_3.12"

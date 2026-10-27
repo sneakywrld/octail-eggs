@@ -21,14 +21,14 @@ in [CHANGELOG.md](CHANGELOG.md); the history of every egg and the rules they fol
 
 ## Stats
 
-[![eggs: 158](https://img.shields.io/badge/eggs-158-blue)](#all-games) [![categories: 13](https://img.shields.io/badge/categories-13-blue)](#categories) [![smoke tests: 143 passed of 158](https://img.shields.io/badge/smoke%20tests-143%20passed%20of%20158-brightgreen)](TESTED.md) [![pass rate: 100%](https://img.shields.io/badge/pass%20rate-100%25-brightgreen)](TESTED.md) [![last smoke run: 2026-10-25](https://img.shields.io/badge/last%20smoke%20run-2026--10--25-informational)](TESTED.md) [![runtime images: 29](https://img.shields.io/badge/runtime%20images-29-2496ED)](https://github.com/sneakywrld/octail-yolks) [![new in 30 days: 158](https://img.shields.io/badge/new%20in%2030%20days-158-blueviolet)](#stats)
+[![eggs: 158](https://img.shields.io/badge/eggs-158-blue)](#all-games) [![categories: 13](https://img.shields.io/badge/categories-13-blue)](#categories) [![smoke tests: 143 passed of 158](https://img.shields.io/badge/smoke%20tests-143%20passed%20of%20158-brightgreen)](TESTED.md) [![pass rate: 100%](https://img.shields.io/badge/pass%20rate-100%25-brightgreen)](TESTED.md) [![last smoke run: 2026-10-25](https://img.shields.io/badge/last%20smoke%20run-2026--10--25-informational)](TESTED.md) [![runtime images: 31](https://img.shields.io/badge/runtime%20images-31-2496ED)](https://github.com/sneakywrld/octail-yolks) [![new in 30 days: 158](https://img.shields.io/badge/new%20in%2030%20days-158-blueviolet)](#stats)
 
-**158 eggs** in 13 categories, running on 29 runtime images.
+**158 eggs** in 13 categories, running on 31 runtime images.
 Real runs on our nodes (install, start, a console command, stop): **143 passed**, 0 failed,
 15 blocked (a login, a licence or more resources needed) and 0 not run on the current images
 yet: 100 % of runs pass and 90.5 % of eggs have one. Last smoke run: 2026-10-25. Details per egg in [TESTED.md](TESTED.md).
 
-Added in the last 30 days (since 2026-09-25): **158**, [AssaultCube](standalone/assaultcube.json) (2026-10-23), [Ballistic Overkill](steam/ballistic-overkill.json) (2026-10-23), [Bun App](apps/bun-app.json) (2026-10-23), [Chivalry: Medieval Warfare](steam/chivalry-medieval-warfare.json) (2026-10-23), [Cuberite](minecraft/cuberite.json) (2026-10-23), [Deno App](apps/deno-app.json) (2026-10-23), [ET: Legacy](standalone/et-legacy.json) (2026-10-23), [FOUNDRY](steam/foundry.json) (2026-10-23), [Gate](minecraft/gate.json) (2026-10-23), [Lavalink](apps/lavalink.json) (2026-10-23), and 148 more.
+Added in the last 30 days (since 2026-09-27): **158**, [AssaultCube](standalone/assaultcube.json) (2026-10-23), [Ballistic Overkill](steam/ballistic-overkill.json) (2026-10-23), [Bun App](apps/bun-app.json) (2026-10-23), [Chivalry: Medieval Warfare](steam/chivalry-medieval-warfare.json) (2026-10-23), [Cuberite](minecraft/cuberite.json) (2026-10-23), [Deno App](apps/deno-app.json) (2026-10-23), [ET: Legacy](standalone/et-legacy.json) (2026-10-23), [FOUNDRY](steam/foundry.json) (2026-10-23), [Gate](minecraft/gate.json) (2026-10-23), [Lavalink](apps/lavalink.json) (2026-10-23), and 148 more.
 
 | Category | Eggs | ✅ Passed | ❌ Failed | ⚠️ Blocked | — Untested |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -72,9 +72,11 @@ Added in the last 30 days (since 2026-09-25): **158**, [AssaultCube](standalone/
 | [`go_1.27`](https://github.com/sneakywrld/octail-yolks#go_1.27) | 1 | 1 |
 | [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | 1 | 1 |
 | [`nodejs_24`](https://github.com/sneakywrld/octail-yolks#nodejs_24) | 1 | 1 |
+| [`nodejs_26`](https://github.com/sneakywrld/octail-yolks#nodejs_26) | 1 | 1 |
 | [`python_3.12`](https://github.com/sneakywrld/octail-yolks#python_3.12) | 1 | 1 |
 | [`python_3.13`](https://github.com/sneakywrld/octail-yolks#python_3.13) | 1 | 1 |
 | [`python_3.14`](https://github.com/sneakywrld/octail-yolks#python_3.14) | 1 | 1 |
+| [`python_3.15`](https://github.com/sneakywrld/octail-yolks#python_3.15) | 1 | 1 |
 | [`rust`](https://github.com/sneakywrld/octail-yolks#rust) | 1 | 1 |
 | [`steamcmd_dotnet`](https://github.com/sneakywrld/octail-yolks#steamcmd_dotnet) | 1 | 1 |
 | [`steamcmd_sniper`](https://github.com/sneakywrld/octail-yolks#steamcmd_sniper) | 1 | 1 |
@@ -533,9 +535,9 @@ Generic Node.js, Bun, Deno, Python, Java and Go apps such as Discord bots. Folde
 | Java App (JAR) | [java-jar.json](apps/java-jar.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) [`java_11`](https://github.com/sneakywrld/octail-yolks#java_11) [`java_8`](https://github.com/sneakywrld/octail-yolks#java_8) | – | [✓ 2026-10-24](TESTED.md#apps-java-jar) | start detected by port |
 | Lavalink | [lavalink.json](apps/lavalink.json) | [`java_21`](https://github.com/sneakywrld/octail-yolks#java_21) [`java_25`](https://github.com/sneakywrld/octail-yolks#java_25) [`java_17`](https://github.com/sneakywrld/octail-yolks#java_17) | – | [✓ 2026-10-23](TESTED.md#apps-lavalink) | no console input, start detected by port |
 | MariaDB | [mariadb.json](apps/mariadb.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-23](TESTED.md#apps-mariadb) | no console input, start detected by port |
-| Node.js App | [nodejs-app.json](apps/nodejs-app.json) | [`nodejs_24`](https://github.com/sneakywrld/octail-yolks#nodejs_24) [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | – | [✓ 2026-10-24](TESTED.md#apps-nodejs-app) | start detected by port |
+| Node.js App | [nodejs-app.json](apps/nodejs-app.json) | [`nodejs_24`](https://github.com/sneakywrld/octail-yolks#nodejs_24) [`nodejs_26`](https://github.com/sneakywrld/octail-yolks#nodejs_26) [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) [`nodejs_20`](https://github.com/sneakywrld/octail-yolks#nodejs_20) | – | [✓ 2026-10-24](TESTED.md#apps-nodejs-app) | start detected by port |
 | PostgreSQL | [postgresql.json](apps/postgresql.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-23](TESTED.md#apps-postgresql) | no console input, start detected by port |
-| Python App | [python-app.json](apps/python-app.json) | [`python_3.14`](https://github.com/sneakywrld/octail-yolks#python_3.14) [`python_3.13`](https://github.com/sneakywrld/octail-yolks#python_3.13) [`python_3.12`](https://github.com/sneakywrld/octail-yolks#python_3.12) | – | [✓ 2026-10-24](TESTED.md#apps-python-app) | start detected by port |
+| Python App | [python-app.json](apps/python-app.json) | [`python_3.15`](https://github.com/sneakywrld/octail-yolks#python_3.15) [`python_3.14`](https://github.com/sneakywrld/octail-yolks#python_3.14) [`python_3.13`](https://github.com/sneakywrld/octail-yolks#python_3.13) [`python_3.12`](https://github.com/sneakywrld/octail-yolks#python_3.12) | – | [✓ 2026-10-24](TESTED.md#apps-python-app) | start detected by port |
 | Red-DiscordBot | [red-discordbot.json](apps/red-discordbot.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [—](TESTED.md#apps-red-discordbot) | no console input |
 | Uptime Kuma | [uptime-kuma.json](apps/uptime-kuma.json) | [`nodejs_22`](https://github.com/sneakywrld/octail-yolks#nodejs_22) | – | [✓ 2026-10-23](TESTED.md#apps-uptime-kuma) | no console input, start detected by port |
 | Valkey (Redis-compatible) | [valkey.json](apps/valkey.json) | [`debian`](https://github.com/sneakywrld/octail-yolks#debian) | – | [✓ 2026-10-23](TESTED.md#apps-valkey) | no console input, start detected by port |
