@@ -20,10 +20,18 @@
   },
   "file_denylist": [],
   "startup_commands": {
-    "Default": "./VintagestoryServer --dataPath ./data --port={{SERVER_PORT}} --maxclients={{MAX_CLIENTS}} --withconfig=\"{ ServerName: '${SERVER_NAME}'${SERVER_PASSWORD:+, Password: '${SERVER_PASSWORD}'} }\" {{OPTIONS}}"
+    "Default": "./VintagestoryServer --dataPath ./data --port={{SERVER_PORT}} --withconfig=\"{ ServerName: '${SERVER_NAME}'${SERVER_PASSWORD:+, Password: '${SERVER_PASSWORD}'} }\" {{OPTIONS}}"
   },
   "config": {
-    "files": {},
+    "files": {
+      "data/serverconfig.json": {
+        "parser": "json",
+        "create": false,
+        "find": {
+          "MaxClients": "{{server.build.env.MAX_CLIENTS}}"
+        }
+      }
+    },
     "startup": {
       "done": "Dedicated Server now running on Port "
     },
@@ -82,7 +90,7 @@
     },
     {
       "name": "Max Clients",
-      "description": "How many players can be online at once.",
+      "description": "How many players can be online at once. Kept in step with MaxClients in data/serverconfig.json: a change on either side (also /serverconfig maxclients in game) wins at the next start.",
       "env_variable": "MAX_CLIENTS",
       "default_value": "16",
       "user_viewable": true,

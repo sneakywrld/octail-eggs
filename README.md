@@ -28,7 +28,7 @@ Real runs on our nodes (install, start, a console command, stop): **143 passed**
 15 blocked (a login, a licence or more resources needed) and 0 not run on the current images
 yet: 100 % of runs pass and 90.5 % of eggs have one. Last smoke run: 2026-10-25. Details per egg in [TESTED.md](TESTED.md).
 
-Added in the last 30 days (since 2026-09-27): **158**, [AssaultCube](standalone/assaultcube.json) (2026-10-23), [Ballistic Overkill](steam/ballistic-overkill.json) (2026-10-23), [Bun App](apps/bun-app.json) (2026-10-23), [Chivalry: Medieval Warfare](steam/chivalry-medieval-warfare.json) (2026-10-23), [Cuberite](minecraft/cuberite.json) (2026-10-23), [Deno App](apps/deno-app.json) (2026-10-23), [ET: Legacy](standalone/et-legacy.json) (2026-10-23), [FOUNDRY](steam/foundry.json) (2026-10-23), [Gate](minecraft/gate.json) (2026-10-23), [Lavalink](apps/lavalink.json) (2026-10-23), and 148 more.
+Added in the last 30 days (since 2026-09-30): **158**, [AssaultCube](standalone/assaultcube.json) (2026-10-23), [Ballistic Overkill](steam/ballistic-overkill.json) (2026-10-23), [Bun App](apps/bun-app.json) (2026-10-23), [Chivalry: Medieval Warfare](steam/chivalry-medieval-warfare.json) (2026-10-23), [Cuberite](minecraft/cuberite.json) (2026-10-23), [Deno App](apps/deno-app.json) (2026-10-23), [ET: Legacy](standalone/et-legacy.json) (2026-10-23), [FOUNDRY](steam/foundry.json) (2026-10-23), [Gate](minecraft/gate.json) (2026-10-23), [Lavalink](apps/lavalink.json) (2026-10-23), and 148 more.
 
 | Category | Eggs | ✅ Passed | ❌ Failed | ⚠️ Blocked | — Untested |
 | --- | ---: | ---: | ---: | ---: | ---: |
