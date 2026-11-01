@@ -2,7 +2,7 @@
 window.OCTAIL_STATS = {
   "schema": 1,
   "repo": "sneakywrld/octail-eggs",
-  "date": "2026-10-30",
+  "date": "2026-11-01",
   "eggs": 158,
   "categories": [
     {
@@ -396,7 +396,7 @@ window.OCTAIL_STATS = {
   ],
   "added": {
     "days": 30,
-    "since": "2026-09-30",
+    "since": "2026-10-02",
     "known": true,
     "eggs": [
       {

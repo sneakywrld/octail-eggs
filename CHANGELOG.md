@@ -4,7 +4,7 @@
 
 The eggs added, changed and removed by each publish.
 
-## 2026-10-30
+## 2026-11-01
 
 First publish: 158 eggs.
 
